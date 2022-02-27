@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+message WebSocketRawMessage {
+    WSChannel channel = 1;
+    bytes data = 2;
+}
+enum WSChannel {
+    Document = 0;
+    Folder = 1;
+}

@@ -2,38 +2,45 @@
     <b>
         <a href="https://www.appflowy.io">AppFlowy.IO</a><br>
     </b>
-    ⭐️ The Open Source Notion Alternative ⭐️ <br>
+    ⭐️  The Open Source Alternative To Notion  ⭐️ <br>
 </h1>
-
-
-<p align="center">
-<a href="https://discord.gg/9Q2xaN37tV"><img src="https://img.shields.io/badge/AppFlowy.IO-discord-orange"></a>
-<a href="https://github.com/AppFlowy-IO/appflowy"><img src="https://img.shields.io/github/stars/AppFlowy-IO/appflowy.svg?style=flat&logo=github&colorB=deeppink&label=stars"></a>
-<a href="https://github.com/AppFlowy-IO/appflowy"><img src="https://img.shields.io/github/forks/AppFlowy-IO/appflowy.svg"></a>
-<a href="https://opensource.org/licenses/AGPL-3.0"><img src="https://img.shields.io/badge/license-APGL-purple.svg" alt="License: AGPL"></a>
-
-</p>
-
-
 
 <p align="center">
 You are in charge of your data and customizations.
 </p>
 
+<p align="center">
+<a href="https://discord.gg/9Q2xaN37tV"><img src="https://img.shields.io/badge/AppFlowy.IO-discord-orange"></a>
+<a href="https://github.com/AppFlowy-IO/appflowy"><img src="https://img.shields.io/github/stars/AppFlowy-IO/appflowy.svg?style=flat&logo=github&colorB=deeppink&label=stars"></a>
+<a href="https://github.com/AppFlowy-IO/appflowy"><img src="https://img.shields.io/github/forks/AppFlowy-IO/appflowy.svg"></a>
+<a href="https://opensource.org/licenses/AGPL-3.0"><img src="https://img.shields.io/badge/license-AGPL-purple.svg" alt="License: AGPL"></a>
+
+</p>
 
 <p align="center">
     <a href="http://www.appflowy.io"><b>Website</b></a> •
     <a href="https://discord.gg/9Q2xaN37tV"><b>Discord</b></a> •
-    <a href="https://twitter.com/appflowy"><b>Twitter</b></a> •
-    
-    
+    <a href="https://twitter.com/appflowy"><b>Twitter</b></a>
+</p>
 
-    
-</p>  
+<p align="center"><img src="https://github.com/AppFlowy-IO/appflowy/blob/main/doc/imgs/welcome.png" alt="The Open Source Alternative To Notion." width="1000px" /></p>
 
-<p align="center"><img src="https://github.com/AppFlowy-IO/appflowy/blob/main/doc/imgs/welcome.png" alt="The Open Source Notion Alternative." width="1000px" /></p>
+## User Installation
 
+Please view the [documentation](https://appflowy.gitbook.io/docs/essential-documentation/install-appflowy/installation-methods) for OS specific installation instructions.
 
+You can also try AppFlowy using the docker image:
+
+```
+docker run --rm \
+  -v $HOME/.Xauthority:/root/.Xauthority:rw \
+  -v /tmp/.X11-unix:/tmp/.X11-unix \
+  -v /dev/dri:/dev/dri \
+  -v /var/run/dbus/system_bus_socket:/var/run/dbus/system_bus_socket \
+  -v appflowy-data:/home/appflowy \
+  -e DISPLAY=${DISPLAY} \
+  appflowyio/appflowy_client:latest
+```
 
 ## Built With
 
@@ -45,52 +52,8 @@ You are in charge of your data and customizations.
 
 <p align="center"><img src="https://github.com/AppFlowy-IO/appflowy/blob/main/doc/imgs/howtostar.gif" alt="AppFlowy Github" width="1000px" /></p>
 
-## Getting Started
-
-How to build on MacOS, please follow these simple steps.
-
-**Step 1:**
-
-```shell
-git clone https://github.com/AppFlowy-IO/appflowy.git
-```
-
-**Step 2:**
-
-```shell
-cd appflowy
-```
-```shell
-make install_rust
-```
-```shell
-source $HOME/.cargo/env
-```
-```shell
-make install_cargo_make
-```
-```shell
-cargo make install_targets
-```
-
->
->
-> 🚀 Skip install_rust or install_cargo_make if you already installed it. 
-> FYI, AppFlowy uses [https://github.com/sagiegurari/cargo-make](https://github.com/sagiegurari/cargo-make) to construct the build scripts
-
-**Step 3:**
-
-Follow the instructions [here](https://flutter.dev/docs/get-started/install) to install Flutter. As AppFlowy uses the `dev` channel, you need to switch the channel. Just type:
-
-```shell
-flutter channel dev
-```
-
-**Step 4:**
-
-* Open the `app_flowy` folder located at xx/appflowy/app_flowy with Visual Studio or other IDEs at your disposal.
-* Go to the Run and Debug tab and then click the run button.
-![Run the project](https://github.com/AppFlowy-IO/appflowy/blob/main/doc/imgs/run.png)
+## Getting Started with development
+Please view the [documentation](https://appflowy.gitbook.io/docs/essential-documentation/contribute-to-appflowy) for OS specific development instructions
 
 ## Roadmap
 
@@ -100,11 +63,11 @@ If you'd like to propose a feature, submit an issue [here](https://github.com/Ap
 
 ## **Releases**
 
-Please see the [changelog](https://www.appflowy.io/whatsnew) for more details about a given release.
+Please see the [changelog](https://www.appflowy.io/whatsnew) for more details about a given release.
 
 ## Contributing
 
-Contributions are what make the open source community such an amazing place to be learn, inspire, and create. Any contributions you make are **greatly appreciated**. Please look at [CONTRIBUTING.md](https://github.com/AppFlowy-IO/appflowy/blob/main/doc/CONTRIBUTING.md) for details.
+Contributions are what make the open source community such an amazing place to be learn, inspire, and create. Any contributions you make are **greatly appreciated**. Please look at [CONTRIBUTING.md](https://github.com/AppFlowy-IO/appflowy/blob/main/doc/CONTRIBUTING.md) for details.
 
 ## Why Are We Building This?
 
@@ -129,10 +92,11 @@ To be honest, we do not claim to outperform Notion in terms of functionality and
 
 ## License
 
-Distributed under the AGPLv3 License. See `LICENSE.md` for more information.
+Distributed under the AGPLv3 License. See `LICENSE.md` for more information.
 
 ## Acknowledgements
 
 Special thanks to these amazing projects which help power AppFlowy.IO:
 
 - [flutter-quill](https://github.com/singerdmx/flutter-quill)
+- [cargo-make](https://github.com/sagiegurari/cargo-make)

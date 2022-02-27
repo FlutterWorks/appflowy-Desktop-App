@@ -1,0 +1,30 @@
+
+[tasks.test_local]
+category = "Build"
+dependencies = ["rm_cache"]
+description = "Build desktop targets."
+script = '''
+cd rust-lib
+cargo test
+'''
+
+
+[tasks.test_remote]
+dependencies = ["rm_cache"]
+script = """
+cd rust-lib
+cargo test --features "flowy-folder/http_server","flowy-user/http_server"
+"""
+
+
+[tasks.run_server]
+script = """
+cd backend
+cargo run
+"""
+
+
+[tasks.rm_cache]
+script = """
+rm -rf rust-lib/flowy-test/temp
+"""

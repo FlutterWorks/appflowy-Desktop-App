@@ -1,144 +1,35 @@
-#https://github.com/sagiegurari/cargo-make
-
-extend = [
-    { path = "scripts/makefile/desktop.toml" },
-    { path = "scripts/makefile/protobuf.toml" },
-    { path = "scripts/makefile/tests.toml" },
-    { path = "scripts/makefile/docker.toml" },
-    { path = "scripts/makefile/env.toml" },
-    { path = "scripts/makefile/flutter.toml" },
-]
-
-[env]
-CARGO_MAKE_EXTEND_WORKSPACE_MAKEFILE = true
-CARGO_MAKE_CRATE_FS_NAME = "dart_ffi"
-CARGO_MAKE_CRATE_NAME = "dart-ffi"
-VERSION = "0.0.2"
-FEATURES = "flutter"
-PRODUCT_NAME = "AppFlowy"
-#CRATE_TYPE: https://doc.rust-lang.org/reference/linkage.html
-CRATE_TYPE = "staticlib"
-SDK_EXT = "a"
-
-[env.development-mac]
-TARGET_OS = "macos"
-RUST_COMPILE_TARGET = "x86_64-apple-darwin"
-BUILD_FLAG = "debug"
-FLUTTER_OUTPUT_DIR = "Debug"
-PRODUCT_EXT = "app"
-
-[env.production-desktop-mac-aarch64]
-BUILD_FLAG = "release"
-TARGET_OS = "macos"
-RUST_COMPILE_TARGET = "aarch64-apple-darwin"
-FLUTTER_OUTPUT_DIR = "Release"
-PRODUCT_EXT = "app"
-
-[env.production-desktop-mac-x86]
-BUILD_FLAG = "release"
-TARGET_OS = "macos"
-RUST_COMPILE_TARGET = "x86_64-apple-darwin"
-FLUTTER_OUTPUT_DIR = "Release"
-PRODUCT_EXT = "app"
-
-
-[env.development-windows]
-TARGET_OS = "windows"
-RUST_COMPILE_TARGET = "x86_64-pc-windows-msvc"
-BUILD_FLAG = "debug"
-FLUTTER_OUTPUT_DIR = "Debug"
-PRODUCT_EXT = "exe"
-CRATE_TYPE = "cdylib"
-SDK_EXT = "dll"
-
-[env.production-desktop-windows-x86]
-BUILD_FLAG = "release"
-TARGET_OS = "windows"
-RUST_COMPILE_TARGET = "x86_64-pc-windows-msvc"
-FLUTTER_OUTPUT_DIR = "Release"
-PRODUCT_EXT = "exe"
-CRATE_TYPE = "cdylib"
-SDK_EXT = "dll"
-
-[env.development-linux-x86]
-TARGET_OS = "linux"
-RUST_COMPILE_TARGET = "x86_64-unknown-linux-gnu"
-BUILD_FLAG = "debug"
-CRATE_TYPE = "cdylib"
-FLUTTER_OUTPUT_DIR = "Debug"
-SDK_EXT = "so"
-LINUX_ARCH = "x64"
-
-[env.production-linux-x86]
-BUILD_FLAG = "release"
-TARGET_OS = "linux"
-RUST_COMPILE_TARGET = "x86_64-unknown-linux-gnu"
-CRATE_TYPE = "cdylib"
-FLUTTER_OUTPUT_DIR = "Release"
-SDK_EXT = "so"
-LINUX_ARCH = "x64"
-
-[env.development-linux-aarch64]
-TARGET_OS = "linux"
-RUST_COMPILE_TARGET = "aarch64-unknown-linux-gnu"
-BUILD_FLAG = "debug"
-CRATE_TYPE = "cdylib"
-FLUTTER_OUTPUT_DIR = "Debug"
-SDK_EXT = "so"
-LINUX_ARCH = "arm64"
-
-[env.production-linux-aarch64]
-BUILD_FLAG = "release"
-TARGET_OS = "linux"
-RUST_COMPILE_TARGET = "aarch64-unknown-linux-gnu"
-CRATE_TYPE = "cdylib"
-FLUTTER_OUTPUT_DIR = "Release"
-SDK_EXT = "so"
-LINUX_ARCH = "arm64"
-
-[tasks.echo_env]
-script = [
-    '''
-    echo CRATE_TYPE: ${CRATE_TYPE}
-    echo BUILD_FLAG: ${BUILD_FLAG}
-    echo TARGET_OS: ${TARGET_OS}
-    echo RUST_COMPILE_TARGET: ${RUST_COMPILE_TARGET}
-    echo FEATURES: ${FEATURES}
-    echo PRODUCT_EXT: ${PRODUCT_EXT}
-    echo ${platforms}
-    '''
-]
-script_runner = "@duckscript"
-
-[env.production-ios]
-BUILD_FLAG = "release"
-TARGET_OS = "ios"
-CRATE_TYPE = "staticlib"
-BUILD_FLAG = "release"
-FLUTTER_OUTPUT_DIR = "Release"
-PRODUCT_EXT = "ipa"
-
-
-[tasks.setup-crate-type]
-private = true
+[tasks.install-commitlint.mac]
 script = [
     """
-      toml = readfile ${CARGO_MAKE_WORKSPACE_WORKING_DIRECTORY}/rust-lib/${CARGO_MAKE_CRATE_NAME}/Cargo.toml
-      val = replace ${toml} "staticlib" ${CRATE_TYPE}
-      result = writefile ${CARGO_MAKE_WORKSPACE_WORKING_DIRECTORY}/rust-lib/${CARGO_MAKE_CRATE_NAME}/Cargo.toml ${val}
-      assert ${result}
-      """,
+    brew install npm
+  	yarn install
+  	yarn husky install
+    """,
+]
+script_runner = "@shell"
+
+[tasks.install-commitlint.windows]
+script = [
+    """
+    echo "WIP"
+    """,
 ]
 script_runner = "@duckscript"
 
-[tasks.restore-crate-type]
-private = true
+[tasks.install-commitlint.linux]
 script = [
     """
-      toml = readfile ${CARGO_MAKE_WORKSPACE_WORKING_DIRECTORY}/rust-lib/${CARGO_MAKE_CRATE_NAME}/Cargo.toml
-      val = replace ${toml} ${CRATE_TYPE} "staticlib"
-      result = writefile ${CARGO_MAKE_WORKSPACE_WORKING_DIRECTORY}/rust-lib/${CARGO_MAKE_CRATE_NAME}/Cargo.toml ${val}
-      assert ${result}
-      """,
+    if command -v apt &> /dev/null
+    then
+      echo "Installing node.js and yarn (sudo apt install nodejs yarn)"
+      sudo apt install nodejs yarn
+    else
+    echo "Installing node.js and yarn (sudo pacman -S nodejs yarn)"
+      sudo pacman -S nodejs yarn
+    fi
+
+    yarn install
+    yarn husky install
+    """,
 ]
-script_runner = "@duckscript"
+script_runner = "@shell"

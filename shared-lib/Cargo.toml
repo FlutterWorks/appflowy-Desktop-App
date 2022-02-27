@@ -1,0 +1,15 @@
+[workspace]
+members = [
+  "flowy-user-data-model",
+  "flowy-folder-data-model",
+  "flowy-collaboration",
+  "lib-ot",
+  "lib-ws",
+  "lib-infra",
+  "flowy-derive",
+  "flowy-ast",
+  "flowy-error-code",
+]
+
+[profile.dev]
+split-debuginfo = "unpacked"

@@ -1,0 +1,20 @@
+[workspace]
+members = [
+  "lib-dispatch",
+  "lib-log",
+  "lib-sqlite",
+  "flowy-net",
+  "flowy-sdk",
+  "dart-ffi",
+  "flowy-user",
+  "flowy-test",
+  "flowy-database",
+  "flowy-folder",
+  "dart-notify",
+  "flowy-document",
+  "flowy-error",
+  "flowy-sync",
+]
+
+[profile.dev]
+split-debuginfo = "unpacked"

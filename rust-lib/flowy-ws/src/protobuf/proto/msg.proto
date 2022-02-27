@@ -1,9 +1,0 @@
-syntax = "proto3";
-
-message WsMessage {
-    WsModule module = 1;
-    bytes data = 2;
-}
-enum WsModule {
-    Doc = 0;
-}
