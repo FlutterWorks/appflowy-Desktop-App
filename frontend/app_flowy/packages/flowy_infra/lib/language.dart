@@ -9,25 +9,41 @@ String languageFromLocale(Locale locale) {
       return "简体中文";
 
     // Then in alphabetical order
+    case "ca":
+      return "Català";
     case "de":
       return "Deutsch";
     case "es":
       return "Español";
     case "fr":
-      switch(locale.countryCode) {
-        case "CA" : 
+      switch (locale.countryCode) {
+        case "CA":
           return "Français (CA)";
-        case "FR" :
+        case "FR":
           return "Français (FR)";
-        default : 
+        default:
           return locale.languageCode;
       }
+    case "hu":
+      return "Magyar";
+    case "id":
+      return "Bahasa";
     case "it":
       return "Italiano";
+    case "ja":
+      return "日本語";
+    case "ko":
+      return "한국어";
+    case "pl":
+      return "Polski";
     case "pt":
       return "Português";
     case "ru":
       return "русский";
+    case "sv":
+      return "Svenska";
+    case "tr":
+      return "Türkçe";
 
     // If not found then the language code will be displayed
     default:

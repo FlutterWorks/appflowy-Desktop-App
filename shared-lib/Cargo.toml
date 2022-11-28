@@ -1,14 +1,15 @@
 [workspace]
 members = [
-  "flowy-user-data-model",
-  "flowy-folder-data-model",
-  "flowy-collaboration",
+  "folder-rev-model",
+  "flowy-sync",
+  "flowy-http-model",
   "lib-ot",
   "lib-ws",
   "lib-infra",
   "flowy-derive",
   "flowy-ast",
   "flowy-error-code",
+  "grid-rev-model",
 ]
 
 [profile.dev]

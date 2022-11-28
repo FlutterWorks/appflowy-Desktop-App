@@ -7,7 +7,7 @@
   "letsGoButtonText": "Vamos",
   "title": "Título",
   "signUp": {
-    "buttonText": "Registar",
+    "buttonText": "Registrar",
     "title": "Registrar en @:appName",
     "getStartedText": "Empezar",
     "emptyPasswordError": "La contraseña no puede estar en blanco",
@@ -16,7 +16,7 @@
     "alreadyHaveAnAccount": "¿Posee credenciales?",
     "emailHint": "Correo",
     "passwordHint": "Contraseña",
-    "repeatPasswordHint": "Repite la contraseña"
+    "repeatPasswordHint": "Repetir contraseña"
   },
   "signIn": {
     "loginTitle": "Ingresa a @:appName",
@@ -58,7 +58,7 @@
     }
   },
   "deletePagePrompt": {
-    "text": "Esta paágina esta en la Papelera",
+    "text": "Esta página está en la Papelera",
     "restore": "Recuperar página",
     "deletePermanent": "Eliminar permanentemente"
   },
@@ -69,7 +69,7 @@
     "debug": {
       "name": "Información de depuración",
       "success": "¡Información copiada!",
-      "fail": "No fué posible copiar la información"
+      "fail": "No fue posible copiar la información"
     }
   },
   "menuAppHeader": {
@@ -96,6 +96,12 @@
     "lightMode": "Cambiar a modo Claro",
     "darkMode": "Cambiar a modo Oscuro"
   },
+  "notifications": {
+    "export": {
+      "markdown": "Nota exportada a Markdown",
+      "path": "Documentos/flowy"
+    }
+  },
   "contactsPage": {
     "title": "Contactos",
     "whatsHappening": "¿Qué está pasando esta semana?",
@@ -120,13 +126,13 @@
   "oAuth": {
     "err": {
       "failedTitle": "Imposible conectarse con sus credenciales.",
-      "failedMsg": "Por favor asegurese haber completado el proceso de ingreso en su buscador."
+      "failedMsg": "Por favor asegurese haber completado el proceso de ingreso en su navegador."
     },
     "google": {
       "title": "Ingresar con Google",
-      "instruction1": "Para importar sus contactos de Google, debe autorizar esta aplicación usando su buscador web.",
+      "instruction1": "Para importar sus contactos de Google, debe autorizar esta aplicación usando su navegador web.",
       "instruction2": "Copie este código al presionar el icono o al seleccionar el texto:",
-      "instruction3": "Navege al siguiente enlace en su buscador web, e ingrese el código anterior:",
+      "instruction3": "Navege al siguiente enlace en su navegador web, e ingrese el código anterior:",
       "instruction4": "Presione el botón de abajo cuando haya completado su registro:"
     }
   },
@@ -140,6 +146,81 @@
     "appearance": {
       "lightLabel": "Modo Claro",
       "darkLabel": "Modo Oscuro"
+    }
+  },
+  "grid": {
+    "settings": {
+      "filter": "Filtrar",
+      "sortBy": "Ordenar por",
+      "Properties": "Propiedades"
+    },
+    "field": {
+      "hide": "Ocultar",
+      "insertLeft": "Insertar a la Izquierda",
+      "insertRight": "Insertar a la Derecha",
+      "duplicate": "Duplicar",
+      "delete": "Eliminar",
+      "textFieldName": "Texto",
+      "checkboxFieldName": "Casilla de verificación",
+      "dateFieldName": "Fecha",
+      "numberFieldName": "Números",
+      "singleSelectFieldName": "Seleccionar",
+      "multiSelectFieldName": "Selección múltiple",
+      "urlFieldName": "URL",
+      "numberFormat": "Formato numérico",
+      "dateFormat": "Formato de fecha",
+      "includeTime": "Incluir tiempo",
+      "dateFormatFriendly": "Mes Día, Año",
+      "dateFormatISO": "Año-Mes-Día",
+      "dateFormatLocal": "Mes/Día/Año",
+      "dateFormatUS": "Año/Mes/Día",
+      "timeFormat": "Formato de tiempo",
+      "invalidTimeFormat": "Formato de tiempo inválido",
+      "timeFormatTwelveHour": "12 horas",
+      "timeFormatTwentyFourHour": "24 horas",
+      "addSelectOption": "Añadir una opción",
+      "optionTitle": "Opciones",
+      "addOption": "Añadir opción",
+      "editProperty": "Editar propiedad"
+    },
+    "row": {
+      "duplicate": "Duplicar",
+      "delete": "Eliminar",
+      "textPlaceholder": "Vacío",
+      "copyProperty": "Propiedad copiada al portapapeles"
+    },
+    "selectOption": {
+      "create": "Crear",
+      "purpleColor": "Morado",
+      "pinkColor": "Rosa",
+      "lightPinkColor": "Rosa Claro",
+      "orangeColor": "Naranja",
+      "yellowColor": "Amarillo",
+      "limeColor": "Lima",
+      "greenColor": "Verde",
+      "aquaColor": "Agua",
+      "blueColor": "Azul",
+      "deleteTag": "Borrar etiqueta",
+      "colorPanelTitle": "Colores",
+      "panelTitle": "Selecciona una opción o crea una",
+      "searchOption": "Buscar una opción"
+    },
+    "menuName": "Cuadrícula"
+  },
+  "document": {
+    "menuName": "Documento",
+    "date": {
+      "timeHintTextInTwelveHour": "01:00 PM",
+      "timeHintTextInTwentyFourHour": "13:00"
+    }
+  },
+  "sideBar": {
+    "openSidebar": "Abrir panel lateral",
+    "closeSidebar": "Cerrar panel lateral"
+  },
+    "board": {
+    "column": {
+      "create_new_card": "Nuevo"
     }
   }
 }

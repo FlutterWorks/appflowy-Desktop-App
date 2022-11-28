@@ -1,73 +1,139 @@
-import 'package:app_flowy/user/infrastructure/repos/user_setting_repo.dart';
-import 'package:equatable/equatable.dart';
+import 'dart:async';
+
+import 'package:app_flowy/user/application/user_settings_service.dart';
 import 'package:flowy_infra/theme.dart';
 import 'package:flowy_sdk/log.dart';
-import 'package:flowy_sdk/protobuf/flowy-user-data-model/user_setting.pb.dart';
+import 'package:flowy_sdk/protobuf/flowy-user/user_setting.pb.dart';
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
-import 'package:async/async.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:freezed_annotation/freezed_annotation.dart';
 
-class AppearanceSettingModel extends ChangeNotifier with EquatableMixin {
-  AppearanceSettings setting;
-  AppTheme _theme;
-  Locale _locale;
-  CancelableOperation? _saveOperation;
+part 'appearance.freezed.dart';
 
-  AppearanceSettingModel(this.setting)
-      : _theme = AppTheme.fromName(name: setting.theme),
-        _locale = Locale(setting.locale.languageCode, setting.locale.countryCode);
+/// [AppearanceSettingsCubit] is used to modify the appear setting of AppFlowy application. Includes the [Locale] and [AppTheme].
+class AppearanceSettingsCubit extends Cubit<AppearanceSettingsState> {
+  final AppearanceSettingsPB _setting;
 
-  AppTheme get theme => _theme;
-  Locale get locale => _locale;
+  AppearanceSettingsCubit(AppearanceSettingsPB setting)
+      : _setting = setting,
+        super(AppearanceSettingsState.initial(
+          setting.theme,
+          setting.font,
+          setting.monospaceFont,
+          setting.locale,
+        ));
 
-  Future<void> save() async {
-    _saveOperation?.cancel;
-    _saveOperation = CancelableOperation.fromFuture(
-      Future.delayed(const Duration(seconds: 1), () async {
-        await UserSettingReppsitory().setAppearanceSettings(setting);
-      }),
-    );
-  }
-
-  @override
-  List<Object> get props {
-    return [setting.hashCode];
-  }
-
-  void swapTheme() {
-    final themeType = (_theme.ty == ThemeType.light ? ThemeType.dark : ThemeType.light);
-
-    if (_theme.ty != themeType) {
-      _theme = AppTheme.fromType(themeType);
-      setting.theme = themeTypeToString(themeType);
-      notifyListeners();
-      save();
+  /// Updates the current theme and notify the listeners the theme was changed.
+  /// Do nothing if the passed in themeType equal to the current theme type.
+  void setTheme(Brightness brightness) {
+    if (state.theme.brightness == brightness) {
+      return;
     }
+
+    _setting.theme = themeTypeToString(brightness);
+    _saveAppearanceSettings();
+
+    emit(state.copyWith(
+      theme: AppTheme.fromName(
+        themeName: _setting.theme,
+        font: state.theme.font,
+        monospaceFont: state.theme.monospaceFont,
+      ),
+    ));
   }
 
+  /// Updates the current locale and notify the listeners the locale was changed
+  /// Fallback to [en] locale If the newLocale is not supported.
   void setLocale(BuildContext context, Locale newLocale) {
-    if (_locale != newLocale) {
-      if (!context.supportedLocales.contains(newLocale)) {
-        Log.error("Unsupported locale: $newLocale");
-        newLocale = const Locale('en');
-        Log.debug("Fallback to locale: $newLocale");
+    if (!context.supportedLocales.contains(newLocale)) {
+      Log.warn("Unsupported locale: $newLocale, Fallback to locale: en");
+      newLocale = const Locale('en');
+    }
+
+    context.setLocale(newLocale);
+
+    if (state.locale != newLocale) {
+      _setting.locale.languageCode = newLocale.languageCode;
+      _setting.locale.countryCode = newLocale.countryCode ?? "";
+      _saveAppearanceSettings();
+
+      emit(state.copyWith(locale: newLocale));
+    }
+  }
+
+  /// Saves key/value setting to disk.
+  /// Removes the key if the passed in value is null
+  void setKeyValue(String key, String? value) {
+    if (key.isEmpty) {
+      Log.warn("The key should not be empty");
+      return;
+    }
+
+    if (value == null) {
+      _setting.settingKeyValue.remove(key);
+    }
+
+    if (_setting.settingKeyValue[key] != value) {
+      if (value == null) {
+        _setting.settingKeyValue.remove(key);
+      } else {
+        _setting.settingKeyValue[key] = value;
       }
-
-      context.setLocale(newLocale);
-      _locale = newLocale;
-      setting.locale.languageCode = _locale.languageCode;
-      setting.locale.countryCode = _locale.countryCode ?? "";
-      notifyListeners();
-      save();
     }
+    _saveAppearanceSettings();
   }
 
+  String? getValue(String key) {
+    if (key.isEmpty) {
+      Log.warn("The key should not be empty");
+      return null;
+    }
+    return _setting.settingKeyValue[key];
+  }
+
+  /// Called when the application launch.
+  /// Uses the device locale when open the application for the first time
   void readLocaleWhenAppLaunch(BuildContext context) {
-    if (setting.resetAsDefault) {
-      setting.resetAsDefault = false;
-      save();
-
+    if (_setting.resetToDefault) {
+      _setting.resetToDefault = false;
+      _saveAppearanceSettings();
       setLocale(context, context.deviceLocale);
+      return;
     }
+
+    setLocale(context, state.locale);
   }
+
+  Future<void> _saveAppearanceSettings() async {
+    SettingsFFIService().setAppearanceSetting(_setting).then((result) {
+      result.fold(
+        (l) => null,
+        (error) => Log.error(error),
+      );
+    });
+  }
+}
+
+@freezed
+class AppearanceSettingsState with _$AppearanceSettingsState {
+  const factory AppearanceSettingsState({
+    required AppTheme theme,
+    required Locale locale,
+  }) = _AppearanceSettingsState;
+
+  factory AppearanceSettingsState.initial(
+    String themeName,
+    String font,
+    String monospaceFont,
+    LocaleSettingsPB locale,
+  ) =>
+      AppearanceSettingsState(
+        theme: AppTheme.fromName(
+          themeName: themeName,
+          font: font,
+          monospaceFont: monospaceFont,
+        ),
+        locale: Locale(locale.languageCode, locale.countryCode),
+      );
 }

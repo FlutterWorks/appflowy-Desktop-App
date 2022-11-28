@@ -1,8 +1,5 @@
 import 'package:flowy_infra/size.dart';
-import 'package:flowy_infra/text_style.dart';
-import 'package:flowy_infra/theme.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 
 class BaseStyledButton extends StatefulWidget {
   final Widget child;
@@ -45,10 +42,10 @@ class BaseStyledButton extends StatefulWidget {
   }) : super(key: key);
 
   @override
-  _BaseStyledBtnState createState() => _BaseStyledBtnState();
+  State<BaseStyledButton> createState() => BaseStyledBtnState();
 }
 
-class _BaseStyledBtnState extends State<BaseStyledButton> {
+class BaseStyledBtnState extends State<BaseStyledButton> {
   late FocusNode _focusNode;
   bool _isFocused = false;
 
@@ -72,16 +69,25 @@ class _BaseStyledBtnState extends State<BaseStyledButton> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = context.watch<AppTheme>();
     return Container(
       decoration: BoxDecoration(
-        color: widget.bgColor ?? theme.surface,
+        color: widget.bgColor ?? Theme.of(context).colorScheme.surface,
         borderRadius: widget.borderRadius ?? Corners.s10Border,
         boxShadow: _isFocused
             ? [
-                BoxShadow(color: theme.shader6, offset: Offset.zero, blurRadius: 8.0, spreadRadius: 0.0),
                 BoxShadow(
-                    color: widget.bgColor ?? theme.surface, offset: Offset.zero, blurRadius: 8.0, spreadRadius: -4.0),
+                  color: Theme.of(context).colorScheme.shadow,
+                  offset: Offset.zero,
+                  blurRadius: 8.0,
+                  spreadRadius: 0.0,
+                ),
+                BoxShadow(
+                  color:
+                      widget.bgColor ?? Theme.of(context).colorScheme.surface,
+                  offset: Offset.zero,
+                  blurRadius: 8.0,
+                  spreadRadius: -4.0,
+                ),
               ]
             : [],
       ),
@@ -90,7 +96,7 @@ class _BaseStyledBtnState extends State<BaseStyledButton> {
               shape: RoundedRectangleBorder(
                 side: BorderSide(
                   width: 1.8,
-                  color: theme.shader6,
+                  color: Theme.of(context).colorScheme.outline,
                 ),
                 borderRadius: widget.borderRadius ?? Corners.s10Border,
               ),
@@ -99,7 +105,8 @@ class _BaseStyledBtnState extends State<BaseStyledButton> {
       child: RawMaterialButton(
         focusNode: _focusNode,
         autofocus: widget.autoFocus,
-        textStyle: widget.useBtnText ? TextStyles.Btn : null,
+        textStyle:
+            widget.useBtnText ? Theme.of(context).textTheme.bodyMedium : null,
         materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
         // visualDensity: VisualDensity.compact,
         splashColor: Colors.transparent,
@@ -109,23 +116,26 @@ class _BaseStyledBtnState extends State<BaseStyledButton> {
         highlightElevation: 0,
         focusElevation: 0,
         fillColor: Colors.transparent,
-        hoverColor: widget.hoverColor ?? theme.hover,
-        highlightColor: widget.downColor ?? theme.main1,
+        hoverColor:
+            widget.hoverColor ?? Theme.of(context).colorScheme.secondary,
+        highlightColor:
+            widget.downColor ?? Theme.of(context).colorScheme.primary,
         focusColor: widget.focusColor ?? Colors.grey.withOpacity(0.35),
-        child: Opacity(
-          child: Padding(
-            padding: widget.contentPadding ?? EdgeInsets.all(Insets.m),
-            child: widget.child,
-          ),
-          opacity: widget.onPressed != null ? 1 : .7,
-        ),
-        constraints: BoxConstraints(minHeight: widget.minHeight ?? 0, minWidth: widget.minWidth ?? 0),
+        constraints: BoxConstraints(
+            minHeight: widget.minHeight ?? 0, minWidth: widget.minWidth ?? 0),
         onPressed: widget.onPressed,
         shape: widget.shape ??
             RoundedRectangleBorder(
               side: BorderSide(color: widget.outlineColor, width: 1.5),
               borderRadius: widget.borderRadius ?? Corners.s10Border,
             ),
+        child: Opacity(
+          opacity: widget.onPressed != null ? 1 : .7,
+          child: Padding(
+            padding: widget.contentPadding ?? EdgeInsets.all(Insets.m),
+            child: widget.child,
+          ),
+        ),
       ),
     );
   }

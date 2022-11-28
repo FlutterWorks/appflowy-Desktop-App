@@ -26,14 +26,15 @@ RUN flutter channel stable
 RUN flutter config --enable-linux-desktop
 RUN flutter doctor
 RUN dart pub global activate protoc_plugin
+RUN sudo pacman -Syu --needed --noconfirm git xdg-user-dirs libkeybinder3
 
 RUN git clone https://github.com/AppFlowy-IO/appflowy.git && \
 cd appflowy/frontend && \
 source $HOME/.cargo/env && \
 cargo install --force cargo-make && \
 cargo install --force duckscript_cli && \
-cargo make flowy_dev && \
-cargo make -p production-linux-x86 appflowy-linux
+cargo make appflowy-deps-tools && \
+cargo make -p production-linux-x86_64 appflowy-linux
 
 CMD ["/home/makepkg/appflowy/frontend/app_flowy/build/linux/x64/release/bundle/app_flowy"]
 
@@ -46,7 +47,7 @@ RUN pacman -Syy && \
 RUN xdg-user-dirs-update
 
 COPY --from=builder /usr/sbin/yay /usr/sbin/yay
-RUN yay -S --noconfirm gtk3
+RUN yay -S --noconfirm gtk3 libkeybinder3
 
 ARG user=appflowy
 ARG uid=1000

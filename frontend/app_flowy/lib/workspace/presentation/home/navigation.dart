@@ -1,24 +1,32 @@
-import 'package:app_flowy/workspace/domain/page_stack/page_stack.dart';
+import 'dart:io';
+
+import 'package:app_flowy/generated/locale_keys.g.dart';
+import 'package:app_flowy/workspace/application/home/home_setting_bloc.dart';
+import 'package:app_flowy/workspace/presentation/home/home_stack.dart';
+import 'package:flowy_infra/color_extension.dart';
 import 'package:flowy_infra/image.dart';
 import 'package:flowy_infra/notifier.dart';
-import 'package:flowy_infra/theme.dart';
+import 'package:flowy_infra/size.dart';
 import 'package:flowy_infra_ui/style_widget/icon_button.dart';
 import 'package:flowy_infra_ui/style_widget/text.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:styled_widget/styled_widget.dart';
+import 'package:easy_localization/easy_localization.dart';
+import 'package:textstyle_extensions/textstyle_extensions.dart';
 
 typedef NaviAction = void Function();
 
 class NavigationNotifier with ChangeNotifier {
   List<NavigationItem> navigationItems;
   PublishNotifier<bool> collapasedNotifier;
-  NavigationNotifier({required this.navigationItems, required this.collapasedNotifier});
+  NavigationNotifier(
+      {required this.navigationItems, required this.collapasedNotifier});
 
   void update(HomeStackNotifier notifier) {
     bool shouldNotify = false;
-    if (navigationItems != notifier.context.navigationItems) {
-      navigationItems = notifier.context.navigationItems;
+    if (navigationItems != notifier.plugin.display.navigationItems) {
+      navigationItems = notifier.plugin.display.navigationItems;
       shouldNotify = true;
     }
 
@@ -28,38 +36,16 @@ class NavigationNotifier with ChangeNotifier {
   }
 }
 
-// [[diagram: HomeStack navigation flow]]
-//                                                                              ┌───────────────────────┐
-//                     2.notify listeners                                ┌──────│DefaultHomeStackContext│
-//  ┌────────────────┐           ┌───────────┐   ┌────────────────┐      │      └───────────────────────┘
-//  │HomeStackNotifie│◀──────────│ HomeStack │◀──│HomeStackContext│◀─ impl
-//  └────────────────┘           └───────────┘   └────────────────┘      │       ┌───────────────────┐
-//           │                         ▲                                 └───────│  DocStackContext  │
-//           │                         │                                         └───────────────────┘
-//    3.notify change            1.set context
-//           │                         │
-//           ▼                         │
-// ┌───────────────────┐     ┌──────────────────┐
-// │NavigationNotifier │     │ ViewSectionItem  │
-// └───────────────────┘     └──────────────────┘
-//           │
-//           │
-//           ▼
-//  ┌─────────────────┐
-//  │ FlowyNavigation │   4.render navigation items
-//  └─────────────────┘
 class FlowyNavigation extends StatelessWidget {
   const FlowyNavigation({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    final theme = context.watch<AppTheme>();
-
     return ChangeNotifierProxyProvider<HomeStackNotifier, NavigationNotifier>(
       create: (_) {
         final notifier = Provider.of<HomeStackNotifier>(context, listen: false);
         return NavigationNotifier(
-          navigationItems: notifier.context.navigationItems,
+          navigationItems: notifier.plugin.display.navigationItems,
           collapasedNotifier: notifier.collapsedNotifier,
         );
       },
@@ -68,7 +54,8 @@ class FlowyNavigation extends StatelessWidget {
         child: Row(children: [
           Selector<NavigationNotifier, PublishNotifier<bool>>(
               selector: (context, notifier) => notifier.collapasedNotifier,
-              builder: (ctx, collapsedNotifier, child) => _renderCollapse(ctx, collapsedNotifier, theme)),
+              builder: (ctx, collapsedNotifier, child) =>
+                  _renderCollapse(ctx, collapsedNotifier)),
           Selector<NavigationNotifier, List<NavigationItem>>(
             selector: (context, notifier) => notifier.navigationItems,
             builder: (ctx, items, child) => Expanded(
@@ -83,7 +70,8 @@ class FlowyNavigation extends StatelessWidget {
     );
   }
 
-  Widget _renderCollapse(BuildContext context, PublishNotifier<bool> collapsedNotifier, AppTheme theme) {
+  Widget _renderCollapse(
+      BuildContext context, PublishNotifier<bool> collapsedNotifier) {
     return ChangeNotifierProvider.value(
       value: collapsedNotifier,
       child: Consumer(
@@ -91,14 +79,26 @@ class FlowyNavigation extends StatelessWidget {
           if (notifier.currentValue ?? false) {
             return RotationTransition(
               turns: const AlwaysStoppedAnimation(180 / 360),
-              child: FlowyIconButton(
-                width: 24,
-                onPressed: () {
-                  notifier.value = false;
-                },
-                iconPadding: const EdgeInsets.fromLTRB(2, 2, 2, 2),
-                icon: svg("home/hide_menu", color: theme.iconColor),
-              ),
+              child: Tooltip(
+                  richMessage: sidebarTooltipTextSpan(
+                    context,
+                    LocaleKeys.sideBar_openSidebar.tr(),
+                  ),
+                  child: FlowyIconButton(
+                    width: 24,
+                    hoverColor: Colors.transparent,
+                    onPressed: () {
+                      notifier.value = false;
+                      ctx
+                          .read<HomeSettingBloc>()
+                          .add(const HomeSettingEvent.collapseMenu());
+                    },
+                    iconPadding: const EdgeInsets.fromLTRB(2, 2, 2, 2),
+                    icon: svgWidget(
+                      "home/hide_menu",
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                  )),
             );
           } else {
             return Container();
@@ -152,7 +152,8 @@ class NaviItemWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Expanded(child: item.leftBarItem.padding(horizontal: 2, vertical: 2));
+    return Expanded(
+        child: item.leftBarItem.padding(horizontal: 2, vertical: 2));
   }
 }
 
@@ -175,11 +176,25 @@ class EllipsisNaviItem extends NavigationItem {
   });
 
   @override
-  Widget get leftBarItem => const FlowyText.medium('...');
+  Widget get leftBarItem => FlowyText.medium(
+        '...',
+        fontSize: FontSizes.s16,
+      );
 
   @override
   NavigationCallback get action => (id) {};
-
-  @override
-  String get identifier => "Ellipsis";
 }
+
+TextSpan sidebarTooltipTextSpan(BuildContext context, String hintText) =>
+    TextSpan(
+      children: [
+        TextSpan(
+          text: "$hintText\n",
+          style: AFThemeExtension.of(context).callout.textColor(Colors.white),
+        ),
+        TextSpan(
+          text: Platform.isMacOS ? "⌘+\\" : "Ctrl+\\",
+          style: AFThemeExtension.of(context).caption.textColor(Colors.white60),
+        ),
+      ],
+    );

@@ -1,14 +1,14 @@
 import 'package:app_flowy/startup/startup.dart';
-import 'package:app_flowy/user/infrastructure/repos/user_setting_repo.dart';
+import 'package:app_flowy/user/application/user_settings_service.dart';
 import 'package:app_flowy/workspace/application/appearance.dart';
+import 'package:appflowy_editor/appflowy_editor.dart' hide Log;
 import 'package:easy_localization/easy_localization.dart';
-import 'package:flowy_infra/theme.dart';
 import 'package:flowy_infra_ui/flowy_infra_ui.dart';
-import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:window_size/window_size.dart';
-import 'package:bloc/bloc.dart';
 import 'package:flowy_sdk/log.dart';
+import 'package:flowy_sdk/protobuf/flowy-user/protobuf.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:window_size/window_size.dart';
 
 class InitAppWidgetTask extends LaunchTask {
   @override
@@ -17,36 +17,40 @@ class InitAppWidgetTask extends LaunchTask {
   @override
   Future<void> initialize(LaunchContext context) async {
     final widget = context.getIt<EntryPoint>().create();
-    final setting = await UserSettingReppsitory().getAppearanceSettings();
-    final settingModel = AppearanceSettingModel(setting);
+    final appearanceSetting = await SettingsFFIService().getAppearanceSetting();
     final app = ApplicationWidget(
+      appearanceSetting: appearanceSetting,
       child: widget,
-      settingModel: settingModel,
     );
-    BlocOverrides.runZoned(
-      () {
-        runApp(
-          EasyLocalization(
-            supportedLocales: const [
-              // In alphabetical order
-              Locale('de', 'DE'),
-              Locale('en'),
-              Locale('es', 'VE'),
-              Locale('fr', 'FR'),
-              Locale('fr', 'CA'),
-              Locale('it', 'IT'),
-              Locale('pt', 'BR'),
-              Locale('ru', 'RU'),
-              Locale('zh', 'CN'),
-            ],
-            path: 'assets/translations',
-            fallbackLocale: const Locale('en'),
-            saveLocale: false,
-            child: app,
-          ),
-        );
-      },
-      blocObserver: ApplicationBlocObserver(),
+    Bloc.observer = ApplicationBlocObserver();
+    runApp(
+      EasyLocalization(
+        supportedLocales: const [
+          // In alphabetical order
+          Locale('ca', 'ES'),
+          Locale('de', 'DE'),
+          Locale('en'),
+          Locale('es', 'VE'),
+          Locale('fr', 'FR'),
+          Locale('fr', 'CA'),
+          Locale('hu', 'HU'),
+          Locale('id', 'ID'),
+          Locale('it', 'IT'),
+          Locale('ja', 'JP'),
+          Locale('ko', 'KR'),
+          Locale('pl', 'PL'),
+          Locale('pt', 'BR'),
+          Locale('ru', 'RU'),
+          Locale('sv'),
+          Locale('tr', 'TR'),
+          Locale('zh', 'CN'),
+        ],
+        path: 'assets/translations',
+        fallbackLocale: const Locale('en'),
+        useFallbackTranslations: true,
+        saveLocale: false,
+        child: app,
+      ),
     );
 
     return Future(() => {});
@@ -55,49 +59,40 @@ class InitAppWidgetTask extends LaunchTask {
 
 class ApplicationWidget extends StatelessWidget {
   final Widget child;
-  final AppearanceSettingModel settingModel;
+  final AppearanceSettingsPB appearanceSetting;
 
   const ApplicationWidget({
     Key? key,
     required this.child,
-    required this.settingModel,
+    required this.appearanceSetting,
   }) : super(key: key);
 
   @override
-  Widget build(BuildContext context) => ChangeNotifierProvider.value(
-        value: settingModel,
-        builder: (context, _) {
-          const ratio = 1.73;
-          const minWidth = 600.0;
-          setWindowMinSize(const Size(minWidth, minWidth / ratio));
-          settingModel.readLocaleWhenAppLaunch(context);
-          AppTheme theme = context.select<AppearanceSettingModel, AppTheme>(
-            (value) => value.theme,
-          );
-          Locale locale = context.select<AppearanceSettingModel, Locale>(
-            (value) => value.locale,
-          );
+  Widget build(BuildContext context) {
+    const ratio = 1.73;
+    const minWidth = 600.0;
+    setWindowMinSize(const Size(minWidth, minWidth / ratio));
 
-          return MultiProvider(
-            providers: [
-              Provider.value(value: theme),
-              Provider.value(value: locale),
-            ],
-            builder: (context, _) {
-              return MaterialApp(
-                builder: overlayManagerBuilder(),
-                debugShowCheckedModeBanner: false,
-                theme: theme.themeData,
-                localizationsDelegates: context.localizationDelegates,
-                supportedLocales: context.supportedLocales,
-                locale: locale,
-                navigatorKey: AppGlobals.rootNavKey,
-                home: child,
-              );
-            },
-          );
-        },
-      );
+    final cubit = AppearanceSettingsCubit(appearanceSetting)
+      ..readLocaleWhenAppLaunch(context);
+
+    return BlocProvider(
+      create: (context) => cubit,
+      child: BlocBuilder<AppearanceSettingsCubit, AppearanceSettingsState>(
+        builder: (context, state) => MaterialApp(
+          builder: overlayManagerBuilder(),
+          debugShowCheckedModeBanner: false,
+          theme: state.theme.themeData,
+          localizationsDelegates: context.localizationDelegates +
+              [AppFlowyEditorLocalizations.delegate],
+          supportedLocales: context.supportedLocales,
+          locale: state.locale,
+          navigatorKey: AppGlobals.rootNavKey,
+          home: child,
+        ),
+      ),
+    );
+  }
 }
 
 class AppGlobals {
@@ -110,7 +105,7 @@ class ApplicationBlocObserver extends BlocObserver {
   // ignore: unnecessary_overrides
   void onTransition(Bloc bloc, Transition transition) {
     // Log.debug("[current]: ${transition.currentState} \n\n[next]: ${transition.nextState}");
-    //Log.debug("${transition.nextState}");
+    // Log.debug("${transition.nextState}");
     super.onTransition(bloc, transition);
   }
 
@@ -120,9 +115,9 @@ class ApplicationBlocObserver extends BlocObserver {
     super.onError(bloc, error, stackTrace);
   }
 
-  @override
-  void onEvent(Bloc bloc, Object? event) {
-    Log.debug("$event");
-    super.onEvent(bloc, event);
-  }
+  // @override
+  // void onEvent(Bloc bloc, Object? event) {
+  //   Log.debug("$event");
+  //   super.onEvent(bloc, event);
+  // }
 }

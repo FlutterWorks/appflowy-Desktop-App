@@ -1,7 +1,7 @@
 use crate::{
     entities::{
-        trash::{Trash, TrashType},
-        view::{RepeatedView, UpdateViewParams, View, ViewType},
+        trash::{TrashPB, TrashType},
+        view::UpdateViewParams,
     },
     errors::FlowyError,
     services::persistence::version_1::app_sql::AppTable,
@@ -12,12 +12,14 @@ use flowy_database::{
     schema::{view_table, view_table::dsl},
     SqliteConnection,
 };
-use lib_infra::timestamp;
+
+use folder_rev_model::{ViewDataFormatRevision, ViewLayoutTypeRevision, ViewRevision};
+use lib_infra::util::timestamp;
 
 pub struct ViewTableSql();
 impl ViewTableSql {
-    pub(crate) fn create_view(view: View, conn: &SqliteConnection) -> Result<(), FlowyError> {
-        let view_table = ViewTable::new(view);
+    pub(crate) fn create_view(view_rev: ViewRevision, conn: &SqliteConnection) -> Result<(), FlowyError> {
+        let view_table = ViewTable::new(view_rev);
         match diesel_record_count!(view_table, &view_table.id, conn) {
             0 => diesel_insert_table!(view_table, &view_table, conn),
             _ => {
@@ -65,49 +67,6 @@ impl ViewTableSql {
     }
 }
 
-// pub(crate) fn read_views(
-//     belong_to_id: &str,
-//     is_trash: Option<bool>,
-//     conn: &SqliteConnection,
-// ) -> Result<RepeatedView, FlowyError> {
-//     let views = dsl::view_table
-//         .inner_join(trash_table::dsl::trash_table.on(trash_id.ne(view_table::
-// id)))         .filter(view_table::belong_to_id.eq(belong_to_id))
-//         .select((
-//             view_table::id,
-//             view_table::belong_to_id,
-//             view_table::name,
-//             view_table::desc,
-//             view_table::modified_time,
-//             view_table::create_time,
-//             view_table::thumbnail,
-//             view_table::view_type,
-//             view_table::version,
-//         ))
-//         .load(conn)?
-//         .into_iter()
-//         .map(
-//             |(id, belong_to_id, name, desc, create_time, modified_time,
-// thumbnail, view_type, version)| {                 ViewTable {
-//                     id,
-//                     belong_to_id,
-//                     name,
-//                     desc,
-//                     modified_time,
-//                     create_time,
-//                     thumbnail,
-//                     view_type,
-//                     version,
-//                     is_trash: false,
-//                 }
-//                 .into()
-//             },
-//         )
-//         .collect::<Vec<View>>();
-//
-//     Ok(RepeatedView { items: views })
-// }
-
 #[derive(PartialEq, Clone, Debug, Queryable, Identifiable, Insertable, Associations)]
 #[belongs_to(AppTable, foreign_key = "belong_to_id")]
 #[table_name = "view_table"]
@@ -119,57 +78,66 @@ pub(crate) struct ViewTable {
     pub modified_time: i64,
     pub create_time: i64,
     pub thumbnail: String,
-    pub view_type: ViewTableType,
+    pub view_type: SqlViewDataFormat,
     pub version: i64,
     pub is_trash: bool,
+    pub ext_data: String,
 }
 
 impl ViewTable {
-    pub fn new(view: View) -> Self {
-        let view_type = match view.view_type {
-            ViewType::Blank => ViewTableType::Docs,
-            ViewType::Doc => ViewTableType::Docs,
+    pub fn new(view_rev: ViewRevision) -> Self {
+        let data_type = match view_rev.data_format {
+            ViewDataFormatRevision::DeltaFormat => SqlViewDataFormat::Delta,
+            ViewDataFormatRevision::DatabaseFormat => SqlViewDataFormat::Database,
+            ViewDataFormatRevision::TreeFormat => SqlViewDataFormat::Tree,
         };
 
         ViewTable {
-            id: view.id,
-            belong_to_id: view.belong_to_id,
-            name: view.name,
-            desc: view.desc,
-            modified_time: view.modified_time,
-            create_time: view.create_time,
-            // TODO: thumbnail
-            thumbnail: "".to_owned(),
-            view_type,
-            version: 0,
+            id: view_rev.id,
+            belong_to_id: view_rev.app_id,
+            name: view_rev.name,
+            desc: view_rev.desc,
+            modified_time: view_rev.modified_time,
+            create_time: view_rev.create_time,
+            thumbnail: view_rev.thumbnail,
+            view_type: data_type,
+            ext_data: view_rev.ext_data,
+            version: view_rev.version,
             is_trash: false,
         }
     }
 }
 
-impl std::convert::From<ViewTable> for View {
+impl std::convert::From<ViewTable> for ViewRevision {
     fn from(table: ViewTable) -> Self {
-        let view_type = match table.view_type {
-            ViewTableType::Docs => ViewType::Doc,
+        let data_type = match table.view_type {
+            SqlViewDataFormat::Delta => ViewDataFormatRevision::DeltaFormat,
+            SqlViewDataFormat::Database => ViewDataFormatRevision::DatabaseFormat,
+            SqlViewDataFormat::Tree => ViewDataFormatRevision::TreeFormat,
         };
 
-        View {
+        ViewRevision {
             id: table.id,
-            belong_to_id: table.belong_to_id,
+            app_id: table.belong_to_id,
             name: table.name,
             desc: table.desc,
-            view_type,
-            belongings: RepeatedView::default(),
+            data_format: data_type,
+            belongings: vec![],
             modified_time: table.modified_time,
             version: table.version,
             create_time: table.create_time,
+            ext_data: "".to_string(),
+            thumbnail: table.thumbnail,
+            // Store the view in ViewTable was deprecated since v0.0.2.
+            // No need to worry about layout.
+            layout: ViewLayoutTypeRevision::Document,
         }
     }
 }
 
-impl std::convert::From<ViewTable> for Trash {
+impl std::convert::From<ViewTable> for TrashPB {
     fn from(table: ViewTable) -> Self {
-        Trash {
+        TrashPB {
             id: table.id,
             name: table.name,
             modified_time: table.modified_time,
@@ -214,32 +182,36 @@ impl ViewChangeset {
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Hash, FromSqlRow, AsExpression)]
 #[repr(i32)]
 #[sql_type = "Integer"]
-pub enum ViewTableType {
-    Docs = 0,
+pub enum SqlViewDataFormat {
+    Delta = 0,
+    Database = 1,
+    Tree = 2,
 }
 
-impl std::default::Default for ViewTableType {
+impl std::default::Default for SqlViewDataFormat {
     fn default() -> Self {
-        ViewTableType::Docs
+        SqlViewDataFormat::Delta
     }
 }
 
-impl std::convert::From<i32> for ViewTableType {
+impl std::convert::From<i32> for SqlViewDataFormat {
     fn from(value: i32) -> Self {
         match value {
-            0 => ViewTableType::Docs,
+            0 => SqlViewDataFormat::Delta,
+            1 => SqlViewDataFormat::Database,
+            2 => SqlViewDataFormat::Tree,
             o => {
-                log::error!("Unsupported view type {}, fallback to ViewType::Docs", o);
-                ViewTableType::Docs
+                log::error!("Unsupported view type {}, fallback to ViewType::Block", o);
+                SqlViewDataFormat::Delta
             }
         }
     }
 }
 
-impl ViewTableType {
+impl SqlViewDataFormat {
     pub fn value(&self) -> i32 {
         *self as i32
     }
 }
 
-impl_sql_integer_expression!(ViewTableType);
+impl_sql_integer_expression!(SqlViewDataFormat);

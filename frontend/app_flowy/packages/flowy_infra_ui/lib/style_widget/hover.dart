@@ -4,18 +4,32 @@ import 'package:flowy_infra/time/duration.dart';
 
 typedef HoverBuilder = Widget Function(BuildContext context, bool onHover);
 
-typedef IsOnSelected = bool Function();
-
 class FlowyHover extends StatefulWidget {
-  final HoverDisplayConfig config;
-  final HoverBuilder builder;
-  final IsOnSelected? isOnSelected;
+  final HoverStyle? style;
+  final HoverBuilder? builder;
+  final Widget? child;
+
+  final bool Function()? isSelected;
+  final void Function(bool)? onHover;
+  final MouseCursor? cursor;
+
+  /// Determined whether the [builder] should get called when onEnter/onExit
+  /// happened
+  ///
+  /// [FlowyHover] show hover when [MouseRegion]'s onEnter get called
+  /// [FlowyHover] hide hover when [MouseRegion]'s onExit get called
+  ///
+  final bool Function()? buildWhenOnHover;
 
   const FlowyHover({
     Key? key,
-    required this.builder,
-    required this.config,
-    this.isOnSelected,
+    this.builder,
+    this.child,
+    this.style,
+    this.isSelected,
+    this.onHover,
+    this.cursor,
+    this.buildWhenOnHover,
   }) : super(key: key);
 
   @override
@@ -26,71 +40,102 @@ class _FlowyHoverState extends State<FlowyHover> {
   bool _onHover = false;
 
   @override
+  void didUpdateWidget(covariant FlowyHover oldWidget) {
+    // Reset the _onHover to false when the parent widget get rebuild.
+    _onHover = false;
+    super.didUpdateWidget(oldWidget);
+  }
+
+  @override
   Widget build(BuildContext context) {
     return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      onEnter: (p) => setOnHover(true),
-      onExit: (p) => setOnHover(false),
-      child: render(),
+      cursor: widget.cursor != null ? widget.cursor! : SystemMouseCursors.click,
+      opaque: false,
+      onHover: (p) {
+        if (_onHover) return;
+
+        if (widget.buildWhenOnHover?.call() ?? true) {
+          setState(() => _onHover = true);
+          if (widget.onHover != null) {
+            widget.onHover!(true);
+          }
+        }
+      },
+      onExit: (p) {
+        if (_onHover == false) return;
+
+        if (widget.buildWhenOnHover?.call() ?? true) {
+          setState(() => _onHover = false);
+          if (widget.onHover != null) {
+            widget.onHover!(false);
+          }
+        }
+      },
+      child: renderWidget(),
     );
   }
 
-  void setOnHover(bool value) => setState(() => _onHover = value);
-
-  Widget render() {
+  Widget renderWidget() {
     var showHover = _onHover;
-
-    if (showHover == false && widget.isOnSelected != null) {
-      showHover = widget.isOnSelected!();
+    if (!showHover && widget.isSelected != null) {
+      showHover = widget.isSelected!();
     }
 
+    final child = widget.child ?? widget.builder!(context, _onHover);
+    final style = widget.style ??
+        HoverStyle(hoverColor: Theme.of(context).colorScheme.secondary);
     if (showHover) {
-      return FlowyHoverBackground(
-        config: widget.config,
-        child: widget.builder(context, _onHover),
+      return FlowyHoverContainer(
+        style: style,
+        child: child,
       );
     } else {
-      return widget.builder(context, _onHover);
+      return Container(color: style.backgroundColor, child: child);
     }
   }
 }
 
-class HoverDisplayConfig {
+class HoverStyle {
   final Color borderColor;
   final double borderWidth;
-  final Color hoverColor;
+  final Color? hoverColor;
   final BorderRadius borderRadius;
+  final EdgeInsets contentMargin;
+  final Color backgroundColor;
 
-  const HoverDisplayConfig(
-      {this.borderColor = Colors.transparent,
-      this.borderWidth = 0,
-      this.borderRadius = const BorderRadius.all(Radius.circular(6)),
-      required this.hoverColor});
+  const HoverStyle({
+    this.borderColor = Colors.transparent,
+    this.borderWidth = 0,
+    this.borderRadius = const BorderRadius.all(Radius.circular(6)),
+    this.contentMargin = EdgeInsets.zero,
+    this.backgroundColor = Colors.transparent,
+    this.hoverColor,
+  });
 }
 
-class FlowyHoverBackground extends StatelessWidget {
-  final HoverDisplayConfig config;
+class FlowyHoverContainer extends StatelessWidget {
+  final HoverStyle style;
+  final Widget? child;
 
-  final Widget child;
-
-  const FlowyHoverBackground({
+  const FlowyHoverContainer({
     Key? key,
-    required this.child,
-    required this.config,
+    this.child,
+    required this.style,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     final hoverBorder = Border.all(
-      color: config.borderColor,
-      width: config.borderWidth,
+      color: style.borderColor,
+      width: style.borderWidth,
     );
 
     return Container(
+      margin: style.contentMargin,
       decoration: BoxDecoration(
         border: hoverBorder,
-        color: config.hoverColor,
-        borderRadius: config.borderRadius,
+        color: style.hoverColor ?? Theme.of(context).colorScheme.secondary,
+        borderRadius: style.borderRadius,
       ),
       child: child,
     );

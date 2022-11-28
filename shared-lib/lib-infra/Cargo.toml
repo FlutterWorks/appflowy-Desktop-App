@@ -6,16 +6,16 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-uuid = { version = "0.8", features = ["serde", "v4"] }
 log = "0.4.14"
 chrono = "0.4.19"
 bytes = { version = "1.0" }
 pin-project = "1.0"
 futures-core = { version = "0.3" }
 tokio = { version = "1.0", features = ["time", "rt"] }
-rand = "0.8.3"
+rand = "0.8.5"
 serde = { version = "1.0", features = ["derive"]}
 serde_json = "1.0"
+
 
 cmd_lib = { version = "1", optional = true }
 protoc-rust = { version = "2", optional = true }
@@ -24,7 +24,7 @@ walkdir = { version = "2", optional = true }
 flowy-ast = { path = "../flowy-ast", optional = true}
 similar = { version = "1.2.2", optional = true }
 syn = { version = "1.0.60", features = ["extra-traits", "parsing", "derive", "full"], optional = true }
-fancy-regex = { version = "0.5.0", optional = true }
+fancy-regex = { version = "0.10.0", optional = true }
 lazy_static = { version = "1.4.0", optional = true }
 tera = { version = "1.5.0", optional = true}
 itertools = { version = "0.10", optional = true }
@@ -45,8 +45,11 @@ proto_gen = [
     "phf",
     "walkdir",
     "console",
-    "toml"
+    "toml",
+    "cmd_lib",
+    "protoc-rust",
+    "walkdir",
+    "protoc-bin-vendored",
 ]
-protobuf_file_gen = ["cmd_lib", "protoc-rust", "walkdir", "protoc-bin-vendored",]
 dart_event = ["walkdir", "flowy-ast", "tera", "syn"]
 dart = ["proto_gen", "dart_event"]

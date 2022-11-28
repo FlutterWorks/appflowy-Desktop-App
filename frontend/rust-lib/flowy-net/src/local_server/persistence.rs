@@ -1,10 +1,11 @@
-use flowy_collaboration::{
-    entities::{document_info::DocumentInfo, folder_info::FolderInfo},
+use flowy_http_model::document::DocumentPayloadPB;
+use flowy_http_model::folder::FolderInfo;
+use flowy_http_model::revision::{RepeatedRevision, Revision};
+use flowy_sync::{
     errors::CollaborateError,
-    protobuf::{RepeatedRevision as RepeatedRevisionPB, Revision as RevisionPB},
     server_document::*,
     server_folder::FolderCloudPersistence,
-    util::{make_document_info_from_revisions_pb, make_folder_from_revisions_pb},
+    util::{make_document_from_revision_pbs, make_folder_from_revisions_pb},
 };
 use lib_infra::future::BoxResultFuture;
 use std::{
@@ -15,17 +16,17 @@ use std::{
 // For the moment, we use memory to cache the data, it will be implemented with
 // other storage. Like the Firestore,Dropbox.etc.
 pub trait RevisionCloudStorage: Send + Sync {
-    fn set_revisions(&self, repeated_revision: RepeatedRevisionPB) -> BoxResultFuture<(), CollaborateError>;
+    fn set_revisions(&self, repeated_revision: RepeatedRevision) -> BoxResultFuture<(), CollaborateError>;
     fn get_revisions(
         &self,
         object_id: &str,
         rev_ids: Option<Vec<i64>>,
-    ) -> BoxResultFuture<RepeatedRevisionPB, CollaborateError>;
+    ) -> BoxResultFuture<RepeatedRevision, CollaborateError>;
 
     fn reset_object(
         &self,
         object_id: &str,
-        repeated_revision: RepeatedRevisionPB,
+        repeated_revision: RepeatedRevision,
     ) -> BoxResultFuture<(), CollaborateError>;
 }
 
@@ -64,7 +65,7 @@ impl FolderCloudPersistence for LocalDocumentCloudPersistence {
         &self,
         _user_id: &str,
         folder_id: &str,
-        repeated_revision: RepeatedRevisionPB,
+        repeated_revision: RepeatedRevision,
     ) -> BoxResultFuture<Option<FolderInfo>, CollaborateError> {
         let folder_id = folder_id.to_owned();
         let storage = self.storage.clone();
@@ -74,7 +75,7 @@ impl FolderCloudPersistence for LocalDocumentCloudPersistence {
         })
     }
 
-    fn save_folder_revisions(&self, repeated_revision: RepeatedRevisionPB) -> BoxResultFuture<(), CollaborateError> {
+    fn save_folder_revisions(&self, repeated_revision: RepeatedRevision) -> BoxResultFuture<(), CollaborateError> {
         let storage = self.storage.clone();
         Box::pin(async move {
             let _ = storage.set_revisions(repeated_revision).await?;
@@ -86,20 +87,19 @@ impl FolderCloudPersistence for LocalDocumentCloudPersistence {
         &self,
         folder_id: &str,
         rev_ids: Option<Vec<i64>>,
-    ) -> BoxResultFuture<Vec<RevisionPB>, CollaborateError> {
+    ) -> BoxResultFuture<Vec<Revision>, CollaborateError> {
         let folder_id = folder_id.to_owned();
         let storage = self.storage.clone();
         Box::pin(async move {
-            let mut repeated_revision = storage.get_revisions(&folder_id, rev_ids).await?;
-            let revisions: Vec<RevisionPB> = repeated_revision.take_items().into();
-            Ok(revisions)
+            let repeated_revision = storage.get_revisions(&folder_id, rev_ids).await?;
+            Ok(repeated_revision.into_inner())
         })
     }
 
     fn reset_folder(
         &self,
         folder_id: &str,
-        repeated_revision: RepeatedRevisionPB,
+        repeated_revision: RepeatedRevision,
     ) -> BoxResultFuture<(), CollaborateError> {
         let storage = self.storage.clone();
         let folder_id = folder_id.to_owned();
@@ -111,12 +111,12 @@ impl FolderCloudPersistence for LocalDocumentCloudPersistence {
 }
 
 impl DocumentCloudPersistence for LocalDocumentCloudPersistence {
-    fn read_document(&self, doc_id: &str) -> BoxResultFuture<DocumentInfo, CollaborateError> {
+    fn read_document(&self, doc_id: &str) -> BoxResultFuture<DocumentPayloadPB, CollaborateError> {
         let storage = self.storage.clone();
         let doc_id = doc_id.to_owned();
         Box::pin(async move {
             let repeated_revision = storage.get_revisions(&doc_id, None).await?;
-            match make_document_info_from_revisions_pb(&doc_id, repeated_revision)? {
+            match make_document_from_revision_pbs(&doc_id, repeated_revision)? {
                 Some(document_info) => Ok(document_info),
                 None => Err(CollaborateError::record_not_found()),
             }
@@ -126,13 +126,13 @@ impl DocumentCloudPersistence for LocalDocumentCloudPersistence {
     fn create_document(
         &self,
         doc_id: &str,
-        repeated_revision: RepeatedRevisionPB,
-    ) -> BoxResultFuture<Option<DocumentInfo>, CollaborateError> {
+        repeated_revision: RepeatedRevision,
+    ) -> BoxResultFuture<Option<DocumentPayloadPB>, CollaborateError> {
         let doc_id = doc_id.to_owned();
         let storage = self.storage.clone();
         Box::pin(async move {
             let _ = storage.set_revisions(repeated_revision.clone()).await?;
-            make_document_info_from_revisions_pb(&doc_id, repeated_revision)
+            make_document_from_revision_pbs(&doc_id, repeated_revision)
         })
     }
 
@@ -140,17 +140,16 @@ impl DocumentCloudPersistence for LocalDocumentCloudPersistence {
         &self,
         doc_id: &str,
         rev_ids: Option<Vec<i64>>,
-    ) -> BoxResultFuture<Vec<RevisionPB>, CollaborateError> {
+    ) -> BoxResultFuture<Vec<Revision>, CollaborateError> {
         let doc_id = doc_id.to_owned();
         let storage = self.storage.clone();
         Box::pin(async move {
-            let mut repeated_revision = storage.get_revisions(&doc_id, rev_ids).await?;
-            let revisions: Vec<RevisionPB> = repeated_revision.take_items().into();
-            Ok(revisions)
+            let repeated_revision = storage.get_revisions(&doc_id, rev_ids).await?;
+            Ok(repeated_revision.into_inner())
         })
     }
 
-    fn save_document_revisions(&self, repeated_revision: RepeatedRevisionPB) -> BoxResultFuture<(), CollaborateError> {
+    fn save_document_revisions(&self, repeated_revision: RepeatedRevision) -> BoxResultFuture<(), CollaborateError> {
         let storage = self.storage.clone();
         Box::pin(async move {
             let _ = storage.set_revisions(repeated_revision).await?;
@@ -158,7 +157,7 @@ impl DocumentCloudPersistence for LocalDocumentCloudPersistence {
         })
     }
 
-    fn reset_document(&self, doc_id: &str, revisions: RepeatedRevisionPB) -> BoxResultFuture<(), CollaborateError> {
+    fn reset_document(&self, doc_id: &str, revisions: RepeatedRevision) -> BoxResultFuture<(), CollaborateError> {
         let storage = self.storage.clone();
         let doc_id = doc_id.to_owned();
         Box::pin(async move {
@@ -171,7 +170,7 @@ impl DocumentCloudPersistence for LocalDocumentCloudPersistence {
 #[derive(Default)]
 struct MemoryDocumentCloudStorage {}
 impl RevisionCloudStorage for MemoryDocumentCloudStorage {
-    fn set_revisions(&self, _repeated_revision: RepeatedRevisionPB) -> BoxResultFuture<(), CollaborateError> {
+    fn set_revisions(&self, _repeated_revision: RepeatedRevision) -> BoxResultFuture<(), CollaborateError> {
         Box::pin(async move { Ok(()) })
     }
 
@@ -179,9 +178,9 @@ impl RevisionCloudStorage for MemoryDocumentCloudStorage {
         &self,
         _doc_id: &str,
         _rev_ids: Option<Vec<i64>>,
-    ) -> BoxResultFuture<RepeatedRevisionPB, CollaborateError> {
+    ) -> BoxResultFuture<RepeatedRevision, CollaborateError> {
         Box::pin(async move {
-            let repeated_revisions = RepeatedRevisionPB::new();
+            let repeated_revisions = RepeatedRevision::default();
             Ok(repeated_revisions)
         })
     }
@@ -189,7 +188,7 @@ impl RevisionCloudStorage for MemoryDocumentCloudStorage {
     fn reset_object(
         &self,
         _doc_id: &str,
-        _repeated_revision: RepeatedRevisionPB,
+        _repeated_revision: RepeatedRevision,
     ) -> BoxResultFuture<(), CollaborateError> {
         Box::pin(async move { Ok(()) })
     }

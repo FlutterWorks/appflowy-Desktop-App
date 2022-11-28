@@ -10,11 +10,12 @@ pub(crate) enum FolderNotification {
     WorkspaceUpdated = 12,
     WorkspaceListUpdated = 13,
     WorkspaceAppsChanged = 14,
+    WorkspaceSetting = 15,
     AppUpdated = 21,
-    AppViewsChanged = 24,
     ViewUpdated = 31,
     ViewDeleted = 32,
     ViewRestored = 33,
+    ViewMoveToTrash = 34,
     UserUnauthorized = 100,
     TrashUpdated = 1000,
 }

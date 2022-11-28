@@ -1,15 +1,15 @@
 use bytes::Bytes;
-use flowy_collaboration::entities::ws_data::ClientRevisionWSData;
 use flowy_database::ConnectionPool;
 use flowy_document::{
     errors::{internal_error, FlowyError},
-    DocumentCloudService, DocumentUser, FlowyDocumentManager,
+    DocumentCloudService, DocumentConfig, DocumentDatabase, DocumentManager, DocumentUser,
 };
+use flowy_http_model::ws_data::ClientRevisionWSData;
 use flowy_net::ClientServerConfiguration;
 use flowy_net::{
-    http_server::document::DocumentHttpCloudService, local_server::LocalServer, ws::connection::FlowyWebSocketConnect,
+    http_server::document::DocumentCloudServiceImpl, local_server::LocalServer, ws::connection::FlowyWebSocketConnect,
 };
-use flowy_sync::{RevisionWebSocket, WSStateReceiver};
+use flowy_revision::{RevisionWebSocket, WSStateReceiver};
 use flowy_user::services::UserSession;
 use futures_core::future::BoxFuture;
 use lib_infra::future::BoxResultFuture;
@@ -23,15 +23,23 @@ impl DocumentDepsResolver {
         ws_conn: Arc<FlowyWebSocketConnect>,
         user_session: Arc<UserSession>,
         server_config: &ClientServerConfiguration,
-    ) -> Arc<FlowyDocumentManager> {
-        let user = Arc::new(DocumentUserImpl(user_session));
-        let ws_sender = Arc::new(DocumentWebSocketImpl(ws_conn.clone()));
+        document_config: &DocumentConfig,
+    ) -> Arc<DocumentManager> {
+        let user = Arc::new(BlockUserImpl(user_session.clone()));
+        let rev_web_socket = Arc::new(DocumentRevisionWebSocket(ws_conn.clone()));
         let cloud_service: Arc<dyn DocumentCloudService> = match local_server {
-            None => Arc::new(DocumentHttpCloudService::new(server_config.clone())),
+            None => Arc::new(DocumentCloudServiceImpl::new(server_config.clone())),
             Some(local_server) => local_server,
         };
+        let database = Arc::new(DocumentDatabaseImpl(user_session));
 
-        let manager = Arc::new(FlowyDocumentManager::new(cloud_service, user, ws_sender));
+        let manager = Arc::new(DocumentManager::new(
+            cloud_service,
+            user,
+            database,
+            rev_web_socket,
+            document_config.clone(),
+        ));
         let receiver = Arc::new(DocumentWSMessageReceiverImpl(manager.clone()));
         ws_conn.add_ws_message_receiver(receiver).unwrap();
 
@@ -39,8 +47,8 @@ impl DocumentDepsResolver {
     }
 }
 
-struct DocumentUserImpl(Arc<UserSession>);
-impl DocumentUser for DocumentUserImpl {
+struct BlockUserImpl(Arc<UserSession>);
+impl DocumentUser for BlockUserImpl {
     fn user_dir(&self) -> Result<String, FlowyError> {
         let dir = self.0.user_dir().map_err(|e| FlowyError::unauthorized().context(e))?;
 
@@ -58,14 +66,17 @@ impl DocumentUser for DocumentUserImpl {
     fn token(&self) -> Result<String, FlowyError> {
         self.0.token()
     }
+}
 
+struct DocumentDatabaseImpl(Arc<UserSession>);
+impl DocumentDatabase for DocumentDatabaseImpl {
     fn db_pool(&self) -> Result<Arc<ConnectionPool>, FlowyError> {
         self.0.db_pool()
     }
 }
 
-struct DocumentWebSocketImpl(Arc<FlowyWebSocketConnect>);
-impl RevisionWebSocket for DocumentWebSocketImpl {
+struct DocumentRevisionWebSocket(Arc<FlowyWebSocketConnect>);
+impl RevisionWebSocket for DocumentRevisionWebSocket {
     fn send(&self, data: ClientRevisionWSData) -> BoxResultFuture<(), FlowyError> {
         let bytes: Bytes = data.try_into().unwrap();
         let msg = WebSocketRawMessage {
@@ -90,7 +101,7 @@ impl RevisionWebSocket for DocumentWebSocketImpl {
     }
 }
 
-struct DocumentWSMessageReceiverImpl(Arc<FlowyDocumentManager>);
+struct DocumentWSMessageReceiverImpl(Arc<DocumentManager>);
 impl WSMessageReceiver for DocumentWSMessageReceiverImpl {
     fn source(&self) -> WSChannel {
         WSChannel::Document

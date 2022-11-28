@@ -1,32 +1,38 @@
 # cargo make --profile production task
 
 # Run the task with profile, e.g.
-# cargo make --profile development-mac flowy-sdk-dev
-# cargo make --profile production-windows-x86 flowy-sdk-dev
+# cargo make --profile development-mac appflowy-sdk-dev
+# cargo make --profile production-windows-x86 appflowy-sdk-dev
 
 [tasks.env_check]
 dependencies = ["echo_env", "install_protobuf"]
 condition = { env_set = [ "BUILD_FLAG", "RUST_COMPILE_TARGET", "CRATE_TYPE", "TARGET_OS"],  channels = ["stable"] }
 
-[tasks.flowy-sdk-dev]
-mac_alias = "flowy-sdk-dev-macos"
-windows_alias = "flowy-sdk-dev-windows"
-linux_alias = "flowy-sdk-dev-linux"
+[tasks.appflowy-sdk-dev]
+mac_alias = "appflowy-sdk-dev-macos"
+windows_alias = "appflowy-sdk-dev-windows"
+linux_alias = "appflowy-sdk-dev-linux"
 
-[tasks.flowy-sdk-dev-macos]
+[tasks.appflowy-sdk-dev-android]
 category = "Build"
 dependencies = ["env_check"]
-run_task = { name = ["setup-crate-type","sdk-build", "post-desktop", "restore-crate-type", "copy-to-sys-tmpdir"] }
+run_task = { name = ["setup-crate-type","sdk-build-android", "restore-crate-type"] }
 
-[tasks.flowy-sdk-dev-windows]
+[tasks.appflowy-sdk-dev-macos]
 category = "Build"
 dependencies = ["env_check"]
-run_task = { name = ["setup-crate-type","sdk-build", "post-desktop", "restore-crate-type", "copy-to-sys-tmpdir"] }
+run_task = { name = ["setup-crate-type","sdk-build", "post-desktop", "restore-crate-type"] }
 
-[tasks.flowy-sdk-dev-linux]
+[tasks.appflowy-sdk-dev-windows]
 category = "Build"
 dependencies = ["env_check"]
-run_task = { name = ["setup-crate-type","sdk-build", "post-desktop", "restore-crate-type", "copy-to-sys-tmpdir"] }
+run_task = { name = ["setup-crate-type","sdk-build", "post-desktop", "restore-crate-type"] }
+
+[tasks.appflowy-sdk-dev-linux]
+category = "Build"
+dependencies = ["env_check"]
+run_task = { name = ["setup-crate-type","sdk-build", "post-desktop", "restore-crate-type"] }
+
 
 #
 [tasks.sdk-build]
@@ -37,6 +43,32 @@ script = [
     rustup show
     echo cargo build --package=dart-ffi --target ${RUST_COMPILE_TARGET} --features "${FEATURES}"
     cargo build --package=dart-ffi --target ${RUST_COMPILE_TARGET} --features "${FEATURES}"
+    cd ../
+  """,
+]
+script_runner = "@shell"
+
+[tasks.sdk-build-android]
+private = true
+script = [
+  """
+    cd rust-lib/
+    rustup show
+    rustup target add aarch64-linux-android \
+      armv7-linux-androideabi \
+      i686-linux-android \
+      x86_64-linux-android
+    DEST=${CARGO_MAKE_WORKSPACE_WORKING_DIRECTORY}/app_flowy/android/app/src/main/jniLibs
+    rm -rf $DEST/arm64-v8a \
+      $DEST/armeabi-v7a \
+      $DEST/x86 \
+      $DEST/x86_64
+    cargo ndk \
+      -t arm64-v8a \
+      -t armeabi-v7a \
+      -t x86 \
+      -t x86_64 \
+      -o $DEST build
     cd ../
   """,
 ]
@@ -54,7 +86,7 @@ script = [
 script_runner = "@duckscript"
 
 #
-[tasks.flowy-sdk-release]
+[tasks.appflowy-sdk-release]
 description = "Build flowy sdk in release mode"
 category = "Build"
 dependencies = ["env_check"]
@@ -83,7 +115,7 @@ script = [
   """
     echo "🚀 🚀 🚀  Flowy-SDK(macOS) build success"
     dart_ffi_dir= set ${CARGO_MAKE_WORKSPACE_WORKING_DIRECTORY}/app_flowy/packages/flowy_sdk/${TARGET_OS}
-    lib = set lib${LIB_NAME}.${SDK_EXT}
+    lib = set lib${LIB_NAME}.${LIB_EXT}
 
     cp ${CARGO_MAKE_WORKSPACE_WORKING_DIRECTORY}/rust-lib/target/${RUST_COMPILE_TARGET}/${BUILD_FLAG}/${lib} \
     ${dart_ffi_dir}/${lib}
@@ -100,7 +132,7 @@ script = [
   """
     echo "🚀 🚀 🚀  Flowy-SDK(windows) build success"
     dart_ffi_dir= set ${CARGO_MAKE_WORKSPACE_WORKING_DIRECTORY}/app_flowy/windows/flutter/dart_ffi
-    lib = set ${LIB_NAME}.${SDK_EXT}
+    lib = set ${LIB_NAME}.${LIB_EXT}
 
     # copy dll
     cp ${CARGO_MAKE_WORKSPACE_WORKING_DIRECTORY}/rust-lib/target/${RUST_COMPILE_TARGET}/${BUILD_FLAG}/${lib} \
@@ -119,7 +151,7 @@ script = [
   """
     echo "🚀 🚀 🚀  Flowy-SDK(linux) build success"
     dart_ffi_dir= set ${CARGO_MAKE_WORKSPACE_WORKING_DIRECTORY}/app_flowy/linux/flutter/dart_ffi
-    lib = set lib${LIB_NAME}.${SDK_EXT}
+    lib = set lib${LIB_NAME}.${LIB_EXT}
 
     # copy dll
     cp ${CARGO_MAKE_WORKSPACE_WORKING_DIRECTORY}/rust-lib/target/${RUST_COMPILE_TARGET}/${BUILD_FLAG}/${lib} \
@@ -132,25 +164,34 @@ script = [
 ]
 script_runner = "@duckscript"
 
-[tasks.copy-to-sys-tmpdir]
+[tasks.build-test-lib]
+category = "Build"
+dependencies = ["env_check"]
+run_task = { name = ["setup-test-crate-type","build-test-backend", "copy-to-sandbox-folder", "restore-test-crate-type"] }
+
+[tasks.build-test-backend]
+private = true
+script = [
+  """
+    cd rust-lib/
+    rustup show
+    echo cargo build --package=dart-ffi --target ${TEST_COMPILE_TARGET} --features "${FEATURES}"
+    RUST_LOG=${RUST_LOG} cargo build --package=dart-ffi --target ${TEST_COMPILE_TARGET} --features "${FEATURES}"
+    cd ../
+  """,
+]
+script_runner = "@shell"
+
+[tasks.copy-to-sandbox-folder]
 private = true
 script = [
   """
     # Copy the flowy_sdk lib to system temp directory for flutter unit test.
-    lib = set lib${LIB_NAME}.${SDK_EXT}
+    lib = set lib${LIB_NAME}.${TEST_LIB_EXT}
     dest = set ${CARGO_MAKE_WORKSPACE_WORKING_DIRECTORY}/app_flowy/.sandbox/${lib}
     rm ${dest}
-    cp ${CARGO_MAKE_WORKSPACE_WORKING_DIRECTORY}/rust-lib/target/${RUST_COMPILE_TARGET}/${BUILD_FLAG}/${lib} \
+    cp ${CARGO_MAKE_WORKSPACE_WORKING_DIRECTORY}/rust-lib/target/${TEST_COMPILE_TARGET}/${TEST_BUILD_FLAG}/${lib} \
     ${dest}
-  """,
-]
-script_runner = "@duckscript"
-
-[tasks.copy-to-sys-tmpdir.windows]
-private = true
-script = [
-  """
-    # Doesn't work on windows
   """,
 ]
 script_runner = "@duckscript"

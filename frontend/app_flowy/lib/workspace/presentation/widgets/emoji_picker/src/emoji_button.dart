@@ -1,34 +1,28 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_quill/flutter_quill.dart';
-
-import 'package:app_flowy/workspace/presentation/stack_page/doc/widget/toolbar/toolbar_icon_button.dart';
 import 'package:app_flowy/workspace/presentation/widgets/emoji_picker/emoji_picker.dart';
 
 class FlowyEmojiStyleButton extends StatefulWidget {
   // final Attribute attribute;
   final String normalIcon;
-  final double iconSize;
-  final QuillController controller;
+  // TODO: enable insert emoji in appflowy_editor
+  // final QuillController controller;
   final String tooltipText;
 
   const FlowyEmojiStyleButton({
     // required this.attribute,
     required this.normalIcon,
-    required this.controller,
     required this.tooltipText,
-    this.iconSize = defaultIconSize,
     Key? key,
   }) : super(key: key);
 
   @override
-  _EmojiStyleButtonState createState() => _EmojiStyleButtonState();
+  EmojiStyleButtonState createState() => EmojiStyleButtonState();
 }
 
-class _EmojiStyleButtonState extends State<FlowyEmojiStyleButton> {
-  bool _isToggled = false;
+class EmojiStyleButtonState extends State<FlowyEmojiStyleButton> {
   // Style get _selectionStyle => widget.controller.getSelectionStyle();
   final GlobalKey emojiButtonKey = GlobalKey();
-  OverlayEntry _entry = OverlayEntry(builder: (context) => Container());
+  OverlayEntry? _entry;
   // final FocusNode _keyFocusNode = FocusNode();
 
   @override
@@ -43,78 +37,51 @@ class _EmojiStyleButtonState extends State<FlowyEmojiStyleButton> {
     // debugPrint(MediaQuery.of(context).size.width.toString());
     // debugPrint(MediaQuery.of(context).size.height.toString());
 
-    return ToolbarIconButton(
-      key: emojiButtonKey,
-      onPressed: _toggleAttribute,
-      width: widget.iconSize * kIconButtonFactor,
-      isToggled: _isToggled,
-      iconName: widget.normalIcon,
-      tooltipText: widget.tooltipText,
-    );
-  }
-
-  // @override
-  // void didUpdateWidget(covariant FlowyEmojiStyleButton oldWidget) {
-  //   super.didUpdateWidget(oldWidget);
-  //   if (oldWidget.controller != widget.controller) {
-  //     oldWidget.controller.removeListener(_didChangeEditingValue);
-  //     widget.controller.addListener(_didChangeEditingValue);
-  //     _isToggled = _getIsToggled(_selectionStyle.attributes);
-  //   }
-  // }
-
-  // @override
-  // void dispose() {
-  //   widget.controller.removeListener(_didChangeEditingValue);
-  //   super.dispose();
-  // }
-
-  // void _didChangeEditingValue() {
-  //   setState(() => _isToggled = _getIsToggled(_selectionStyle.attributes));
-  // }
-
-  // bool _getIsToggled(Map<String, Attribute> attrs) {
-  //   return _entry.mounted;
-  // }
-
-  void _toggleAttribute() {
-    if (_entry.mounted) {
-      _entry.remove();
-      setState(() => _isToggled = false);
-    } else {
-      RenderBox box = emojiButtonKey.currentContext?.findRenderObject() as RenderBox;
-      Offset position = box.localToGlobal(Offset.zero);
-
-      // final window = await getWindowInfo();
-
-      _entry = OverlayEntry(
-        builder: (BuildContext context) => BuildEmojiPickerView(
-          controller: widget.controller,
-          offset: position,
-        ),
-      );
-
-      Overlay.of(context)!.insert(_entry);
-      setState(() => _isToggled = true);
-    }
-
-    //TODO @gaganyadav80: INFO: throws error when using TextField with FlowyOverlay.
-
-    // FlowyOverlay.of(context).insertWithRect(
-    //   widget: BuildEmojiPickerView(controller: widget.controller),
-    //   identifier: 'overlay_emoji_picker',
-    //   anchorPosition: Offset(position.dx + 40, position.dy - 10),
-    //   anchorSize: window.frame.size,
-    //   anchorDirection: AnchorDirection.topLeft,
-    //   style: FlowyOverlayStyle(blur: true),
+    // return ToolbarIconButton(
+    //   key: emojiButtonKey,
+    //   onPressed: _toggleAttribute,
+    //   width: widget.iconSize * kIconButtonFactor,
+    //   isToggled: _isToggled,
+    //   iconName: widget.normalIcon,
+    //   tooltipText: widget.tooltipText,
     // );
+    return Container();
   }
+
+  @override
+  void dispose() {
+    _entry?.remove();
+    super.dispose();
+  }
+
+  // void _toggleAttribute() {
+  //   if (_entry?.mounted ?? false) {
+  //     _entry?.remove();
+  //     _entry = null;
+  //     setState(() => _isToggled = false);
+  //   } else {
+  //     RenderBox box =
+  //         emojiButtonKey.currentContext?.findRenderObject() as RenderBox;
+  //     Offset position = box.localToGlobal(Offset.zero);
+
+  //     // final window = await getWindowInfo();
+
+  //     _entry = OverlayEntry(
+  //       builder: (BuildContext context) => BuildEmojiPickerView(
+  //         controller: widget.controller,
+  //         offset: position,
+  //       ),
+  //     );
+
+  //     Overlay.of(context)!.insert(_entry!);
+  //     setState(() => _isToggled = true);
+  //   }
+
+  // }
 }
 
 class BuildEmojiPickerView extends StatefulWidget {
-  const BuildEmojiPickerView({Key? key, required this.controller, this.offset}) : super(key: key);
-
-  final QuillController controller;
+  const BuildEmojiPickerView({Key? key, this.offset}) : super(key: key);
   final Offset? offset;
 
   @override
@@ -127,13 +94,14 @@ class _BuildEmojiPickerViewState extends State<BuildEmojiPickerView> {
     return Stack(
       children: [
         Positioned(
-          //TODO @gaganyadav80: Not sure about the calculated position.
-          top: widget.offset!.dy - MediaQuery.of(context).size.height / 2.83 - 30,
-          left: widget.offset!.dx - MediaQuery.of(context).size.width / 3.92 + 40,
+          top: widget.offset!.dy -
+              MediaQuery.of(context).size.height / 2.83 -
+              30,
+          left:
+              widget.offset!.dx - MediaQuery.of(context).size.width / 3.92 + 40,
           child: Material(
             borderRadius: BorderRadius.circular(8.0),
             child: SizedBox(
-              //TODO @gaganyadav80: FIXIT: Gets too large when fullscreen.
               height: MediaQuery.of(context).size.height / 2.83 + 20,
               width: MediaQuery.of(context).size.width / 3.92,
               child: ClipRRect(
@@ -161,14 +129,15 @@ class _BuildEmojiPickerViewState extends State<BuildEmojiPickerView> {
   }
 
   void insertEmoji(Emoji emoji) {
-    final baseOffset = widget.controller.selection.baseOffset;
-    final extentOffset = widget.controller.selection.extentOffset;
-    final replaceLen = extentOffset - baseOffset;
-    final selection = widget.controller.selection.copyWith(
-      baseOffset: baseOffset + emoji.emoji.length,
-      extentOffset: baseOffset + emoji.emoji.length,
-    );
+    // final baseOffset = widget.controller.selection.baseOffset;
+    // final extentOffset = widget.controller.selection.extentOffset;
+    // final replaceLen = extentOffset - baseOffset;
+    // final selection = widget.controller.selection.copyWith(
+    //   baseOffset: baseOffset + emoji.emoji.length,
+    //   extentOffset: baseOffset + emoji.emoji.length,
+    // );
 
-    widget.controller.replaceText(baseOffset, replaceLen, emoji.emoji, selection);
+    // widget.controller
+    //     .replaceText(baseOffset, replaceLen, emoji.emoji, selection);
   }
 }

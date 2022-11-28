@@ -1,192 +1,130 @@
+import 'package:app_flowy/startup/tasks/rust_sdk.dart';
+import 'package:app_flowy/workspace/presentation/home/toast.dart';
 import 'package:app_flowy/workspace/presentation/widgets/pop_up_action.dart';
+import 'package:appflowy_popover/appflowy_popover.dart';
 import 'package:easy_localization/easy_localization.dart';
-import 'package:flowy_infra/theme.dart';
-import 'package:flowy_infra_ui/flowy_infra_ui.dart';
+import 'package:flowy_infra/size.dart';
 import 'package:flowy_infra_ui/style_widget/button.dart';
 import 'package:flowy_infra_ui/style_widget/text.dart';
 import 'package:flowy_infra_ui/widget/spacing.dart';
-import 'package:flowy_sdk/log.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:provider/provider.dart';
-import 'package:dartz/dartz.dart' as dartz;
 import 'package:styled_widget/styled_widget.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:app_flowy/generated/locale_keys.g.dart';
 import 'package:device_info_plus/device_info_plus.dart';
-import 'package:fluttertoast/fluttertoast.dart';
-import 'package:app_flowy/workspace/presentation/stack_page/home_stack.dart';
 
 class QuestionBubble extends StatelessWidget {
   const QuestionBubble({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    final theme = context.watch<AppTheme>();
-    return SizedBox(
+    return const SizedBox(
       width: 30,
       height: 30,
-      child: FlowyTextButton(
-        '?',
-        tooltip: LocaleKeys.questionBubble_help.tr(),
-        fontSize: 12,
-        fontWeight: FontWeight.w600,
-        fillColor: theme.selector,
-        mainAxisAlignment: MainAxisAlignment.center,
-        radius: BorderRadius.circular(10),
-        onPressed: () {
-          final actionList = QuestionBubbleActionSheet(onSelected: (result) {
-            result.fold(() {}, (action) {
-              switch (action) {
-                case BubbleAction.whatsNews:
-                  _launchURL("https://www.appflowy.io/whatsnew");
-                  break;
-                case BubbleAction.help:
-                  _launchURL("https://discord.gg/9Q2xaN37tV");
-                  break;
-                case BubbleAction.debug:
-                  final deviceInfoPlugin = DeviceInfoPlugin();
-                  final deviceInfo = deviceInfoPlugin.deviceInfo;
+      child: BubbleActionList(),
+    );
+  }
+}
 
-                  deviceInfo.then((info) {
-                    var debugText = "";
-                    info.toMap().forEach((key, value) {
-                      debugText = debugText + "$key: $value\n";
-                    });
+class BubbleActionList extends StatelessWidget {
+  const BubbleActionList({Key? key}) : super(key: key);
 
-                    Clipboard.setData(ClipboardData(text: debugText));
+  @override
+  Widget build(BuildContext context) {
+    final List<PopoverAction> actions = [];
+    actions.addAll(
+      BubbleAction.values.map((action) => BubbleActionWrapper(action)),
+    );
+    actions.add(FlowyVersionDescription());
 
-                    Widget toast = Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 12.0),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(25.0),
-                        color: theme.main1,
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.check),
-                          const SizedBox(
-                            width: 12.0,
-                          ),
-                          Text(LocaleKeys.questionBubble_debug_success.tr()),
-                        ],
-                      ),
-                    );
+    return PopoverActionList<PopoverAction>(
+      direction: PopoverDirection.topWithRightAligned,
+      actions: actions,
+      buildChild: (controller) {
+        return FlowyTextButton(
+          '?',
+          tooltip: LocaleKeys.questionBubble_help.tr(),
+          fontWeight: FontWeight.w600,
+          mainAxisAlignment: MainAxisAlignment.center,
+          radius: Corners.s10Border,
+          onPressed: () => controller.show(),
+        );
+      },
+      onSelected: (action, controller) {
+        if (action is BubbleActionWrapper) {
+          switch (action.inner) {
+            case BubbleAction.whatsNews:
+              _launchURL("https://www.appflowy.io/whatsnew");
+              break;
+            case BubbleAction.help:
+              _launchURL("https://discord.gg/9Q2xaN37tV");
+              break;
+            case BubbleAction.debug:
+              _DebugToast().show();
+              break;
+          }
+        }
 
-                    fToast.showToast(
-                      child: toast,
-                      gravity: ToastGravity.BOTTOM,
-                      toastDuration: const Duration(seconds: 3),
-                    );
-                  }).catchError((error) {
-                    Log.info("Debug info has not yet been implemented on this platform");
-
-                    Widget toast = Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 12.0),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(25.0),
-                        color: Colors.red,
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.close),
-                          const SizedBox(
-                            width: 12.0,
-                          ),
-                          Text(LocaleKeys.questionBubble_debug_fail.tr()),
-                        ],
-                      ),
-                    );
-
-                    fToast.showToast(
-                      child: toast,
-                      gravity: ToastGravity.BOTTOM,
-                      toastDuration: const Duration(seconds: 3),
-                    );
-                  }, test: (e) => e is UnimplementedError);
-                  break;
-              }
-            });
-          });
-          actionList.show(
-            context,
-            context,
-            anchorDirection: AnchorDirection.topWithRightAligned,
-            anchorOffset: const Offset(0, -10),
-          );
-        },
-      ),
+        controller.close();
+      },
     );
   }
 
   _launchURL(String url) async {
-    if (await canLaunch(url)) {
-      await launch(url);
+    final uri = Uri.parse(url);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri);
     } else {
       throw 'Could not launch $url';
     }
   }
 }
 
-class QuestionBubbleActionSheet with ActionList<BubbleActionWrapper> implements FlowyOverlayDelegate {
-  final Function(dartz.Option<BubbleAction>) onSelected;
-  final _items = BubbleAction.values.map((action) => BubbleActionWrapper(action)).toList();
+class _DebugToast {
+  void show() async {
+    var debugInfo = "";
+    debugInfo += await _getDeviceInfo();
+    debugInfo += await _getDocumentPath();
+    Clipboard.setData(ClipboardData(text: debugInfo));
 
-  QuestionBubbleActionSheet({
-    required this.onSelected,
-  });
-
-  @override
-  double get maxWidth => 170;
-
-  @override
-  double get itemHeight => 22;
-
-  @override
-  List<BubbleActionWrapper> get items => _items;
-
-  @override
-  void Function(dartz.Option<BubbleActionWrapper> p1) get selectCallback => (result) {
-        result.fold(
-          () => onSelected(dartz.none()),
-          (wrapper) => onSelected(
-            dartz.some(wrapper.inner),
-          ),
-        );
-      };
-
-  @override
-  FlowyOverlayDelegate? get delegate => this;
-
-  @override
-  void didRemove() {
-    onSelected(dartz.none());
+    showMessageToast(LocaleKeys.questionBubble_debug_success.tr());
   }
 
-  @override
-  ListOverlayFooter? get footer => ListOverlayFooter(
-        widget: const FlowyVersionDescription(),
-        height: 30,
-        padding: const EdgeInsets.only(top: 6),
-      );
+  Future<String> _getDeviceInfo() async {
+    final deviceInfoPlugin = DeviceInfoPlugin();
+    final deviceInfo = deviceInfoPlugin.deviceInfo;
+
+    return deviceInfo.then((info) {
+      var debugText = "";
+      info.toMap().forEach((key, value) {
+        debugText = "$debugText$key: $value\n";
+      });
+      return debugText;
+    });
+  }
+
+  Future<String> _getDocumentPath() async {
+    return appFlowyDocumentDirectory().then((directory) {
+      final path = directory.path.toString();
+      return "Document: $path\n";
+    });
+  }
 }
 
-class FlowyVersionDescription extends StatelessWidget {
-  const FlowyVersionDescription({Key? key}) : super(key: key);
-
+class FlowyVersionDescription extends CustomActionCell {
   @override
-  Widget build(BuildContext context) {
-    final theme = context.watch<AppTheme>();
-
+  Widget buildWithContext(BuildContext context) {
     return FutureBuilder(
       future: PackageInfo.fromPlatform(),
       builder: (BuildContext context, AsyncSnapshot<dynamic> snapshot) {
         if (snapshot.connectionState == ConnectionState.done) {
           if (snapshot.hasError) {
-            return FlowyText("Error: ${snapshot.error}", fontSize: 12, color: theme.shader4);
+            return FlowyText(
+              "Error: ${snapshot.error}",
+              color: Theme.of(context).disabledColor,
+            );
           }
 
           PackageInfo packageInfo = snapshot.data;
@@ -194,19 +132,28 @@ class FlowyVersionDescription extends StatelessWidget {
           String version = packageInfo.version;
           String buildNumber = packageInfo.buildNumber;
 
-          return Column(
-            mainAxisAlignment: MainAxisAlignment.start,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Divider(height: 1, color: theme.shader6, thickness: 1.0),
-              const VSpace(6),
-              FlowyText("$appName $version.$buildNumber", fontSize: 12, color: theme.shader4),
-            ],
-          ).padding(
-            horizontal: ActionListSizes.itemHPadding + ActionListSizes.padding,
+          return SizedBox(
+            height: 30,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Divider(
+                    height: 1,
+                    color: Theme.of(context).dividerColor,
+                    thickness: 1.0),
+                const VSpace(6),
+                FlowyText(
+                  "$appName $version.$buildNumber",
+                  color: Theme.of(context).hintColor,
+                ),
+              ],
+            ).padding(
+              horizontal: ActionListSizes.itemHPadding,
+            ),
           );
         } else {
-          return const CircularProgressIndicator();
+          return const SizedBox(height: 30);
         }
       },
     );
@@ -215,12 +162,12 @@ class FlowyVersionDescription extends StatelessWidget {
 
 enum BubbleAction { whatsNews, help, debug }
 
-class BubbleActionWrapper extends ActionItem {
+class BubbleActionWrapper extends ActionCell {
   final BubbleAction inner;
 
   BubbleActionWrapper(this.inner);
   @override
-  Widget? get icon => inner.emoji;
+  Widget? leftIcon(Color iconColor) => FlowyText.regular(inner.emoji);
 
   @override
   String get name => inner.name;
@@ -238,14 +185,14 @@ extension QuestionBubbleExtension on BubbleAction {
     }
   }
 
-  Widget get emoji {
+  String get emoji {
     switch (this) {
       case BubbleAction.whatsNews:
-        return const Text('⭐️', style: TextStyle(fontSize: 12));
+        return '⭐️';
       case BubbleAction.help:
-        return const Text('👥', style: TextStyle(fontSize: 12));
+        return '👥';
       case BubbleAction.debug:
-        return const Text('🐛', style: TextStyle(fontSize: 12));
+        return '🐛';
     }
   }
 }

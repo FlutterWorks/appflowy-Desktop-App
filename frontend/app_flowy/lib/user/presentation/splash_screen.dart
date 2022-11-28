@@ -1,10 +1,10 @@
 import 'package:app_flowy/startup/startup.dart';
 import 'package:app_flowy/user/application/splash_bloc.dart';
 import 'package:app_flowy/user/domain/auth_state.dart';
-import 'package:app_flowy/user/infrastructure/router.dart';
+import 'package:app_flowy/user/presentation/router.dart';
 import 'package:flowy_sdk/log.dart';
 import 'package:flowy_sdk/dispatch/dispatch.dart';
-import 'package:flowy_sdk/protobuf/flowy-folder-data-model/errors.pb.dart';
+import 'package:flowy_sdk/protobuf/flowy-error-code/code.pb.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -44,10 +44,11 @@ class SplashScreen extends StatelessWidget {
 
   void _handleAuthenticated(BuildContext context, Authenticated result) {
     final userProfile = result.userProfile;
-    FolderEventReadCurWorkspace().send().then(
+    FolderEventReadCurrentWorkspace().send().then(
       (result) {
         return result.fold(
-          (workspaceSetting) => getIt<SplashRoute>().pushHomeScreen(context, userProfile, workspaceSetting),
+          (workspaceSetting) => getIt<SplashRoute>()
+              .pushHomeScreen(context, userProfile, workspaceSetting),
           (error) async {
             Log.error(error);
             assert(error.code == ErrorCode.RecordNotFound.value);
@@ -80,7 +81,8 @@ class Body extends StatelessWidget {
                 fit: BoxFit.cover,
                 width: size.width,
                 height: size.height,
-                image: const AssetImage('assets/images/appflowy_launch_splash.jpg')),
+                image: const AssetImage(
+                    'assets/images/appflowy_launch_splash.jpg')),
             const CircularProgressIndicator.adaptive(),
           ],
         ),

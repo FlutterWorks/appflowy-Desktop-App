@@ -1,35 +1,34 @@
+import 'package:flowy_infra/size.dart';
+import 'package:flowy_infra/text_style.dart';
 import 'package:flutter/material.dart';
 
-enum ThemeType {
-  light,
-  dark,
-}
+import 'color_extension.dart';
 
-ThemeType themeTypeFromString(String name) {
-  ThemeType themeType = ThemeType.light;
+Brightness themeTypeFromString(String name) {
+  Brightness themeType = Brightness.light;
   if (name == "dark") {
-    themeType = ThemeType.dark;
+    themeType = Brightness.dark;
   }
   return themeType;
 }
 
-String themeTypeToString(ThemeType ty) {
-  switch (ty) {
-    case ThemeType.light:
+String themeTypeToString(Brightness brightness) {
+  switch (brightness) {
+    case Brightness.light:
       return "light";
-    case ThemeType.dark:
+    case Brightness.dark:
       return "dark";
   }
 }
 
-//Color Pallettes
+// Color Palettes
 const _black = Color(0xff000000);
 const _white = Color(0xFFFFFFFF);
 
 class AppTheme {
-  ThemeType ty;
-  bool isDark;
-  late Color surface; //
+  Brightness brightness;
+
+  late Color surface;
   late Color hover;
   late Color selector;
   late Color red;
@@ -58,6 +57,7 @@ class AppTheme {
   late Color tint7;
   late Color tint8;
   late Color tint9;
+
   late Color textColor;
   late Color iconColor;
   late Color disableIconColor;
@@ -65,22 +65,24 @@ class AppTheme {
   late Color main1;
   late Color main2;
 
-  late Color shadowColor;
+  late Color shadow;
+
+  late String font;
+  late String monospaceFont;
 
   /// Default constructor
-  AppTheme({required this.ty, this.isDark = false});
+  AppTheme({this.brightness = Brightness.light});
 
-  factory AppTheme.fromName({required String name}) {
-    return AppTheme.fromType(themeTypeFromString(name));
-  }
-
-  /// fromType factory constructor
-  factory AppTheme.fromType(ThemeType themeType) {
-    switch (themeType) {
-      case ThemeType.light:
-        return AppTheme(ty: themeType, isDark: false)
+  factory AppTheme.fromName({
+    required String themeName,
+    required String font,
+    required String monospaceFont,
+  }) {
+    switch (themeTypeFromString(themeName)) {
+      case Brightness.light:
+        return AppTheme(brightness: Brightness.light)
           ..surface = Colors.white
-          ..hover = const Color(0xFFe0f8ff) //
+          ..hover = const Color(0xFFe0f8ff)
           ..selector = const Color(0xfff2fcff)
           ..red = const Color(0xfffb006d)
           ..yellow = const Color(0xffffd667)
@@ -104,16 +106,18 @@ class AppTheme {
           ..tint6 = const Color(0xfff5ffdc)
           ..tint7 = const Color(0xffddffd6)
           ..tint8 = const Color(0xffdefff1)
-          ..tint9 = const Color(0xffdefff1)
+          ..tint9 = const Color(0xffe1fbff)
           ..main1 = const Color(0xff00bcf0)
           ..main2 = const Color(0xff00b7ea)
           ..textColor = _black
           ..iconColor = _black
-          ..shadowColor = _black
-          ..disableIconColor = const Color(0xffbdbdbd);
+          ..shadow = _black
+          ..disableIconColor = const Color(0xffbdbdbd)
+          ..font = font
+          ..monospaceFont = monospaceFont;
 
-      case ThemeType.dark:
-        return AppTheme(ty: themeType, isDark: true)
+      case Brightness.dark:
+        return AppTheme(brightness: Brightness.dark)
           ..surface = const Color(0xff292929)
           ..hover = const Color(0xff1f1f1f)
           ..selector = const Color(0xff333333)
@@ -144,42 +148,87 @@ class AppTheme {
           ..main2 = const Color(0xff009cc7)
           ..textColor = _white
           ..iconColor = _white
-          ..shadowColor = _white
-          ..disableIconColor = const Color(0xff333333);
+          ..shadow = _black
+          ..disableIconColor = const Color(0xff333333)
+          ..font = font
+          ..monospaceFont = monospaceFont;
     }
   }
 
   ThemeData get themeData {
-    var t = ThemeData(
-      textTheme: TextTheme(bodyText2: TextStyle(color: textColor)),
-      textSelectionTheme: TextSelectionThemeData(cursorColor: main2, selectionHandleColor: main2),
+    final textTheme = TextStyles(font: font, color: shader1);
+    return ThemeData(
+      brightness: brightness,
+      textTheme: textTheme.generateTextTheme(),
+      textSelectionTheme: TextSelectionThemeData(
+          cursorColor: main2, selectionHandleColor: main2),
       primaryIconTheme: IconThemeData(color: hover),
       iconTheme: IconThemeData(color: shader1),
+      scrollbarTheme: ScrollbarThemeData(
+        thumbColor: MaterialStateProperty.all(Colors.transparent),
+      ),
+      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
       canvasColor: shader6,
-      //Don't use this property because of the redo/undo button in the toolbar use the hoverColor.
-      // hoverColor: main2,
+      dividerColor: shader6,
+      hintColor: shader3,
+      disabledColor: shader4,
+      highlightColor: main1,
+      indicatorColor: main1,
+      toggleableActiveColor: main1,
       colorScheme: ColorScheme(
-          brightness: isDark ? Brightness.dark : Brightness.light,
-          primary: main1,
-          secondary: main2,
-          background: surface,
-          surface: surface,
-          onBackground: surface,
-          onSurface: surface,
-          onError: red,
-          onPrimary: bg1,
-          onSecondary: bg1,
-          error: red),
+        brightness: brightness,
+        primary: main1,
+        onPrimary: shader7,
+        primaryContainer: main2,
+        onPrimaryContainer: shader7,
+        secondary: hover,
+        onSecondary: shader1,
+        secondaryContainer: selector,
+        onSecondaryContainer: shader1,
+        background: surface,
+        onBackground: shader1,
+        surface: surface,
+        onSurface: shader1,
+        onError: shader7,
+        error: red,
+        outline: shader4,
+        surfaceVariant: bg1,
+        shadow: shadow,
+      ),
+      extensions: [
+        AFThemeExtension(
+          warning: yellow,
+          success: green,
+          tint1: tint1,
+          tint2: tint2,
+          tint3: tint3,
+          tint4: tint4,
+          tint5: tint5,
+          tint6: tint6,
+          tint7: tint7,
+          tint8: tint8,
+          tint9: tint9,
+          greyHover: bg2,
+          greySelect: bg3,
+          lightGreyHover: shader6,
+          toggleOffFill: shader5,
+          code: textTheme.getFontStyle(fontFamily: monospaceFont),
+          callout: textTheme.getFontStyle(
+            fontSize: FontSizes.s11,
+            fontColor: shader3,
+          ),
+          caption: textTheme.getFontStyle(
+            fontSize: FontSizes.s11,
+            fontWeight: FontWeight.w400,
+            fontColor: shader3,
+          ),
+        )
+      ],
     );
-
-    return t.copyWith(
-        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-        highlightColor: main1,
-        indicatorColor: main1,
-        toggleableActiveColor: main1);
   }
 
-  Color shift(Color c, double d) => ColorUtils.shiftHsl(c, d * (isDark ? -1 : 1));
+  Color shift(Color c, double d) =>
+      ColorUtils.shiftHsl(c, d * (brightness == Brightness.dark ? -1 : 1));
 }
 
 class ColorUtils {
@@ -188,14 +237,18 @@ class ColorUtils {
     return hslc.withLightness((hslc.lightness + amt).clamp(0.0, 1.0)).toColor();
   }
 
-  static Color parseHex(String value) => Color(int.parse(value.substring(1, 7), radix: 16) + 0xFF000000);
+  static Color parseHex(String value) =>
+      Color(int.parse(value.substring(1, 7), radix: 16) + 0xFF000000);
 
   static Color blend(Color dst, Color src, double opacity) {
     return Color.fromARGB(
       255,
-      (dst.red.toDouble() * (1.0 - opacity) + src.red.toDouble() * opacity).toInt(),
-      (dst.green.toDouble() * (1.0 - opacity) + src.green.toDouble() * opacity).toInt(),
-      (dst.blue.toDouble() * (1.0 - opacity) + src.blue.toDouble() * opacity).toInt(),
+      (dst.red.toDouble() * (1.0 - opacity) + src.red.toDouble() * opacity)
+          .toInt(),
+      (dst.green.toDouble() * (1.0 - opacity) + src.green.toDouble() * opacity)
+          .toInt(),
+      (dst.blue.toDouble() * (1.0 - opacity) + src.blue.toDouble() * opacity)
+          .toInt(),
     );
   }
 }

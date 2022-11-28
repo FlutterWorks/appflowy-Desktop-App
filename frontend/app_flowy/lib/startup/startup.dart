@@ -1,11 +1,11 @@
 import 'dart:io';
 
+import 'package:app_flowy/startup/plugin/plugin.dart';
 import 'package:app_flowy/startup/tasks/prelude.dart';
+import 'package:app_flowy/startup/deps_resolver.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
-import 'package:app_flowy/workspace/infrastructure/deps_resolver.dart';
-import 'package:app_flowy/user/infrastructure/deps_resolver.dart';
 import 'package:flowy_sdk/flowy_sdk.dart';
 
 // [[diagram: flowy startup flow]]
@@ -39,6 +39,7 @@ class FlowyRunner {
 
     // add task
     getIt<AppLauncher>().addTask(InitRustSDKTask());
+    getIt<AppLauncher>().addTask(PluginLoadTask());
 
     if (!env.isTest()) {
       getIt<AppLauncher>().addTask(InitAppWidgetTask());
@@ -58,9 +59,9 @@ Future<void> initGetIt(
   getIt.registerFactory<EntryPoint>(() => f);
   getIt.registerLazySingleton<FlowySDK>(() => const FlowySDK());
   getIt.registerLazySingleton<AppLauncher>(() => AppLauncher(env, getIt));
+  getIt.registerSingleton<PluginSandbox>(PluginSandbox());
 
-  await UserDepsResolver.resolve(getIt);
-  await HomeDepsResolver.resolve(getIt);
+  await DependencyResolver.resolve(getIt);
 }
 
 class LaunchContext {

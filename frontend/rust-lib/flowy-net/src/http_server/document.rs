@@ -2,47 +2,47 @@ use crate::{
     configuration::*,
     request::{HttpRequestBuilder, ResponseMiddleware},
 };
-use flowy_collaboration::entities::document_info::{CreateDocParams, DocumentId, DocumentInfo, ResetDocumentParams};
 use flowy_document::DocumentCloudService;
 use flowy_error::FlowyError;
+use flowy_http_model::document::{CreateDocumentParams, DocumentIdPB, DocumentPayloadPB, ResetDocumentParams};
 use http_flowy::response::FlowyResponse;
 use lazy_static::lazy_static;
 use lib_infra::future::FutureResult;
 use std::sync::Arc;
 
-pub struct DocumentHttpCloudService {
+pub struct DocumentCloudServiceImpl {
     config: ClientServerConfiguration,
 }
 
-impl DocumentHttpCloudService {
+impl DocumentCloudServiceImpl {
     pub fn new(config: ClientServerConfiguration) -> Self {
         Self { config }
     }
 }
 
-impl DocumentCloudService for DocumentHttpCloudService {
-    fn create_document(&self, token: &str, params: CreateDocParams) -> FutureResult<(), FlowyError> {
+impl DocumentCloudService for DocumentCloudServiceImpl {
+    fn create_document(&self, token: &str, params: CreateDocumentParams) -> FutureResult<(), FlowyError> {
         let token = token.to_owned();
         let url = self.config.doc_url();
         FutureResult::new(async move { create_document_request(&token, params, &url).await })
     }
 
-    fn read_document(&self, token: &str, params: DocumentId) -> FutureResult<Option<DocumentInfo>, FlowyError> {
+    fn fetch_document(&self, token: &str, params: DocumentIdPB) -> FutureResult<Option<DocumentPayloadPB>, FlowyError> {
         let token = token.to_owned();
         let url = self.config.doc_url();
         FutureResult::new(async move { read_document_request(&token, params, &url).await })
     }
 
-    fn update_document(&self, token: &str, params: ResetDocumentParams) -> FutureResult<(), FlowyError> {
+    fn update_document_content(&self, token: &str, params: ResetDocumentParams) -> FutureResult<(), FlowyError> {
         let token = token.to_owned();
         let url = self.config.doc_url();
         FutureResult::new(async move { reset_doc_request(&token, params, &url).await })
     }
 }
 
-pub async fn create_document_request(token: &str, params: CreateDocParams, url: &str) -> Result<(), FlowyError> {
+pub async fn create_document_request(token: &str, params: CreateDocumentParams, url: &str) -> Result<(), FlowyError> {
     let _ = request_builder()
-        .post(&url.to_owned())
+        .post(url)
         .header(HEADER_TOKEN, token)
         .protobuf(params)?
         .send()
@@ -52,11 +52,11 @@ pub async fn create_document_request(token: &str, params: CreateDocParams, url: 
 
 pub async fn read_document_request(
     token: &str,
-    params: DocumentId,
+    params: DocumentIdPB,
     url: &str,
-) -> Result<Option<DocumentInfo>, FlowyError> {
+) -> Result<Option<DocumentPayloadPB>, FlowyError> {
     let doc = request_builder()
-        .get(&url.to_owned())
+        .get(url)
         .header(HEADER_TOKEN, token)
         .protobuf(params)?
         .option_response()
@@ -67,7 +67,7 @@ pub async fn read_document_request(
 
 pub async fn reset_doc_request(token: &str, params: ResetDocumentParams, url: &str) -> Result<(), FlowyError> {
     let _ = request_builder()
-        .patch(&url.to_owned())
+        .patch(url)
         .header(HEADER_TOKEN, token)
         .protobuf(params)?
         .send()

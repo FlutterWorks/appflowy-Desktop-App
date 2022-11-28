@@ -1,8 +1,8 @@
-import 'package:flowy_infra_ui/flowy_infra_ui_web.dart';
-import 'package:flowy_infra_ui/style_widget/decoration.dart';
+import 'dart:math';
+
+import 'package:flowy_infra_ui/flowy_infra_ui.dart';
 import 'package:flutter/material.dart';
-import 'package:flowy_infra/theme.dart';
-import 'package:provider/provider.dart';
+import 'package:flowy_infra_ui/style_widget/decoration.dart';
 
 class ListOverlayFooter {
   Widget widget;
@@ -19,44 +19,48 @@ class ListOverlay extends StatelessWidget {
   const ListOverlay({
     Key? key,
     required this.itemBuilder,
-    this.itemCount,
+    this.itemCount = 0,
     this.controller,
-    this.width = double.infinity,
-    this.height = double.infinity,
+    this.constraints = const BoxConstraints(),
     this.footer,
   }) : super(key: key);
 
   final IndexedWidgetBuilder itemBuilder;
-  final int? itemCount;
+  final int itemCount;
   final ScrollController? controller;
-  final double width;
-  final double height;
+  final BoxConstraints constraints;
   final ListOverlayFooter? footer;
 
   @override
   Widget build(BuildContext context) {
-    final theme = context.watch<AppTheme>();
     const padding = EdgeInsets.symmetric(horizontal: 6, vertical: 6);
-    double totalHeight = height + padding.vertical;
+    double totalHeight = constraints.minHeight + padding.vertical;
     if (footer != null) {
       totalHeight = totalHeight + footer!.height + footer!.padding.vertical;
     }
 
-    return Material(
-      type: MaterialType.transparency,
-      child: Container(
-        decoration: FlowyDecoration.decoration(theme.surface, theme.shadowColor.withOpacity(0.1)),
-        constraints: BoxConstraints.tight(Size(width, totalHeight)),
-        child: Padding(
-          padding: padding,
+    final innerConstraints = BoxConstraints(
+      minHeight: totalHeight,
+      maxHeight: max(constraints.maxHeight, totalHeight),
+      minWidth: constraints.minWidth,
+      maxWidth: constraints.maxWidth,
+    );
+
+    List<Widget> children = [];
+    for (var i = 0; i < itemCount; i++) {
+      children.add(itemBuilder(context, i));
+    }
+
+    return OverlayContainer(
+      constraints: innerConstraints,
+      padding: padding,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: IntrinsicWidth(
           child: Column(
+            mainAxisSize: MainAxisSize.max,
             children: [
-              ListView.builder(
-                shrinkWrap: true,
-                itemBuilder: itemBuilder,
-                itemCount: itemCount,
-                controller: controller,
-              ),
+              ...children,
               if (footer != null)
                 Padding(
                   padding: footer!.padding,
@@ -73,10 +77,9 @@ class ListOverlay extends StatelessWidget {
     BuildContext context, {
     required String identifier,
     required IndexedWidgetBuilder itemBuilder,
-    int? itemCount,
+    int itemCount = 0,
     ScrollController? controller,
-    double width = double.infinity,
-    double height = double.infinity,
+    BoxConstraints constraints = const BoxConstraints(),
     required BuildContext anchorContext,
     AnchorDirection? anchorDirection,
     FlowyOverlayDelegate? delegate,
@@ -90,8 +93,7 @@ class ListOverlay extends StatelessWidget {
         itemBuilder: itemBuilder,
         itemCount: itemCount,
         controller: controller,
-        width: width,
-        height: height,
+        constraints: constraints,
         footer: footer,
       ),
       identifier: identifier,
@@ -103,38 +105,34 @@ class ListOverlay extends StatelessWidget {
       style: style,
     );
   }
+}
 
-  static void showWithRect(
-    BuildContext context, {
-    required BuildContext anchorContext,
-    required String identifier,
-    required IndexedWidgetBuilder itemBuilder,
-    int? itemCount,
-    ScrollController? controller,
-    double maxWidth = double.infinity,
-    double maxHeight = double.infinity,
-    required Offset anchorPosition,
-    required Size anchorSize,
-    AnchorDirection? anchorDirection,
-    FlowyOverlayDelegate? delegate,
-    OverlapBehaviour? overlapBehaviour,
-    FlowyOverlayStyle? style,
-  }) {
-    FlowyOverlay.of(context).insertWithRect(
-      widget: ListOverlay(
-        itemBuilder: itemBuilder,
-        itemCount: itemCount,
-        controller: controller,
-        width: maxWidth,
-        height: maxHeight,
+const overlayContainerPadding = EdgeInsets.all(12);
+
+class OverlayContainer extends StatelessWidget {
+  final Widget child;
+  final BoxConstraints? constraints;
+  final EdgeInsets padding;
+  const OverlayContainer({
+    required this.child,
+    this.constraints,
+    this.padding = overlayContainerPadding,
+    Key? key,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      type: MaterialType.transparency,
+      child: Container(
+        padding: padding,
+        decoration: FlowyDecoration.decoration(
+          Theme.of(context).colorScheme.surface,
+          Theme.of(context).colorScheme.shadow.withOpacity(0.15),
+        ),
+        constraints: constraints,
+        child: child,
       ),
-      identifier: identifier,
-      anchorPosition: anchorPosition,
-      anchorSize: anchorSize,
-      anchorDirection: anchorDirection,
-      delegate: delegate,
-      overlapBehaviour: overlapBehaviour,
-      style: style,
     );
   }
 }

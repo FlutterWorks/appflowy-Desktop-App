@@ -18,7 +18,7 @@ publish_to: "none" # Remove this line if you wish to publish to pub.dev
 version: 1.0.0+1
 
 environment:
-  sdk: ">=2.15.0-116.0.dev <3.0.0"
+  sdk: ">=2.17.0 <3.0.0"
 
 # Dependencies specify other packages that your package needs in order to work.
 # To automatically upgrade your package dependencies to the latest versions
@@ -37,50 +37,73 @@ dependencies:
     path: packages/flowy_infra_ui
   flowy_infra:
     path: packages/flowy_infra
-  flutter_quill:
-    git:
-      url: https://github.com/appflowy/flutter-quill.git
-      ref: dbc309f5e382963fa0122409a0aaf8e1417d51c1
+  appflowy_board:
+    path: packages/appflowy_board
+  appflowy_editor:
+    path: packages/appflowy_editor
+  appflowy_popover:
+    path: packages/appflowy_popover
 
   #  third party packages
   intl: ^0.17.0
   time: "^2.0.0"
   equatable: "^2.0.3"
-  freezed_annotation:
+  freezed_annotation: ^2.1.0
   get_it: "^7.1.3"
   flutter_bloc: "^8.0.1"
+  dartz: ^0.10.1
   provider: ^6.0.1
   path_provider: ^2.0.1
   window_size:
     git:
-      url: git://github.com/google/flutter-desktop-embedding.git
+      url: https://github.com/google/flutter-desktop-embedding.git
       path: plugins/window_size
       ref: e48abe7c3e9ebfe0b81622167c5201d4e783bb81
   sized_context: ^1.0.0+1
   styled_widget: "^0.3.1"
   expandable: ^5.0.1
-  flutter_svg: ^0.22.0
   flutter_colorpicker: ^0.6.0
   package_info_plus: ^1.3.0
   url_launcher: ^6.0.2
   # file_picker: ^4.2.1
   clipboard: ^0.1.3
-  connectivity_plus: 2.2.0
+  connectivity_plus: ^2.3.6+1
+  connectivity_plus_platform_interface: ^1.2.2
   easy_localization: ^3.0.0
-
+  textfield_tags: ^2.0.2
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.2
   device_info_plus: ^3.2.1
-  fluttertoast: ^8.0.8
+  fluttertoast: ^8.0.9
+  table_calendar: ^3.0.5
+  reorderables: ^0.5.0
+  linked_scroll_controller: ^0.2.0
+  hotkey_manager: ^0.1.7
+  fixnum: ^1.0.1
+  tuple: ^2.0.0
+  protobuf: "2.0.0"
+  charcode: ^1.3.1
+  collection: ^1.16.0
+  bloc: ^8.1.0
+  textstyle_extensions: "2.0.0-nullsafety"
+  shared_preferences: ^2.0.15
+  google_fonts: ^3.0.1
+  file_picker: <=5.0.0
 
 dev_dependencies:
-  flutter_lints: ^1.0.0
+  flutter_lints: ^2.0.1
+
   flutter_test:
     sdk: flutter
-  build_runner:
-  freezed:
+  integration_test:
+    sdk: flutter
+  build_runner: ^2.2.0
+  freezed: ^2.1.0+1
   bloc_test: ^9.0.2
+
+dependency_overrides:
+  analyzer: ">=4.4.0 <5.0.0"
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
@@ -105,12 +128,36 @@ flutter:
     - family: FlowyIconData
       fonts:
         - asset: assets/fonts/FlowyIconData.ttf
+    - family: Poppins
+      fonts:
+        - asset: assets/google_fonts/Poppins/Poppins-ExtraLight.ttf
+          weight: 100
+        - asset: assets/google_fonts/Poppins/Poppins-Thin.ttf
+          weight: 200
+        - asset: assets/google_fonts/Poppins/Poppins-Light.ttf
+          weight: 300          
+        - asset: assets/google_fonts/Poppins/Poppins-Regular.ttf          
+          weight: 400
+        - asset: assets/google_fonts/Poppins/Poppins-Medium.ttf          
+          weight: 500
+        - asset: assets/google_fonts/Poppins/Poppins-SemiBold.ttf          
+          weight: 600
+        - asset: assets/google_fonts/Poppins/Poppins-Bold.ttf
+          weight: 700
+        - asset: assets/google_fonts/Poppins/Poppins-Black.ttf
+          weight: 800
+        - asset: assets/google_fonts/Poppins/Poppins-ExtraBold.ttf
+          weight: 900     
 
   # To add assets to your application, add an assets section, like this:
   assets:
     - assets/images/
     - assets/images/home/
     - assets/images/editor/
+    - assets/images/grid/
+    - assets/images/emoji/
+    - assets/images/grid/field/
+    - assets/images/grid/setting/
     - assets/translations/
   #   - images/a_dot_ham.jpeg
 

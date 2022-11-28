@@ -1,11 +1,11 @@
 use crate::editor::{TestBuilder, TestOp::*};
-use flowy_collaboration::client_document::{NewlineDoc, PlainDoc, RECORD_THRESHOLD};
+use flowy_sync::client_document::{EmptyDocument, NewlineDocument, RECORD_THRESHOLD};
 use lib_ot::core::{Interval, NEW_LINE, WHITESPACE};
 
 #[test]
 fn history_insert_undo() {
     let ops = vec![Insert(0, "123", 0), Undo(0), AssertDocJson(0, r#"[{"insert":"\n"}]"#)];
-    TestBuilder::new().run_scripts::<NewlineDoc>(ops);
+    TestBuilder::new().run_scripts::<NewlineDocument>(ops);
 }
 
 #[test]
@@ -19,7 +19,7 @@ fn history_insert_undo_with_lagging() {
         Undo(0),
         AssertDocJson(0, r#"[{"insert":"\n"}]"#),
     ];
-    TestBuilder::new().run_scripts::<NewlineDoc>(ops);
+    TestBuilder::new().run_scripts::<NewlineDocument>(ops);
 }
 
 #[test]
@@ -32,7 +32,7 @@ fn history_insert_redo() {
         Redo(0),
         AssertDocJson(0, r#"[{"insert":"123\n"}]"#),
     ];
-    TestBuilder::new().run_scripts::<NewlineDoc>(ops);
+    TestBuilder::new().run_scripts::<NewlineDocument>(ops);
 }
 
 #[test]
@@ -51,7 +51,7 @@ fn history_insert_redo_with_lagging() {
         Undo(0),
         AssertDocJson(0, r#"[{"insert":"123\n"}]"#),
     ];
-    TestBuilder::new().run_scripts::<NewlineDoc>(ops);
+    TestBuilder::new().run_scripts::<NewlineDocument>(ops);
 }
 
 #[test]
@@ -62,7 +62,7 @@ fn history_bold_undo() {
         Undo(0),
         AssertDocJson(0, r#"[{"insert":"\n"}]"#),
     ];
-    TestBuilder::new().run_scripts::<NewlineDoc>(ops);
+    TestBuilder::new().run_scripts::<NewlineDocument>(ops);
 }
 
 #[test]
@@ -74,7 +74,7 @@ fn history_bold_undo_with_lagging() {
         Undo(0),
         AssertDocJson(0, r#"[{"insert":"123\n"}]"#),
     ];
-    TestBuilder::new().run_scripts::<NewlineDoc>(ops);
+    TestBuilder::new().run_scripts::<NewlineDocument>(ops);
 }
 
 #[test]
@@ -85,9 +85,9 @@ fn history_bold_redo() {
         Undo(0),
         AssertDocJson(0, r#"[{"insert":"\n"}]"#),
         Redo(0),
-        AssertDocJson(0, r#" [{"insert":"123","attributes":{"bold":"true"}},{"insert":"\n"}]"#),
+        AssertDocJson(0, r#" [{"insert":"123","attributes":{"bold":true}},{"insert":"\n"}]"#),
     ];
-    TestBuilder::new().run_scripts::<NewlineDoc>(ops);
+    TestBuilder::new().run_scripts::<NewlineDocument>(ops);
 }
 
 #[test]
@@ -99,22 +99,23 @@ fn history_bold_redo_with_lagging() {
         Undo(0),
         AssertDocJson(0, r#"[{"insert":"123\n"}]"#),
         Redo(0),
-        AssertDocJson(0, r#"[{"insert":"123","attributes":{"bold":"true"}},{"insert":"\n"}]"#),
+        AssertDocJson(0, r#"[{"insert":"123","attributes":{"bold":true}},{"insert":"\n"}]"#),
     ];
-    TestBuilder::new().run_scripts::<NewlineDoc>(ops);
+    TestBuilder::new().run_scripts::<NewlineDocument>(ops);
 }
 
 #[test]
 fn history_delete_undo() {
     let ops = vec![
         Insert(0, "123", 0),
+        Wait(RECORD_THRESHOLD),
         AssertDocJson(0, r#"[{"insert":"123"}]"#),
         Delete(0, Interval::new(0, 3)),
         AssertDocJson(0, r#"[]"#),
         Undo(0),
         AssertDocJson(0, r#"[{"insert":"123"}]"#),
     ];
-    TestBuilder::new().run_scripts::<PlainDoc>(ops);
+    TestBuilder::new().run_scripts::<EmptyDocument>(ops);
 }
 
 #[test]
@@ -126,14 +127,14 @@ fn history_delete_undo_2() {
         AssertDocJson(
             0,
             r#"[
-            {"insert":"23","attributes":{"bold":"true"}},
+            {"insert":"23","attributes":{"bold":true}},
             {"insert":"\n"}]
             "#,
         ),
         Undo(0),
         AssertDocJson(0, r#"[{"insert":"\n"}]"#),
     ];
-    TestBuilder::new().run_scripts::<NewlineDoc>(ops);
+    TestBuilder::new().run_scripts::<NewlineDocument>(ops);
 }
 
 #[test]
@@ -147,7 +148,7 @@ fn history_delete_undo_with_lagging() {
         AssertDocJson(
             0,
             r#"[
-            {"insert":"23","attributes":{"bold":"true"}},
+            {"insert":"23","attributes":{"bold":true}},
             {"insert":"\n"}]
             "#,
         ),
@@ -155,12 +156,12 @@ fn history_delete_undo_with_lagging() {
         AssertDocJson(
             0,
             r#"[
-            {"insert":"123","attributes":{"bold":"true"}},
+            {"insert":"123","attributes":{"bold":true}},
             {"insert":"\n"}]
             "#,
         ),
     ];
-    TestBuilder::new().run_scripts::<NewlineDoc>(ops);
+    TestBuilder::new().run_scripts::<NewlineDocument>(ops);
 }
 
 #[test]
@@ -174,7 +175,7 @@ fn history_delete_redo() {
         Redo(0),
         AssertDocJson(0, r#"[{"insert":"\n"}]"#),
     ];
-    TestBuilder::new().run_scripts::<NewlineDoc>(ops);
+    TestBuilder::new().run_scripts::<NewlineDocument>(ops);
 }
 
 #[test]
@@ -187,13 +188,13 @@ fn history_replace_undo() {
             0,
             r#"[
             {"insert":"ab"},
-            {"insert":"3","attributes":{"bold":"true"}},{"insert":"\n"}]
+            {"insert":"3","attributes":{"bold":true}},{"insert":"\n"}]
             "#,
         ),
         Undo(0),
         AssertDocJson(0, r#"[{"insert":"\n"}]"#),
     ];
-    TestBuilder::new().run_scripts::<NewlineDoc>(ops);
+    TestBuilder::new().run_scripts::<NewlineDocument>(ops);
 }
 
 #[test]
@@ -208,13 +209,13 @@ fn history_replace_undo_with_lagging() {
             0,
             r#"[
             {"insert":"ab"},
-            {"insert":"3","attributes":{"bold":"true"}},{"insert":"\n"}]
+            {"insert":"3","attributes":{"bold":true}},{"insert":"\n"}]
             "#,
         ),
         Undo(0),
-        AssertDocJson(0, r#"[{"insert":"123","attributes":{"bold":"true"}},{"insert":"\n"}]"#),
+        AssertDocJson(0, r#"[{"insert":"123","attributes":{"bold":true}},{"insert":"\n"}]"#),
     ];
-    TestBuilder::new().run_scripts::<NewlineDoc>(ops);
+    TestBuilder::new().run_scripts::<NewlineDocument>(ops);
 }
 
 #[test]
@@ -229,11 +230,11 @@ fn history_replace_redo() {
             0,
             r#"[
             {"insert":"ab"},
-            {"insert":"3","attributes":{"bold":"true"}},{"insert":"\n"}]
+            {"insert":"3","attributes":{"bold":true}},{"insert":"\n"}]
             "#,
         ),
     ];
-    TestBuilder::new().run_scripts::<NewlineDoc>(ops);
+    TestBuilder::new().run_scripts::<NewlineDocument>(ops);
 }
 
 #[test]
@@ -252,7 +253,7 @@ fn history_header_added_undo() {
         ),
     ];
 
-    TestBuilder::new().run_scripts::<NewlineDoc>(ops);
+    TestBuilder::new().run_scripts::<NewlineDocument>(ops);
 }
 
 #[test]
@@ -271,7 +272,7 @@ fn history_link_added_undo() {
         ),
     ];
 
-    TestBuilder::new().run_scripts::<NewlineDoc>(ops);
+    TestBuilder::new().run_scripts::<NewlineDocument>(ops);
 }
 
 #[test]
@@ -290,7 +291,7 @@ fn history_link_auto_format_undo_with_lagging() {
         AssertDocJson(0, r#"[{"insert":"https://appflowy.io\n"}]"#),
     ];
 
-    TestBuilder::new().run_scripts::<NewlineDoc>(ops);
+    TestBuilder::new().run_scripts::<NewlineDocument>(ops);
 }
 
 #[test]
@@ -313,7 +314,7 @@ fn history_bullet_undo() {
         ),
     ];
 
-    TestBuilder::new().run_scripts::<NewlineDoc>(ops);
+    TestBuilder::new().run_scripts::<NewlineDocument>(ops);
 }
 
 #[test]
@@ -341,7 +342,7 @@ fn history_bullet_undo_with_lagging() {
         ),
     ];
 
-    TestBuilder::new().run_scripts::<NewlineDoc>(ops);
+    TestBuilder::new().run_scripts::<NewlineDocument>(ops);
 }
 
 #[test]
@@ -368,5 +369,5 @@ fn history_undo_attribute_on_merge_between_line() {
         ),
     ];
 
-    TestBuilder::new().run_scripts::<NewlineDoc>(ops);
+    TestBuilder::new().run_scripts::<NewlineDocument>(ops);
 }

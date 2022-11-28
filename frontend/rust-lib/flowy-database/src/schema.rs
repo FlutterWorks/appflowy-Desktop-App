@@ -14,10 +14,69 @@ table! {
 }
 
 table! {
-    doc_table (id) {
-        id -> Text,
-        data -> Text,
+    document_rev_table (id) {
+        id -> Integer,
+        document_id -> Text,
+        base_rev_id -> BigInt,
         rev_id -> BigInt,
+        data -> Binary,
+        state -> Integer,
+    }
+}
+
+table! {
+    grid_block_index_table (row_id) {
+        row_id -> Text,
+        block_id -> Text,
+    }
+}
+
+table! {
+    grid_meta_rev_table (id) {
+        id -> Integer,
+        object_id -> Text,
+        base_rev_id -> BigInt,
+        rev_id -> BigInt,
+        data -> Binary,
+        state -> Integer,
+    }
+}
+
+table! {
+    grid_rev_table (id) {
+        id -> Integer,
+        object_id -> Text,
+        base_rev_id -> BigInt,
+        rev_id -> BigInt,
+        data -> Binary,
+        state -> Integer,
+    }
+}
+
+table! {
+    grid_view_rev_table (id) {
+        id -> Integer,
+        object_id -> Text,
+        base_rev_id -> BigInt,
+        rev_id -> BigInt,
+        data -> Binary,
+        state -> Integer,
+    }
+}
+
+table! {
+    kv_table (key) {
+        key -> Text,
+        value -> Binary,
+    }
+}
+
+table! {
+    rev_snapshot (id) {
+        id -> Integer,
+        object_id -> Text,
+        rev_id -> BigInt,
+        data -> Binary,
     }
 }
 
@@ -51,6 +110,7 @@ table! {
         token -> Text,
         email -> Text,
         workspace -> Text,
+        icon_url -> Text,
     }
 }
 
@@ -66,6 +126,7 @@ table! {
         view_type -> Integer,
         version -> BigInt,
         is_trash -> Bool,
+        ext_data -> Text,
     }
 }
 
@@ -83,7 +144,13 @@ table! {
 
 allow_tables_to_appear_in_same_query!(
     app_table,
-    doc_table,
+    document_rev_table,
+    grid_block_index_table,
+    grid_meta_rev_table,
+    grid_rev_table,
+    grid_view_rev_table,
+    kv_table,
+    rev_snapshot,
     rev_table,
     trash_table,
     user_table,
