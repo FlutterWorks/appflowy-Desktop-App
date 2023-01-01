@@ -7,14 +7,13 @@ import 'package:app_flowy/generated/locale_keys.g.dart';
 import 'package:flowy_infra/image.dart';
 import 'package:flowy_infra_ui/flowy_infra_ui.dart';
 import 'package:flowy_infra_ui/style_widget/button.dart';
-import 'package:flowy_infra_ui/style_widget/text.dart';
 import 'package:flowy_infra_ui/widget/spacing.dart';
 import 'package:flowy_sdk/protobuf/flowy-grid/date_type_option_entities.pb.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:appflowy_popover/appflowy_popover.dart';
 import '../../../layout/sizes.dart';
-import '../../common/text_field.dart';
+import '../../common/type_option_separator.dart';
 import '../field_type_option_editor.dart';
 import 'builder.dart';
 
@@ -63,12 +62,15 @@ class DateTypeOptionWidget extends TypeOptionWidget {
           return ListView.separated(
             shrinkWrap: true,
             controller: ScrollController(),
-            separatorBuilder: (context, index) =>
-                VSpace(GridSize.typeOptionSeparatorHeight),
-            itemCount: children.length,
-            itemBuilder: (BuildContext context, int index) {
-              return children[index];
+            separatorBuilder: (context, index) {
+              if (index == 0) {
+                return const SizedBox();
+              } else {
+                return VSpace(GridSize.typeOptionSeparatorHeight);
+              }
             },
+            itemCount: children.length,
+            itemBuilder: (BuildContext context, int index) => children[index],
           );
         },
       ),
@@ -93,7 +95,12 @@ class DateTypeOptionWidget extends TypeOptionWidget {
           },
         );
       },
-      child: const DateFormatButton(),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12.0),
+        child: DateFormatButton(
+          buttonMargins: GridSize.typeOptionContentInsets,
+        ),
+      ),
     );
   }
 
@@ -115,7 +122,13 @@ class DateTypeOptionWidget extends TypeOptionWidget {
           },
         );
       },
-      child: TimeFormatButton(timeFormat: timeFormat),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12.0),
+        child: TimeFormatButton(
+          timeFormat: timeFormat,
+          buttonMargins: GridSize.typeOptionContentInsets,
+        ),
+      ),
     );
   }
 }
@@ -123,8 +136,13 @@ class DateTypeOptionWidget extends TypeOptionWidget {
 class DateFormatButton extends StatelessWidget {
   final VoidCallback? onTap;
   final void Function(bool)? onHover;
-  const DateFormatButton({this.onTap, this.onHover, Key? key})
-      : super(key: key);
+  final EdgeInsets? buttonMargins;
+  const DateFormatButton({
+    this.onTap,
+    this.onHover,
+    this.buttonMargins,
+    Key? key,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -132,7 +150,7 @@ class DateFormatButton extends StatelessWidget {
       height: GridSize.typeOptionItemHeight,
       child: FlowyButton(
         text: FlowyText.medium(LocaleKeys.grid_field_dateFormat.tr()),
-        margin: GridSize.typeOptionContentInsets,
+        margin: buttonMargins,
         onTap: onTap,
         onHover: onHover,
         rightIcon: svgWidget(
@@ -148,9 +166,14 @@ class TimeFormatButton extends StatelessWidget {
   final TimeFormat timeFormat;
   final VoidCallback? onTap;
   final void Function(bool)? onHover;
-  const TimeFormatButton(
-      {required this.timeFormat, this.onTap, this.onHover, Key? key})
-      : super(key: key);
+  final EdgeInsets? buttonMargins;
+  const TimeFormatButton({
+    required this.timeFormat,
+    this.onTap,
+    this.onHover,
+    this.buttonMargins,
+    Key? key,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -158,7 +181,7 @@ class TimeFormatButton extends StatelessWidget {
       height: GridSize.typeOptionItemHeight,
       child: FlowyButton(
         text: FlowyText.medium(LocaleKeys.grid_field_timeFormat.tr()),
-        margin: GridSize.typeOptionContentInsets,
+        margin: buttonMargins,
         onTap: onTap,
         onHover: onHover,
         rightIcon: svgWidget(
@@ -178,25 +201,28 @@ class _IncludeTimeButton extends StatelessWidget {
     return BlocSelector<DateTypeOptionBloc, DateTypeOptionState, bool>(
       selector: (state) => state.typeOption.includeTime,
       builder: (context, includeTime) {
-        return SizedBox(
-          height: GridSize.typeOptionItemHeight,
-          child: Padding(
-            padding: GridSize.typeOptionContentInsets,
-            child: Row(
-              children: [
-                FlowyText.medium(LocaleKeys.grid_field_includeTime.tr()),
-                const Spacer(),
-                Toggle(
-                  value: includeTime,
-                  onChanged: (value) {
-                    context
-                        .read<DateTypeOptionBloc>()
-                        .add(DateTypeOptionEvent.includeTime(!value));
-                  },
-                  style: ToggleStyle.big,
-                  padding: EdgeInsets.zero,
-                ),
-              ],
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12.0),
+          child: SizedBox(
+            height: GridSize.typeOptionItemHeight,
+            child: Padding(
+              padding: GridSize.typeOptionContentInsets,
+              child: Row(
+                children: [
+                  FlowyText.medium(LocaleKeys.grid_field_includeTime.tr()),
+                  const Spacer(),
+                  Toggle(
+                    value: includeTime,
+                    onChanged: (value) {
+                      context
+                          .read<DateTypeOptionBloc>()
+                          .add(DateTypeOptionEvent.includeTime(!value));
+                    },
+                    style: ToggleStyle.big,
+                    padding: EdgeInsets.zero,
+                  ),
+                ],
+              ),
             ),
           ),
         );
@@ -208,9 +234,11 @@ class _IncludeTimeButton extends StatelessWidget {
 class DateFormatList extends StatelessWidget {
   final DateFormat selectedFormat;
   final Function(DateFormat format) onSelected;
-  const DateFormatList(
-      {required this.selectedFormat, required this.onSelected, Key? key})
-      : super(key: key);
+  const DateFormatList({
+    required this.selectedFormat,
+    required this.onSelected,
+    Key? key,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {

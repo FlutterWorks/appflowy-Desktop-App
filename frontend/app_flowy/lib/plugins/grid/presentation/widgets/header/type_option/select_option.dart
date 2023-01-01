@@ -3,7 +3,6 @@ import 'package:appflowy_popover/appflowy_popover.dart';
 import 'package:flowy_infra/image.dart';
 import 'package:flowy_infra_ui/flowy_infra_ui.dart';
 import 'package:flowy_infra_ui/style_widget/button.dart';
-import 'package:flowy_infra_ui/style_widget/text.dart';
 import 'package:flowy_infra_ui/widget/spacing.dart';
 import 'package:flowy_sdk/protobuf/flowy-grid/select_type_option.pb.dart';
 import 'package:flutter/material.dart';
@@ -13,7 +12,7 @@ import 'package:app_flowy/generated/locale_keys.g.dart';
 
 import '../../../layout/sizes.dart';
 import '../../cell/select_option_cell/extension.dart';
-import '../../common/text_field.dart';
+import '../../common/type_option_separator.dart';
 import 'select_option_editor.dart';
 
 class SelectOptionTypeOptionWidget extends StatelessWidget {
@@ -44,18 +43,21 @@ class SelectOptionTypeOptionWidget extends StatelessWidget {
             const TypeOptionSeparator(),
             const OptionTitle(),
             if (state.isEditingOption)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: _CreateOptionTextField(
-                  popoverMutex: popoverMutex,
-                ),
-              ),
+              _CreateOptionTextField(popoverMutex: popoverMutex),
+            if (state.options.isNotEmpty && state.isEditingOption)
+              const VSpace(10),
             if (state.options.isEmpty && !state.isEditingOption)
               const _AddOptionButton(),
             _OptionList(popoverMutex: popoverMutex)
           ];
 
-          return Column(children: children);
+          return ListView.builder(
+            shrinkWrap: true,
+            itemCount: children.length,
+            itemBuilder: (context, index) {
+              return children[index];
+            },
+          );
         },
       ),
     );
@@ -80,9 +82,12 @@ class OptionTitle extends StatelessWidget {
           children.add(const _OptionTitleButton());
         }
 
-        return SizedBox(
-          height: GridSize.typeOptionItemHeight,
-          child: Row(children: children),
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12.0),
+          child: SizedBox(
+            height: GridSize.typeOptionItemHeight,
+            child: Row(children: children),
+          ),
         );
       },
     );
@@ -179,26 +184,34 @@ class _OptionCellState extends State<_OptionCell> {
 
   @override
   Widget build(BuildContext context) {
+    final child = SizedBox(
+      height: GridSize.typeOptionItemHeight,
+      child: SelectOptionTagCell(
+        option: widget.option,
+        onSelected: (SelectOptionPB pb) {
+          _popoverController.show();
+        },
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 6.0),
+            child: svgWidget(
+              "grid/details",
+              color: Theme.of(context).colorScheme.onSurface,
+            ),
+          ),
+        ],
+      ),
+    );
     return AppFlowyPopover(
       controller: _popoverController,
       mutex: widget.popoverMutex,
       offset: const Offset(20, 0),
+      margin: EdgeInsets.zero,
       asBarrier: true,
-      constraints: BoxConstraints.loose(const Size(460, 440)),
-      child: SizedBox(
-        height: GridSize.typeOptionItemHeight,
-        child: SelectOptionTagCell(
-          option: widget.option,
-          onSelected: (SelectOptionPB pb) {
-            _popoverController.show();
-          },
-          children: [
-            svgWidget(
-              "grid/details",
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
-          ],
-        ),
+      constraints: BoxConstraints.loose(const Size(460, 460)),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12.0),
+        child: child,
       ),
       popupBuilder: (BuildContext popoverContext) {
         return SelectOptionTypeOptionEditor(
@@ -227,18 +240,21 @@ class _AddOptionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: GridSize.typeOptionItemHeight,
-      child: FlowyButton(
-        text: FlowyText.medium(LocaleKeys.grid_field_addSelectOption.tr()),
-        onTap: () {
-          context
-              .read<SelectOptionTypeOptionBloc>()
-              .add(const SelectOptionTypeOptionEvent.addingOption());
-        },
-        leftIcon: svgWidget(
-          "home/add",
-          color: Theme.of(context).colorScheme.onSurface,
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12.0),
+      child: SizedBox(
+        height: GridSize.typeOptionItemHeight,
+        child: FlowyButton(
+          text: FlowyText.medium(LocaleKeys.grid_field_addSelectOption.tr()),
+          onTap: () {
+            context
+                .read<SelectOptionTypeOptionBloc>()
+                .add(const SelectOptionTypeOptionEvent.addingOption());
+          },
+          leftIcon: svgWidget(
+            "home/add",
+            color: Theme.of(context).colorScheme.onSurface,
+          ),
         ),
       ),
     );
@@ -280,21 +296,25 @@ class _CreateOptionTextFieldState extends State<_CreateOptionTextField> {
     return BlocBuilder<SelectOptionTypeOptionBloc, SelectOptionTypeOptionState>(
       builder: (context, state) {
         final text = state.newOptionName.foldRight("", (a, previous) => a);
-        return InputTextField(
-          autoClearWhenDone: true,
-          maxLength: 30,
-          text: text,
-          focusNode: _focusNode,
-          onCanceled: () {
-            context
-                .read<SelectOptionTypeOptionBloc>()
-                .add(const SelectOptionTypeOptionEvent.endAddingOption());
-          },
-          onDone: (optionName) {
-            context
-                .read<SelectOptionTypeOptionBloc>()
-                .add(SelectOptionTypeOptionEvent.createOption(optionName));
-          },
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12.0),
+          child: FlowyTextField(
+            autoClearWhenDone: true,
+            maxLength: 30,
+            text: text,
+            focusNode: _focusNode,
+            onCanceled: () {
+              context
+                  .read<SelectOptionTypeOptionBloc>()
+                  .add(const SelectOptionTypeOptionEvent.endAddingOption());
+            },
+            onEditingComplete: () {},
+            onSubmitted: (optionName) {
+              context
+                  .read<SelectOptionTypeOptionBloc>()
+                  .add(SelectOptionTypeOptionEvent.createOption(optionName));
+            },
+          ),
         );
       },
     );

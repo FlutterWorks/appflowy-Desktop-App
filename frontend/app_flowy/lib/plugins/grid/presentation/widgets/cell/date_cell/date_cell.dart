@@ -1,5 +1,4 @@
 import 'package:flowy_infra_ui/flowy_infra_ui.dart';
-import 'package:flowy_infra_ui/style_widget/text.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:app_flowy/startup/startup.dart';
@@ -71,17 +70,13 @@ class _DateCellState extends GridCellState<GridDateCell> {
             constraints: BoxConstraints.loose(const Size(260, 500)),
             margin: EdgeInsets.zero,
             child: SizedBox.expand(
-              child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: () => _popover.show(),
-                child: Align(
-                  alignment: alignment,
-                  child: Padding(
-                    padding: GridSize.cellContentInsets,
-                    child: FlowyText.medium(
-                      state.dateStr,
-                      overflow: TextOverflow.ellipsis,
-                    ),
+              child: Align(
+                alignment: alignment,
+                child: Padding(
+                  padding: GridSize.cellContentInsets,
+                  child: FlowyText.medium(
+                    state.dateStr,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ),
@@ -109,7 +104,10 @@ class _DateCellState extends GridCellState<GridDateCell> {
   }
 
   @override
-  void requestBeginFocus() {}
+  void requestBeginFocus() {
+    _popover.show();
+    widget.onCellEditing.value = true;
+  }
 
   @override
   String? onCopy() => _cellBloc.state.dateStr;

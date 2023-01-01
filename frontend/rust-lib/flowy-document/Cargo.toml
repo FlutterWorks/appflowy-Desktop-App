@@ -7,9 +7,9 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-flowy-sync = { path = "../../../shared-lib/flowy-sync"}
+flowy-sync = { path = "../flowy-sync"}
 flowy-http-model = { path = "../../../shared-lib/flowy-http-model"}
-flowy-derive = { path = "../../../shared-lib/flowy-derive" }
+flowy-derive = { path = "../flowy-derive" }
 lib-ot = { path = "../../../shared-lib/lib-ot" }
 lib-ws = { path = "../../../shared-lib/lib-ws" }
 lib-infra = { path = "../../../shared-lib/lib-infra" }
@@ -18,7 +18,7 @@ lib-dispatch = { path = "../lib-dispatch" }
 flowy-database = { path = "../flowy-database" }
 flowy-revision = { path = "../flowy-revision" }
 flowy-error = { path = "../flowy-error", features = ["collaboration", "ot", "http_server", "serde", "db"] }
-dart-notify = { path = "../dart-notify" }
+dart-notify = { path = "../dart-notify", features = ["dart"] }
 
 diesel = {version = "1.4.8", features = ["sqlite"]}
 diesel_derives = {version = "1.4.1", features = ["sqlite"]}
@@ -52,10 +52,11 @@ criterion = "0.3"
 rand = "0.8.5"
 
 [build-dependencies]
-lib-infra = { path = "../../../shared-lib/lib-infra", features = [ "proto_gen"] }
+flowy-codegen = { path = "../flowy-codegen"}
+
 
 [features]
 sync = []
 cloud_sync = ["sync"]
 flowy_unit_test = ["lib-ot/flowy_unit_test", "flowy-revision/flowy_unit_test"]
-dart = ["lib-infra/dart"]
+dart = ["flowy-codegen/dart"]

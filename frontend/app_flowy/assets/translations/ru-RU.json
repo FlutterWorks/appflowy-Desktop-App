@@ -151,8 +151,12 @@
       "open": "Открыть настройки"
     },
     "appearance": {
-      "lightLabel": "Светлая",
-      "darkLabel": "Тёмная"
+      "themeMode": {
+        "label": "Theme Mode",
+        "light": "Светлая",
+        "dark": "Тёмная",
+        "system": "Adapt to System"
+      }
     }
   },
   "grid": {
@@ -175,14 +179,14 @@
       "singleSelectFieldName": "Выбор",
       "multiSelectFieldName": "Выбор нескольких",
       "urlFieldName": "URL",
-      "numberFormat": " Формат числа",
-      "dateFormat": " Формат даты",
-      "includeTime": " Время",
+      "numberFormat": "Формат числа",
+      "dateFormat": "Формат даты",
+      "includeTime": "Время",
       "dateFormatFriendly": "День Месяц, Год",
       "dateFormatISO": "Год-Месяц-День",
       "dateFormatLocal": "Месяц/День/Год",
       "dateFormatUS": "Год/Месяц/День",
-      "timeFormat": " Форматировать время",
+      "timeFormat": "Форматировать время",
       "invalidTimeFormat": "Неверный формат",
       "timeFormatTwelveHour": "12 часов",
       "timeFormatTwentyFourHour": "24 часа",

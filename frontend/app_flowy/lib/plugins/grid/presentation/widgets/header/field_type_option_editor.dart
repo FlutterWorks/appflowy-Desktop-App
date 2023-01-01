@@ -5,7 +5,6 @@ import 'package:dartz/dartz.dart' show Either;
 import 'package:flowy_infra/image.dart';
 import 'package:flowy_infra_ui/flowy_infra_ui.dart';
 import 'package:flowy_infra_ui/style_widget/button.dart';
-import 'package:flowy_infra_ui/style_widget/text.dart';
 import 'package:flowy_sdk/protobuf/flowy-error/errors.pb.dart';
 import 'package:flowy_sdk/protobuf/flowy-grid/field_entities.pb.dart';
 import 'package:flutter/material.dart';
@@ -97,7 +96,10 @@ class _SwitchFieldButton extends StatelessWidget {
               .add(FieldTypeOptionEditEvent.switchToField(newFieldType));
         });
       },
-      child: _buildMoreButton(context),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12.0),
+        child: _buildMoreButton(context),
+      ),
     );
 
     return SizedBox(
@@ -112,7 +114,7 @@ class _SwitchFieldButton extends StatelessWidget {
       text: FlowyText.medium(
         bloc.state.field.fieldType.title(),
       ),
-      margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      margin: GridSize.typeOptionContentInsets,
       leftIcon: svgWidget(
         bloc.state.field.fieldType.iconName(),
         color: Theme.of(context).colorScheme.onSurface,

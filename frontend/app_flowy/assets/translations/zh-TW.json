@@ -145,8 +145,12 @@
       "open": "開啟設定"
     },
     "appearance": {
-      "lightLabel": "亮色模式",
-      "darkLabel": "暗色模式"
+      "themeMode": {
+        "label": "Theme Mode",
+        "light": "亮色模式",
+        "dark": "暗色模式",
+        "system": "Adapt to System"
+      }
     }
   },
   "grid": {
@@ -168,14 +172,14 @@
       "singleSelectFieldName": "單選",
       "multiSelectFieldName": "多選",
       "urlFieldName": "網址",
-      "numberFormat": " 數字格式",
-      "dateFormat": " 日期格式",
-      "includeTime": " 包含時間",
+      "numberFormat": "數字格式",
+      "dateFormat": "日期格式",
+      "includeTime": "包含時間",
       "dateFormatFriendly": "月 日,年",
       "dateFormatISO": "年-月-日",
       "dateFormatLocal": "月/日/年",
       "dateFormatUS": "年/月/日",
-      "timeFormat": " 時間格式",
+      "timeFormat": "時間格式",
       "invalidTimeFormat": "格式無效",
       "timeFormatTwelveHour": "12 小時",
       "timeFormatTwentyFourHour": "24 小時",
