@@ -19,10 +19,8 @@ node_modules
 **/.cache
 **/.DS_Store
 
-**/src/protobuf
 **/resources/proto
 
-frontend/.vscode/*
 !frontend/.vscode/settings.json
 !frontend/.vscode/tasks.json
 !frontend/.vscode/launch.json
@@ -31,8 +29,9 @@ frontend/.vscode/*
 
 # Commit the highest level pubspec.lock, but ignore the others
 pubspec.lock
-!frontend/app_flowy/pubspec.lock
+!frontend/appflowy_flutter/pubspec.lock
 
 # ignore tool used for commit linting
 .githooks/gitlint
 .githooks/gitlint.exe
+.fvm/

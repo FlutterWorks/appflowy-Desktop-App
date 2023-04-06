@@ -6,35 +6,37 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-folder-rev-model = { path = "../../../shared-lib/folder-rev-model" }
-flowy-sync = { path = "../flowy-sync"}
-flowy-http-model = { path = "../../../shared-lib/flowy-http-model" }
+folder-model = { path = "../../../shared-lib/folder-model" }
+flowy-client-sync = { path = "../flowy-client-sync"}
+revision-model = { path = "../../../shared-lib/revision-model" }
+ws-model = { path = "../../../shared-lib/ws-model" }
 flowy-derive = { path = "../flowy-derive" }
 lib-ot = { path = "../../../shared-lib/lib-ot" }
 lib-infra = { path = "../../../shared-lib/lib-infra" }
 
 flowy-document = { path = "../flowy-document" }
-flowy-database = { path = "../flowy-database" }
-flowy-error = { path = "../flowy-error", features = ["db", "http_server"]}
-dart-notify = { path = "../dart-notify", features = ["dart"] }
+flowy-sqlite = { path = "../flowy-sqlite", optional = true }
+flowy-error = { path = "../flowy-error", features = ["adaptor_database", "adaptor_dispatch"]}
+flowy-notification = { path = "../flowy-notification" }
 lib-dispatch = { path = "../lib-dispatch" }
 flowy-revision = { path = "../flowy-revision" }
+flowy-revision-persistence = { path = "../flowy-revision-persistence" }
 
 parking_lot = "0.12.1"
-protobuf = {version = "2.18.0"}
-log = "0.4.14"
+protobuf = {version = "2.28.0"}
+log = "0.4.17"
 diesel = {version = "1.4.8", features = ["sqlite"]}
 diesel_derives = {version = "1.4.1", features = ["sqlite"]}
-futures = "0.3.15"
+futures = "0.3.26"
 pin-project = "1.0"
 strum = "0.21"
 strum_macros = "0.21"
-tokio = { version = "1", features = ["rt"] }
+tokio = { version = "1.26", features = ["rt"] }
 lazy_static = "1.4.0"
 serde = { version = "1.0", features = ["derive"] }
 tracing = { version = "0.1", features = ["log"] }
-bytes = { version = "1.0" }
-unicode-segmentation = "1.8"
+bytes = { version = "1.4" }
+unicode-segmentation = "1.10"
 serde_json = "1.0"
 
 [dev-dependencies]
@@ -46,8 +48,10 @@ flowy-codegen = { path = "../flowy-codegen"}
 
 
 [features]
-default = []
+default = ["rev-sqlite"]
 sync = []
 cloud_sync = ["sync"]
+rev-sqlite = ["flowy-sqlite", "flowy-folder/rev-sqlite"]
 flowy_unit_test = ["lib-ot/flowy_unit_test", "flowy-revision/flowy_unit_test"]
-dart = ["flowy-codegen/dart"]
+dart = ["flowy-codegen/dart", "flowy-notification/dart"]
+ts = ["flowy-codegen/ts", "flowy-notification/ts"]

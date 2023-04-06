@@ -9,14 +9,25 @@
         "editor.tabCompletion": "onlySnippets",
         "editor.wordBasedSuggestions": false,
     },
+    "[javascript]": {
+        "editor.formatOnSave": true,
+        "editor.rulers": [80],
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "[typescript]": {
+        "editor.formatOnSave": true,
+        "editor.rulers": [80],
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
     "svgviewer.enableautopreview": true,
     "svgviewer.previewcolumn": "Active",
     "svgviewer.showzoominout": true,
     "editor.wordWrapColumn": 80,
     "editor.minimap.maxColumn": 140,
-    "prettier.printWidth": 140,
     "editor.wordWrap": "wordWrapColumn",
     "dart.lineLength": 80,
+    "typescript.validate.enable": true,
+    "javascript.validate.enable": true,
     "files.associations": {
         "*.log.*": "log"
     },

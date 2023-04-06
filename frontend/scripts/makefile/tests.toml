@@ -1,45 +1,48 @@
 
-[tasks.dart_unit_test.macos]
-description = "Run flutter unit tests"
+[tasks.dart_unit_test]
 script = '''
-cargo make --profile test-macos dart_unit_test_inner
+cargo make --profile test-macos run_dart_unit_test
 '''
-
-[tasks.dart_unit_test.linux]
-description = "Run flutter unit tests"
-script = '''
-cargo make --profile test-linux dart_unit_test_inner
-'''
+script_runner = "@shell"
 
 [tasks.dart_unit_test.windows]
-description = "Run flutter unit tests"
 script = '''
-cargo make --profile test-windows dart_unit_test_inner
+cargo make --profile test-windows run_dart_unit_test
 '''
+script_runner = "@shell"
 
-[tasks.dart_unit_test_inner]
-dependencies = ["build-test-lib"]
+[tasks.dart_unit_test.linux]
+script = '''
+cargo make --profile test-linux run_dart_unit_test
+'''
+script_runner = "@shell"
+
+[tasks.run_dart_unit_test]
+env = { RUST_LOG = "info" }
+dependencies = ["build_test_backend"]
 description = "Run flutter unit tests"
 script = '''
-cd app_flowy
-flutter test --dart-define=RUST_LOG=${TEST_RUST_LOG} --concurrency=1
+cd appflowy_flutter
+flutter test --dart-define=RUST_LOG=${RUST_LOG} -j, --concurrency=1
 '''
 
 [tasks.rust_unit_test]
 run_task = { name = ["rust_lib_unit_test", "shared_lib_unit_test"] }
 
 [tasks.rust_lib_unit_test]
+env = { RUST_LOG = "info" }
 description = "Run rust-lib unit tests"
 script = '''
 cd rust-lib
-RUST_LOG=info cargo test --no-default-features --features="sync"
+cargo test --no-default-features --features="sync, rev-sqlite"
 '''
 
 [tasks.shared_lib_unit_test]
+env = { RUST_LOG = "info" }
 description = "Run shared-lib unit test"
 script = '''
 cd ../shared-lib
-RUST_LOG=info cargo test --no-default-features
+cargo test --no-default-features
 '''
 
 [tasks.check_grcov]
@@ -62,8 +65,7 @@ fi
 [tasks.clean_profraw_files]
 description = "Cleans profraw files that are created by `cargo test`"
 script_runner = "@duckscript"
-script = [
-  """
+script = ["""
   rust_lib_profs = glob_array ./rust-lib/**/*.profraw
   for prof in ${rust_lib_profs}
     full_path = canonicalize ${prof}
@@ -76,29 +78,25 @@ script = [
     rm ${full_path}
   end
 
-  """
-]
+  """]
 
 [tasks.run_rustlib_coverage_tests]
 description = "Run tests with coverage instrumentation"
 script_runner = "@shell"
-script = [
-  """
+script = ["""
   echo --- Running coverage tests ---
   cd rust-lib/
 
   CARGO_INCREMENTAL=0 \
   RUSTFLAGS='-C instrument-coverage' \
   LLVM_PROFILE_FILE='prof-%p-%m.profraw' \
-  cargo test --no-default-features --features="sync"
-  """
-]
+  cargo test --no-default-features --features="sync,rev-sqlite"
+  """]
 
 [tasks.run_sharedlib_coverage_tests]
 description = "Run tests with coverage instrumentation"
 script_runner = "@shell"
-script = [
-  """
+script = ["""
   echo --- Running coverage tests ---
   cd ../shared-lib
 
@@ -107,8 +105,7 @@ script = [
   LLVM_PROFILE_FILE='prof-%p-%m.profraw' \
   cargo test --no-default-features
 
-  """
-]
+  """]
 
 [tasks.get_rustlib_grcov_report]
 description = "Get `grcov` HTML report for test coverage for rust-lib"
@@ -128,7 +125,7 @@ script = [
   --output-path target/coverage-html
 
   echo "--- Done! Generated HTML report under 'target/coverage-html' for rustlib."
-  """
+  """,
 ]
 
 [tasks.get_sharedlib_grcov_report]
@@ -149,21 +146,20 @@ script = [
   --output-path target/coverage-html
 
   echo "--- Done! Generated HTML report under 'target/coverage-html' for sharedlib."
-  """
+  """,
 ]
 
 [tasks.get_grcov_report]
 description = "Get `grcov` HTML report for test coverage"
 run_task = { name = [
   "get_rustlib_grcov_report",
-  "get_sharedlib_grcov_report"
+  "get_sharedlib_grcov_report",
 ], parallel = true }
 
 [tasks.get_sharedlib_lcov_report]
 description = "Generates `lcov` report for `shared-lib`"
 script_runner = "@shell"
-script = [
-  """
+script = ["""
   echo Getting 'lcov' results for 'shared-lib'
 
   cd ../shared-lib
@@ -178,14 +174,12 @@ script = [
   --output-path target/coverage.lcov
 
   echo "--- Done! Generated 'target/coverage.lcov' sharedlib."
-  """
-]
+  """]
 
 [tasks.get_rustlib_lcov_report]
 description = "Generates `lcov` report for `rust-lib`"
 script_runner = "@shell"
-script = [
-  """
+script = ["""
   echo Getting 'lcov' results for 'rust-lib'
 
   cd rust-lib/
@@ -200,23 +194,22 @@ script = [
   --output-path target/coverage.lcov
 
   echo "--- Done! Generated 'target/coverage.lcov' for rustlib."
-  """
-]
+  """]
 
 [tasks.get_lcov_report]
 description = "Get `lcov` reports for test coverage"
 run_task = { name = [
   "get_sharedlib_lcov_report",
-  "get_rustlib_lcov_report"
+  "get_rustlib_lcov_report",
 ], parallel = true }
 
 [tasks.rust_unit_test_with_coverage]
 description = "Run rust unit test with code coverage"
 run_task = { name = [
-    "check_grcov",
-    'appflowy-deps-tools',
-    "run_rustlib_coverage_tests",
-    "run_sharedlib_coverage_tests",
-    "get_lcov_report",
-    "clean_profraw_files"
-  ]}
+  "check_grcov",
+  'appflowy-flutter-deps-tools',
+  "run_rustlib_coverage_tests",
+  "run_sharedlib_coverage_tests",
+  "get_lcov_report",
+  "clean_profraw_files",
+] }
