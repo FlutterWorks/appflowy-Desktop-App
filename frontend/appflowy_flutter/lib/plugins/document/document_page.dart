@@ -1,15 +1,6 @@
-import 'package:appflowy/plugins/document/presentation/plugins/board/board_view_menu_item.dart';
+import 'package:appflowy/plugins/document/presentation/plugins/plugins.dart';
 import 'package:appflowy_backend/protobuf/flowy-folder/view.pb.dart';
-import 'package:appflowy_editor_plugins/appflowy_editor_plugins.dart';
 import 'package:appflowy_editor/appflowy_editor.dart';
-import 'package:appflowy/plugins/document/presentation/plugins/board/board_node_widget.dart';
-import 'package:appflowy/plugins/document/presentation/plugins/cover/cover_node_widget.dart';
-import 'package:appflowy/plugins/document/presentation/plugins/grid/grid_menu_item.dart';
-import 'package:appflowy/plugins/document/presentation/plugins/grid/grid_node_widget.dart';
-import 'package:appflowy/plugins/document/presentation/plugins/openai/widgets/auto_completion_node_widget.dart';
-import 'package:appflowy/plugins/document/presentation/plugins/openai/widgets/auto_completion_plugins.dart';
-import 'package:appflowy/plugins/document/presentation/plugins/openai/widgets/smart_edit_node_widget.dart';
-import 'package:appflowy/plugins/document/presentation/plugins/openai/widgets/smart_edit_toolbar_item.dart';
 import 'package:dartz/dartz.dart' as dartz;
 import 'package:flowy_infra_ui/widget/error_page.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -20,8 +11,6 @@ import '../../startup/startup.dart';
 import 'application/doc_bloc.dart';
 import 'editor_styles.dart';
 import 'presentation/banner.dart';
-import 'presentation/plugins/grid/grid_view_menu_item.dart';
-import 'presentation/plugins/board/board_menu_item.dart';
 
 class DocumentPage extends StatefulWidget {
   final VoidCallback onDeleted;
@@ -61,27 +50,28 @@ class _DocumentPageState extends State<DocumentPage> {
       providers: [
         BlocProvider<DocumentBloc>.value(value: documentBloc),
       ],
-      child:
-          BlocBuilder<DocumentBloc, DocumentState>(builder: (context, state) {
-        return state.loadingState.map(
-          loading: (_) => SizedBox.expand(
-            child: Container(color: Colors.transparent),
-          ),
-          finish: (result) => result.successOrFail.fold(
-            (_) {
-              if (state.forceClose) {
-                widget.onDeleted();
-                return const SizedBox();
-              } else if (documentBloc.editorState == null) {
-                return const SizedBox();
-              } else {
-                return _renderDocument(context, state);
-              }
-            },
-            (err) => FlowyErrorPage(err.toString()),
-          ),
-        );
-      }),
+      child: BlocBuilder<DocumentBloc, DocumentState>(
+        builder: (context, state) {
+          return state.loadingState.map(
+            loading: (_) => SizedBox.expand(
+              child: Container(color: Colors.transparent),
+            ),
+            finish: (result) => result.successOrFail.fold(
+              (_) {
+                if (state.forceClose) {
+                  widget.onDeleted();
+                  return const SizedBox();
+                } else if (documentBloc.editorState == null) {
+                  return const SizedBox();
+                } else {
+                  return _renderDocument(context, state);
+                }
+              },
+              (err) => FlowyErrorPage(err.toString()),
+            ),
+          );
+        },
+      ),
     );
   }
 
@@ -191,11 +181,13 @@ class _AppFlowyEditorPageState extends State<_AppFlowyEditorPage> {
       toolbarItems: [
         smartEditItem,
       ],
-      themeData: theme.copyWith(extensions: [
-        ...theme.extensions.values,
-        customEditorTheme(context),
-        ...customPluginTheme(context),
-      ]),
+      themeData: theme.copyWith(
+        extensions: [
+          ...theme.extensions.values,
+          customEditorTheme(context),
+          ...customPluginTheme(context),
+        ],
+      ),
     );
     return Expanded(
       child: Center(

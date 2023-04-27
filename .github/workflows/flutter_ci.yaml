@@ -7,6 +7,7 @@ on:
       - "release/*"
     paths:
       - "frontend/**"
+      - "!frontend/appflowy_tauri/**"
 
   pull_request:
     branches:
@@ -14,6 +15,7 @@ on:
       - "release/*"
     paths:
       - "frontend/**"
+      - "!frontend/appflowy_tauri/**"
 
 env:
   FLUTTER_VERSION: "3.7.5"
@@ -99,7 +101,8 @@ jobs:
 
       - name: Flutter Analyzer
         working-directory: frontend/appflowy_flutter
-        run: flutter analyze
+        run: |
+          flutter analyze .
 
       - name: Run Flutter unit tests
         working-directory: frontend
