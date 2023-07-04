@@ -1,26 +1,72 @@
 import 'package:appflowy/plugins/database_view/application/cell/cell_service.dart';
-import 'package:appflowy_backend/protobuf/flowy-database/field_entities.pbenum.dart';
-import 'package:appflowy_backend/protobuf/flowy-database/select_type_option.pb.dart';
+import 'package:appflowy/plugins/database_view/application/row/row_service.dart';
+import 'package:appflowy_backend/protobuf/flowy-database2/date_entities.pb.dart';
+import 'package:appflowy_backend/protobuf/flowy-database2/field_entities.pbenum.dart';
+import 'package:appflowy_backend/protobuf/flowy-database2/select_option.pb.dart';
+import 'package:appflowy_backend/log.dart';
 import 'package:flutter/material.dart';
 
-typedef CellRenderHook<C, T> = Widget? Function(C cellData, T cardData);
+typedef CellRenderHook<C, CustomCardData> = Widget? Function(
+  C cellData,
+  CustomCardData cardData,
+  BuildContext buildContext,
+);
 typedef RenderHookByFieldType<C> = Map<FieldType, CellRenderHook<dynamic, C>>;
 
-class CardConfiguration<CustomCardData> {
+/// The [RowCardRenderHook] is used to customize the rendering of the
+///  card cell. Each cell has itw own field type. So the [renderHook]
+///  is a map of [FieldType] to [CellRenderHook].
+class RowCardRenderHook<CustomCardData> {
   final RenderHookByFieldType<CustomCardData> renderHook = {};
-  CardConfiguration();
+  RowCardRenderHook();
 
+  /// Add render hook for the FieldType.SingleSelect and FieldType.MultiSelect
   void addSelectOptionHook(
-    CellRenderHook<List<SelectOptionPB>, CustomCardData> hook,
+    CellRenderHook<List<SelectOptionPB>, CustomCardData?> hook,
   ) {
-    selectOptionHook(cellData, cardData) {
-      if (cellData is List<SelectOptionPB>) {
-        hook(cellData, cardData);
+    final hookFn = _typeSafeHook<List<SelectOptionPB>>(hook);
+    renderHook[FieldType.SingleSelect] = hookFn;
+    renderHook[FieldType.MultiSelect] = hookFn;
+  }
+
+  /// Add a render hook for the [FieldType.RichText]
+  void addTextCellHook(
+    CellRenderHook<String, CustomCardData?> hook,
+  ) {
+    renderHook[FieldType.RichText] = _typeSafeHook<String>(hook);
+  }
+
+  /// Add a render hook for the [FieldType.Number]
+  void addNumberCellHook(
+    CellRenderHook<String, CustomCardData?> hook,
+  ) {
+    renderHook[FieldType.Number] = _typeSafeHook<String>(hook);
+  }
+
+  /// Add a render hook for the [FieldType.Date]
+  void addDateCellHook(
+    CellRenderHook<DateCellDataPB, CustomCardData?> hook,
+  ) {
+    renderHook[FieldType.DateTime] = _typeSafeHook<DateCellDataPB>(hook);
+  }
+
+  CellRenderHook<dynamic, CustomCardData> _typeSafeHook<C>(
+    CellRenderHook<C, CustomCardData?> hook,
+  ) {
+    hookFn(cellData, cardData, buildContext) {
+      if (cellData == null) {
+        return null;
+      }
+
+      if (cellData is C) {
+        return hook(cellData, cardData, buildContext);
+      } else {
+        Log.debug("Unexpected cellData type: ${cellData.runtimeType}");
+        return null;
       }
     }
 
-    renderHook[FieldType.SingleSelect] = selectOptionHook;
-    renderHook[FieldType.MultiSelect] = selectOptionHook;
+    return hookFn;
   }
 }
 
@@ -60,7 +106,7 @@ class EditableRowNotifier {
       : isEditing = ValueNotifier(isEditing);
 
   void bindCell(
-    CellIdentifier cellIdentifier,
+    DatabaseCellContext cellIdentifier,
     EditableCardNotifier notifier,
   ) {
     assert(
@@ -111,7 +157,7 @@ class EditableRowNotifier {
   }
 }
 
-abstract class EditableCell {
+abstract mixin class EditableCell {
   // Each cell notifier will be bind to the [EditableRowNotifier], which enable
   // the row notifier receive its cells event. For example: begin editing the
   // cell or end editing the cell.
@@ -121,11 +167,12 @@ abstract class EditableCell {
 
 class EditableCellId {
   String fieldId;
-  String rowId;
+  RowId rowId;
 
   EditableCellId(this.rowId, this.fieldId);
 
-  factory EditableCellId.from(CellIdentifier cellIdentifier) => EditableCellId(
+  factory EditableCellId.from(DatabaseCellContext cellIdentifier) =>
+      EditableCellId(
         cellIdentifier.rowId,
         cellIdentifier.fieldId,
       );

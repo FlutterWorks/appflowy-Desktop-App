@@ -1,16 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:styled_widget/styled_widget.dart';
 
 import 'accessory.dart';
 
-class BoardCardContainer extends StatelessWidget {
+class RowCardContainer extends StatelessWidget {
   final Widget child;
   final CardAccessoryBuilder? accessoryBuilder;
   final bool Function()? buildAccessoryWhen;
   final void Function(BuildContext) openCard;
   final void Function(AccessoryType) openAccessory;
-  const BoardCardContainer({
+  const RowCardContainer({
     required this.child,
     required this.openCard,
     required this.openAccessory,
@@ -43,13 +42,11 @@ class BoardCardContainer extends StatelessWidget {
           }
 
           return GestureDetector(
+            behavior: HitTestBehavior.opaque,
             onTap: () => openCard(context),
-            child: Padding(
-              padding: const EdgeInsets.all(8),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(minHeight: 30),
-                child: container,
-              ),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 30),
+              child: container,
             ),
           );
         },
@@ -74,13 +71,17 @@ class _CardEnterRegion extends StatelessWidget {
     return Selector<_CardContainerNotifier, bool>(
       selector: (context, notifier) => notifier.onEnter,
       builder: (context, onEnter, _) {
-        List<Widget> children = [child];
+        final List<Widget> children = [child];
         if (onEnter) {
           children.add(
-            CardAccessoryContainer(
-              accessories: accessories,
-              onTapAccessory: onTapAccessory,
-            ).positioned(right: 0),
+            Positioned(
+              top: 8.0,
+              right: 8.0,
+              child: CardAccessoryContainer(
+                accessories: accessories,
+                onTapAccessory: onTapAccessory,
+              ),
+            ),
           );
         }
 

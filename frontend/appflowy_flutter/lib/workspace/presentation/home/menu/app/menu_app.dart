@@ -1,6 +1,6 @@
 import 'package:appflowy/workspace/presentation/home/menu/menu.dart';
+import 'package:appflowy_backend/protobuf/flowy-folder2/view.pb.dart';
 import 'package:expandable/expandable.dart';
-import 'package:appflowy_backend/protobuf/flowy-folder/app.pb.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:appflowy/startup/startup.dart';
@@ -9,19 +9,19 @@ import 'package:provider/provider.dart';
 import 'section/section.dart';
 
 class MenuApp extends StatefulWidget {
-  final AppPB app;
-  const MenuApp(this.app, {Key? key}) : super(key: key);
+  final ViewPB view;
+  const MenuApp(this.view, {Key? key}) : super(key: key);
 
   @override
   State<MenuApp> createState() => _MenuAppState();
 }
 
 class _MenuAppState extends State<MenuApp> {
-  late AppViewDataContext viewDataContext;
+  late ViewDataContext viewDataContext;
 
   @override
   void initState() {
-    viewDataContext = AppViewDataContext(appId: widget.app.id);
+    viewDataContext = ViewDataContext(viewId: widget.view.id);
     super.initState();
   }
 
@@ -31,7 +31,7 @@ class _MenuAppState extends State<MenuApp> {
       providers: [
         BlocProvider<AppBloc>(
           create: (context) {
-            final appBloc = getIt<AppBloc>(param1: widget.app);
+            final appBloc = AppBloc(view: widget.view);
             appBloc.add(const AppEvent.initial());
             return appBloc;
           },
@@ -56,7 +56,7 @@ class _MenuAppState extends State<MenuApp> {
           builder: (context, state) {
             return ChangeNotifierProvider.value(
               value: viewDataContext,
-              child: Consumer<AppViewDataContext>(
+              child: Consumer<ViewDataContext>(
                 builder: (context, viewDataContext, _) {
                   return expandableWrapper(context, viewDataContext);
                 },
@@ -70,7 +70,7 @@ class _MenuAppState extends State<MenuApp> {
 
   ExpandableNotifier expandableWrapper(
     BuildContext context,
-    AppViewDataContext viewDataContext,
+    ViewDataContext viewDataContext,
   ) {
     return ExpandableNotifier(
       controller: viewDataContext.expandController,
@@ -88,7 +88,7 @@ class _MenuAppState extends State<MenuApp> {
                 iconPadding: EdgeInsets.zero,
                 hasIcon: false,
               ),
-              header: MenuAppHeader(widget.app),
+              header: MenuAppHeader(widget.view),
               expanded: ViewSection(appViewData: viewDataContext),
               collapsed: const SizedBox(),
             ),

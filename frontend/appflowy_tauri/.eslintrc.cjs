@@ -12,12 +12,14 @@ module.exports = {
     sourceType: 'module',
     tsconfigRootDir: __dirname,
   },
-  plugins: ['@typescript-eslint'],
+  plugins: ['@typescript-eslint',  "react-hooks"],
   rules: {
+    "react-hooks/rules-of-hooks": "error",
+    "react-hooks/exhaustive-deps": "warn",
     '@typescript-eslint/adjacent-overload-signatures': 'error',
     '@typescript-eslint/no-empty-function': 'error',
     '@typescript-eslint/no-empty-interface': 'warn',
-    '@typescript-eslint/no-floating-promises': 'error',
+    '@typescript-eslint/no-floating-promises': 'warn',
     '@typescript-eslint/await-thenable': 'error',
     '@typescript-eslint/no-namespace': 'error',
     '@typescript-eslint/no-unnecessary-type-assertion': 'error',
@@ -42,18 +44,29 @@ module.exports = {
     'no-param-reassign': 'error',
     'no-redeclare': 'error',
     'no-sequences': 'error',
-    'no-shadow': [
-      'error',
-      {
-        hoist: 'all',
-      },
-    ],
     'no-throw-literal': 'error',
     'no-unsafe-finally': 'error',
     'no-unused-labels': 'error',
     'no-var': 'warn',
     'no-void': 'off',
     'prefer-const': 'warn',
+    'prefer-spread': 'off',
+    '@typescript-eslint/no-unused-vars': [
+      'warn',
+      {
+        argsIgnorePattern: '^_',
+      }
+    ],
+    'padding-line-between-statements': [
+      "warn",
+      { blankLine: "always", prev: ["const", "let", "var"], next: "*"},
+      { blankLine: "any",    prev: ["const", "let", "var"], next: ["const", "let", "var"]},
+      { blankLine: "always", prev: "import", next: "*" },
+      { blankLine: "any", prev: "import", next: "import" },
+      { blankLine: "always", prev: "block-like", next: "*" },
+      { blankLine: "always", prev: "block", next: "*" },
+
+    ]
   },
   ignorePatterns: ['src/**/*.test.ts'],
 };

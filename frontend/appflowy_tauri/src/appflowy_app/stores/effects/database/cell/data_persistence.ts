@@ -2,7 +2,7 @@ import { Result } from 'ts-results';
 import { CellBackendService, CellIdentifier } from './cell_bd_svc';
 import { CalendarData } from './controller_builder';
 import { DateChangesetPB, FlowyError, CellIdPB } from '@/services/backend';
-import { DatabaseEventUpdateDateCell } from '@/services/backend/events/flowy-database';
+import { DatabaseEventUpdateDateCell } from '@/services/backend/events/flowy-database2';
 
 export abstract class CellDataPersistence<D> {
   abstract save(data: D): Promise<Result<void, FlowyError>>;
@@ -24,9 +24,8 @@ export class DateCellDataPersistence extends CellDataPersistence<CalendarData> {
   }
 
   save(data: CalendarData): Promise<Result<void, FlowyError>> {
-    const payload = DateChangesetPB.fromObject({ cell_path: _makeCellPath(this.cellIdentifier) });
+    const payload = DateChangesetPB.fromObject({ cell_id: _makeCellId(this.cellIdentifier) });
     payload.date = ((data.date.getTime() / 1000) | 0).toString();
-    payload.is_utc = true;
     if (data.time !== undefined) {
       payload.time = data.time;
     }
@@ -35,7 +34,7 @@ export class DateCellDataPersistence extends CellDataPersistence<CalendarData> {
   }
 }
 
-function _makeCellPath(cellIdentifier: CellIdentifier): CellIdPB {
+function _makeCellId(cellIdentifier: CellIdentifier): CellIdPB {
   return CellIdPB.fromObject({
     view_id: cellIdentifier.viewId,
     field_id: cellIdentifier.fieldId,

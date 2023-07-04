@@ -1,10 +1,12 @@
 import React from 'react';
 import {
+  DateFormatPB,
   FieldType,
-  NumberFormat,
+  NumberFormatPB,
   NumberTypeOptionPB,
   SelectOptionCellDataPB,
-  ViewLayoutTypePB,
+  TimeFormatPB,
+  ViewLayoutPB,
 } from '@/services/backend';
 import { Log } from '$app/utils/log';
 import {
@@ -28,10 +30,11 @@ import {
 import { SelectOptionCellBackendService } from '$app/stores/effects/database/cell/select_option_bd_svc';
 import { TypeOptionController } from '$app/stores/effects/database/field/type_option/type_option_controller';
 import { None, Some } from 'ts-results';
-import { RowBackendService } from '$app/stores/effects/database/row/row_bd_svc';
-import { makeNumberTypeOptionContext } from '$app/stores/effects/database/field/type_option/type_option_context';
+import {
+  makeDateTypeOptionContext,
+  makeNumberTypeOptionContext,
+} from '$app/stores/effects/database/field/type_option/type_option_context';
 import { CalendarData } from '$app/stores/effects/database/cell/controller_builder';
-import { DatabaseEventMoveField } from '@/services/backend/events/flowy-database';
 
 export const RunAllGridTests = () => {
   async function run() {
@@ -60,7 +63,7 @@ export const RunAllGridTests = () => {
 };
 
 async function createBuildInGrid() {
-  const view = await createTestDatabaseView(ViewLayoutTypePB.Grid);
+  const view = await createTestDatabaseView(ViewLayoutPB.Grid);
   const databaseController = await openTestDatabase(view.id);
   databaseController.subscribe({
     onViewChanged: (databasePB) => {
@@ -82,7 +85,7 @@ async function createBuildInGrid() {
 }
 
 async function testEditGridCell() {
-  const view = await createTestDatabaseView(ViewLayoutTypePB.Grid);
+  const view = await createTestDatabaseView(ViewLayoutPB.Grid);
   const databaseController = await openTestDatabase(view.id);
   await databaseController.open().then((result) => result.unwrap());
 
@@ -95,7 +98,7 @@ async function testEditGridCell() {
 }
 
 async function testEditTextCell() {
-  const view = await createTestDatabaseView(ViewLayoutTypePB.Grid);
+  const view = await createTestDatabaseView(ViewLayoutPB.Grid);
   const databaseController = await openTestDatabase(view.id);
   await databaseController.open().then((result) => result.unwrap());
 
@@ -117,7 +120,7 @@ async function testEditTextCell() {
 }
 
 async function testEditURLCell() {
-  const view = await createTestDatabaseView(ViewLayoutTypePB.Grid);
+  const view = await createTestDatabaseView(ViewLayoutPB.Grid);
   const databaseController = await openTestDatabase(view.id);
   await databaseController.open().then((result) => result.unwrap());
 
@@ -144,7 +147,7 @@ async function testEditURLCell() {
 }
 
 async function testEditDateCell() {
-  const view = await createTestDatabaseView(ViewLayoutTypePB.Grid);
+  const view = await createTestDatabaseView(ViewLayoutPB.Grid);
   const databaseController = await openTestDatabase(view.id);
   await databaseController.open().then((result) => result.unwrap());
 
@@ -168,8 +171,54 @@ async function testEditDateCell() {
   await new Promise((resolve) => setTimeout(resolve, 200));
 }
 
+async function testEditDateFormatPB() {
+  const view = await createTestDatabaseView(ViewLayoutPB.Grid);
+  const databaseController = await openTestDatabase(view.id);
+  await databaseController.open().then((result) => result.unwrap());
+
+  // Create date field
+  const typeOptionController = new TypeOptionController(view.id, None, FieldType.DateTime);
+  await typeOptionController.initialize();
+
+  // update date type option
+  const dateTypeOptionContext = makeDateTypeOptionContext(typeOptionController);
+  const typeOption = await dateTypeOptionContext.getTypeOption().then((a) => a.unwrap());
+  assert(typeOption.date_format === DateFormatPB.Friendly, 'Date format not match');
+  assert(typeOption.time_format === TimeFormatPB.TwentyFourHour, 'Time format not match');
+  typeOption.date_format = DateFormatPB.Local;
+  typeOption.time_format = TimeFormatPB.TwelveHour;
+  await dateTypeOptionContext.setTypeOption(typeOption);
+
+  const typeOption2 = await dateTypeOptionContext.getTypeOption().then((a) => a.unwrap());
+  assert(typeOption2.date_format === DateFormatPB.Local, 'Date format not match');
+  assert(typeOption2.time_format === TimeFormatPB.TwelveHour, 'Time format not match');
+
+  await new Promise((resolve) => setTimeout(resolve, 200));
+}
+
+async function testEditNumberFormatPB() {
+  const view = await createTestDatabaseView(ViewLayoutPB.Grid);
+  const databaseController = await openTestDatabase(view.id);
+  await databaseController.open().then((result) => result.unwrap());
+
+  // Create date field
+  const typeOptionController = new TypeOptionController(view.id, None, FieldType.Number);
+  await typeOptionController.initialize();
+
+  // update date type option
+  const dateTypeOptionContext = makeNumberTypeOptionContext(typeOptionController);
+  const typeOption = await dateTypeOptionContext.getTypeOption().then((a) => a.unwrap());
+  typeOption.format = NumberFormatPB.EUR;
+  typeOption.name = 'Money';
+  await dateTypeOptionContext.setTypeOption(typeOption);
+
+  const typeOption2 = await dateTypeOptionContext.getTypeOption().then((a) => a.unwrap());
+  Log.info(typeOption2);
+  await new Promise((resolve) => setTimeout(resolve, 200));
+}
+
 async function testCheckboxCell() {
-  const view = await createTestDatabaseView(ViewLayoutTypePB.Grid);
+  const view = await createTestDatabaseView(ViewLayoutPB.Grid);
   const databaseController = await openTestDatabase(view.id);
   await databaseController.open().then((result) => result.unwrap());
 
@@ -195,25 +244,24 @@ async function testCheckboxCell() {
 }
 
 async function testCreateRow() {
-  const view = await createTestDatabaseView(ViewLayoutTypePB.Grid);
+  const view = await createTestDatabaseView(ViewLayoutPB.Grid);
   const databaseController = await openTestDatabase(view.id);
   await databaseController.open().then((result) => result.unwrap());
   await assertNumberOfRows(view.id, 3);
 
-  // Create a row from a DatabaseController or create using the RowBackendService
+  // Create a row from a DatabaseController
   await databaseController.createRow();
   await assertNumberOfRows(view.id, 4);
   await databaseController.dispose();
 }
 
 async function testDeleteRow() {
-  const view = await createTestDatabaseView(ViewLayoutTypePB.Grid);
+  const view = await createTestDatabaseView(ViewLayoutPB.Grid);
   const databaseController = await openTestDatabase(view.id);
   await databaseController.open().then((result) => result.unwrap());
 
   const rows = databaseController.databaseViewCache.rowInfos;
-  const svc = new RowBackendService(view.id);
-  await svc.deleteRow(rows[0].row.id);
+  await databaseController.deleteRow(rows[0].row.id);
   await assertNumberOfRows(view.id, 2);
 
   // Wait the databaseViewCache get the change notification and
@@ -226,7 +274,7 @@ async function testDeleteRow() {
 }
 
 async function testCreateOptionInCell() {
-  const view = await createTestDatabaseView(ViewLayoutTypePB.Grid);
+  const view = await createTestDatabaseView(ViewLayoutPB.Grid);
   const databaseController = await openTestDatabase(view.id);
   await databaseController.open().then((result) => result.unwrap());
   for (const [index, row] of databaseController.databaseViewCache.rowInfos.entries()) {
@@ -253,13 +301,16 @@ async function testCreateOptionInCell() {
 }
 
 async function testMoveField() {
-  const view = await createTestDatabaseView(ViewLayoutTypePB.Grid);
+  const view = await createTestDatabaseView(ViewLayoutPB.Grid);
   const databaseController = await openTestDatabase(view.id);
   await databaseController.open().then((result) => result.unwrap());
+  const ids = databaseController.fieldController.fieldInfos.map((value) => value.field.id);
+  Log.info('Receive fields data:', ids);
 
   databaseController.subscribe({
-    onFieldsChanged: (value) => {
-      Log.info('Receive fields data:', value);
+    onFieldsChanged: (values) => {
+      const new_ids = values.map((value) => value.field.id);
+      Log.info('Receive fields data:', new_ids);
     },
   });
 
@@ -271,7 +322,7 @@ async function testMoveField() {
 }
 
 async function testGetSingleSelectFieldData() {
-  const view = await createTestDatabaseView(ViewLayoutTypePB.Grid);
+  const view = await createTestDatabaseView(ViewLayoutPB.Grid);
   const databaseController = await openTestDatabase(view.id);
   await databaseController.open().then((result) => result.unwrap());
 
@@ -296,7 +347,7 @@ async function testGetSingleSelectFieldData() {
 }
 
 async function testSwitchFromSingleSelectToNumber() {
-  const view = await createTestDatabaseView(ViewLayoutTypePB.Grid);
+  const view = await createTestDatabaseView(ViewLayoutPB.Grid);
   const databaseController = await openTestDatabase(view.id);
   await databaseController.open().then((result) => result.unwrap());
 
@@ -313,8 +364,8 @@ async function testSwitchFromSingleSelectToNumber() {
   const numberTypeOption: NumberTypeOptionPB = await numberTypeOptionContext
     .getTypeOption()
     .then((result) => result.unwrap());
-  const format: NumberFormat = numberTypeOption.format;
-  if (format !== NumberFormat.Num) {
+  const format: NumberFormatPB = numberTypeOption.format;
+  if (format !== NumberFormatPB.Num) {
     throw Error('The default format should be number');
   }
 
@@ -322,7 +373,7 @@ async function testSwitchFromSingleSelectToNumber() {
 }
 
 async function testSwitchFromMultiSelectToRichText() {
-  const view = await createTestDatabaseView(ViewLayoutTypePB.Grid);
+  const view = await createTestDatabaseView(ViewLayoutPB.Grid);
   const databaseController = await openTestDatabase(view.id);
   await databaseController.open().then((result) => result.unwrap());
 
@@ -372,7 +423,7 @@ async function testSwitchFromMultiSelectToRichText() {
 }
 
 async function testEditField() {
-  const view = await createTestDatabaseView(ViewLayoutTypePB.Grid);
+  const view = await createTestDatabaseView(ViewLayoutPB.Grid);
   const databaseController = await openTestDatabase(view.id);
   await databaseController.open().then((result) => result.unwrap());
   const fieldInfos = databaseController.fieldController.fieldInfos;
@@ -390,7 +441,7 @@ async function testEditField() {
 }
 
 async function testCreateNewField() {
-  const view = await createTestDatabaseView(ViewLayoutTypePB.Grid);
+  const view = await createTestDatabaseView(ViewLayoutPB.Grid);
   const databaseController = await openTestDatabase(view.id);
   await databaseController.open().then((result) => result.unwrap());
   await assertNumberOfFields(view.id, 3);
@@ -403,7 +454,7 @@ async function testCreateNewField() {
 }
 
 async function testDeleteField() {
-  const view = await createTestDatabaseView(ViewLayoutTypePB.Grid);
+  const view = await createTestDatabaseView(ViewLayoutPB.Grid);
   const databaseController = await openTestDatabase(view.id);
   await databaseController.open().then((result) => result.unwrap());
 
@@ -436,6 +487,12 @@ export const TestEditURLCell = () => {
 };
 export const TestEditDateCell = () => {
   return TestButton('Test editing date cell', testEditDateCell);
+};
+export const TestEditDateFormat = () => {
+  return TestButton('Test editing date format', testEditDateFormatPB);
+};
+export const TestEditNumberFormat = () => {
+  return TestButton('Test editing number format', testEditNumberFormatPB);
 };
 export const TestEditCheckboxCell = () => {
   return TestButton('Test editing checkbox cell', testCheckboxCell);

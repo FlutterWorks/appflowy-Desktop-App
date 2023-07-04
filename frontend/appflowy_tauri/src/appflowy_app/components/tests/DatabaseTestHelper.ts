@@ -1,12 +1,12 @@
 import {
   FieldType,
+  FlowyError,
   SingleSelectTypeOptionPB,
-  ViewLayoutTypePB,
+  ViewLayoutPB,
   ViewPB,
   WorkspaceSettingPB,
 } from '../../../services/backend';
-import { FolderEventReadCurrentWorkspace } from '../../../services/backend/events/flowy-folder';
-import { AppBackendService } from '../../stores/effects/folder/app/app_bd_svc';
+import { FolderEventGetCurrentWorkspace } from '../../../services/backend/events/flowy-folder2';
 import { DatabaseController } from '../../stores/effects/database/database_controller';
 import { RowInfo } from '../../stores/effects/database/row/row_cache';
 import { RowController } from '../../stores/effects/database/row/row_controller';
@@ -19,21 +19,28 @@ import {
   TextCellController,
   URLCellController,
 } from '../../stores/effects/database/cell/controller_builder';
-import { None, Option, Some } from 'ts-results';
+import { None, Ok, Option, Result, Some } from 'ts-results';
 import { TypeOptionBackendService } from '../../stores/effects/database/field/type_option/type_option_bd_svc';
 import { DatabaseBackendService } from '../../stores/effects/database/database_bd_svc';
 import { FieldInfo } from '../../stores/effects/database/field/field_controller';
 import { TypeOptionController } from '../../stores/effects/database/field/type_option/type_option_controller';
 import { makeSingleSelectTypeOptionContext } from '../../stores/effects/database/field/type_option/type_option_context';
 import { SelectOptionBackendService } from '../../stores/effects/database/cell/select_option_bd_svc';
+import { Log } from '$app/utils/log';
+import { ViewBackendService } from '$app/stores/effects/folder/view/view_bd_svc';
+import { WorkspaceBackendService } from '$app/stores/effects/folder/workspace/workspace_bd_svc';
 
 // Create a database view for specific layout type
 // Do not use it production code. Just for testing
-export async function createTestDatabaseView(layout: ViewLayoutTypePB): Promise<ViewPB> {
-  const workspaceSetting: WorkspaceSettingPB = await FolderEventReadCurrentWorkspace().then((result) => result.unwrap());
-  const app = workspaceSetting.workspace.apps.items[0];
-  const appService = new AppBackendService(app.id);
-  return await appService.createView({ name: 'New Grid', layoutType: layout });
+export async function createTestDatabaseView(layout: ViewLayoutPB): Promise<ViewPB> {
+  const workspaceSetting: WorkspaceSettingPB = await FolderEventGetCurrentWorkspace().then((result) => result.unwrap());
+  const wsSvc = new WorkspaceBackendService(workspaceSetting.workspace.id);
+  const viewRes = await wsSvc.createView({ name: 'New Grid', layoutType: layout });
+  if (viewRes.ok) {
+    return viewRes.val;
+  } else {
+    throw Error(viewRes.val.msg);
+  }
 }
 
 export async function openTestDatabase(viewId: string): Promise<DatabaseController> {

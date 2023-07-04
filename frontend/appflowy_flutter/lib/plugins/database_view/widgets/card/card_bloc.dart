@@ -1,6 +1,5 @@
 import 'dart:collection';
-import 'package:equatable/equatable.dart';
-import 'package:appflowy_backend/protobuf/flowy-database/row_entities.pb.dart';
+import 'package:appflowy_backend/protobuf/flowy-database2/row_entities.pb.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
@@ -12,29 +11,29 @@ import '../../application/row/row_service.dart';
 
 part 'card_bloc.freezed.dart';
 
-class CardBloc extends Bloc<BoardCardEvent, BoardCardState> {
-  final RowPB row;
-  final String groupFieldId;
+class CardBloc extends Bloc<RowCardEvent, RowCardState> {
+  final RowMetaPB rowMeta;
+  final String? groupFieldId;
   final RowBackendService _rowBackendSvc;
   final RowCache _rowCache;
   VoidCallback? _rowCallback;
+  final String viewId;
 
   CardBloc({
-    required this.row,
+    required this.rowMeta,
     required this.groupFieldId,
-    required String viewId,
+    required this.viewId,
     required RowCache rowCache,
     required bool isEditing,
   })  : _rowBackendSvc = RowBackendService(viewId: viewId),
         _rowCache = rowCache,
         super(
-          BoardCardState.initial(
-            row,
-            _makeCells(groupFieldId, rowCache.loadGridCells(row.id)),
+          RowCardState.initial(
+            _makeCells(groupFieldId, rowCache.loadGridCells(rowMeta)),
             isEditing,
           ),
         ) {
-    on<BoardCardEvent>(
+    on<RowCardEvent>(
       (event, emit) async {
         await event.when(
           initial: () async {
@@ -69,82 +68,68 @@ class CardBloc extends Bloc<BoardCardEvent, BoardCardState> {
     return RowInfo(
       viewId: _rowBackendSvc.viewId,
       fields: UnmodifiableListView(
-        state.cells.map((cell) => cell.identifier.fieldInfo).toList(),
+        state.cells.map((cell) => cell.fieldInfo).toList(),
       ),
-      rowPB: state.rowPB,
+      rowId: rowMeta.id,
+      rowMeta: rowMeta,
     );
   }
 
   Future<void> _startListening() async {
     _rowCallback = _rowCache.addListener(
-      rowId: row.id,
+      rowId: rowMeta.id,
       onCellUpdated: (cellMap, reason) {
         if (!isClosed) {
           final cells = _makeCells(groupFieldId, cellMap);
-          add(BoardCardEvent.didReceiveCells(cells, reason));
+          add(RowCardEvent.didReceiveCells(cells, reason));
         }
       },
     );
   }
 }
 
-List<BoardCellEquatable> _makeCells(
-  String groupFieldId,
-  CellByFieldId originalCellMap,
+List<DatabaseCellContext> _makeCells(
+  String? groupFieldId,
+  CellContextByFieldId originalCellMap,
 ) {
-  List<BoardCellEquatable> cells = [];
+  final List<DatabaseCellContext> cells = [];
   for (final entry in originalCellMap.entries) {
     // Filter out the cell if it's fieldId equal to the groupFieldId
-    if (entry.value.fieldId != groupFieldId) {
-      cells.add(BoardCellEquatable(entry.value));
+    if (groupFieldId != null) {
+      if (entry.value.fieldId == groupFieldId) {
+        continue;
+      }
     }
+
+    cells.add(entry.value);
   }
   return cells;
 }
 
 @freezed
-class BoardCardEvent with _$BoardCardEvent {
-  const factory BoardCardEvent.initial() = _InitialRow;
-  const factory BoardCardEvent.setIsEditing(bool isEditing) = _IsEditing;
-  const factory BoardCardEvent.didReceiveCells(
-    List<BoardCellEquatable> cells,
+class RowCardEvent with _$RowCardEvent {
+  const factory RowCardEvent.initial() = _InitialRow;
+  const factory RowCardEvent.setIsEditing(bool isEditing) = _IsEditing;
+  const factory RowCardEvent.didReceiveCells(
+    List<DatabaseCellContext> cells,
     RowsChangedReason reason,
   ) = _DidReceiveCells;
 }
 
 @freezed
-class BoardCardState with _$BoardCardState {
-  const factory BoardCardState({
-    required RowPB rowPB,
-    required List<BoardCellEquatable> cells,
+class RowCardState with _$RowCardState {
+  const factory RowCardState({
+    required List<DatabaseCellContext> cells,
     required bool isEditing,
     RowsChangedReason? changeReason,
-  }) = _BoardCardState;
+  }) = _RowCardState;
 
-  factory BoardCardState.initial(
-    RowPB rowPB,
-    List<BoardCellEquatable> cells,
+  factory RowCardState.initial(
+    List<DatabaseCellContext> cells,
     bool isEditing,
   ) =>
-      BoardCardState(
-        rowPB: rowPB,
+      RowCardState(
         cells: cells,
         isEditing: isEditing,
       );
-}
-
-class BoardCellEquatable extends Equatable {
-  final CellIdentifier identifier;
-
-  const BoardCellEquatable(this.identifier);
-
-  @override
-  List<Object?> get props {
-    return [
-      identifier.fieldInfo.id,
-      identifier.fieldInfo.fieldType,
-      identifier.fieldInfo.visibility,
-      identifier.fieldInfo.width,
-    ];
-  }
 }

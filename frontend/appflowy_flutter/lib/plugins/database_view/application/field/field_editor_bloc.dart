@@ -1,4 +1,4 @@
-import 'package:appflowy_backend/protobuf/flowy-database/field_entities.pb.dart';
+import 'package:appflowy_backend/protobuf/flowy-database2/field_entities.pb.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:dartz/dartz.dart';
 import 'field_service.dart';
@@ -12,12 +12,20 @@ class FieldEditorBloc extends Bloc<FieldEditorEvent, FieldEditorState> {
   final TypeOptionController dataController;
 
   FieldEditorBloc({
-    required String viewId,
-    required String fieldName,
     required bool isGroupField,
-    required IFieldTypeOptionLoader loader,
-  })  : dataController = TypeOptionController(viewId: viewId, loader: loader),
-        super(FieldEditorState.initial(viewId, fieldName, isGroupField)) {
+    required FieldPB field,
+    required FieldTypeOptionLoader loader,
+  })  : dataController = TypeOptionController(
+          field: field,
+          loader: loader,
+        ),
+        super(
+          FieldEditorState.initial(
+            loader.viewId,
+            loader.field.name,
+            isGroupField,
+          ),
+        ) {
     on<FieldEditorEvent>(
       (event, emit) async {
         await event.when(
@@ -27,7 +35,8 @@ class FieldEditorBloc extends Bloc<FieldEditorEvent, FieldEditorState> {
                 add(FieldEditorEvent.didReceiveFieldChanged(field));
               }
             });
-            await dataController.loadTypeOptionData();
+            await dataController.reloadTypeOption();
+            add(FieldEditorEvent.didReceiveFieldChanged(dataController.field));
           },
           updateName: (name) {
             if (state.name != name) {
@@ -49,7 +58,7 @@ class FieldEditorBloc extends Bloc<FieldEditorEvent, FieldEditorState> {
               () => null,
               (field) {
                 final fieldService = FieldBackendService(
-                  viewId: viewId,
+                  viewId: loader.viewId,
                   fieldId: field.id,
                 );
                 fieldService.deleteField();

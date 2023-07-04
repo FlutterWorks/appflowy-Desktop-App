@@ -1,9 +1,8 @@
-import 'package:appflowy/plugins/database_view/grid/grid.dart';
 import 'package:appflowy/plugins/document/application/doc_bloc.dart';
-import 'package:appflowy/plugins/document/document.dart';
 import 'package:appflowy/workspace/application/app/app_bloc.dart';
 import 'package:appflowy/workspace/application/menu/menu_view_section_bloc.dart';
 import 'package:appflowy_backend/dispatch/dispatch.dart';
+import 'package:appflowy_backend/protobuf/flowy-folder2/view.pb.dart';
 import 'package:flutter_test/flutter_test.dart';
 import '../../util.dart';
 
@@ -15,37 +14,37 @@ void main() {
 
   test('rename app test', () async {
     final app = await testContext.createTestApp();
-    final bloc = AppBloc(app: app)..add(const AppEvent.initial());
+    final bloc = AppBloc(view: app)..add(const AppEvent.initial());
     await blocResponseFuture();
 
     bloc.add(const AppEvent.rename('Hello world'));
     await blocResponseFuture();
 
-    assert(bloc.state.app.name == 'Hello world');
+    expect(bloc.state.view.name, 'Hello world');
   });
 
   test('delete app test', () async {
     final app = await testContext.createTestApp();
-    final bloc = AppBloc(app: app)..add(const AppEvent.initial());
+    final bloc = AppBloc(view: app)..add(const AppEvent.initial());
     await blocResponseFuture();
 
     bloc.add(const AppEvent.delete());
     await blocResponseFuture();
 
     final apps = await testContext.loadApps();
-    assert(apps.where((element) => element.id == app.id).isEmpty);
+    expect(apps.where((element) => element.id == app.id).isEmpty, true);
   });
 
   test('create documents in order', () async {
     final app = await testContext.createTestApp();
-    final bloc = AppBloc(app: app)..add(const AppEvent.initial());
+    final bloc = AppBloc(view: app)..add(const AppEvent.initial());
     await blocResponseFuture();
 
-    bloc.add(AppEvent.createView("1", DocumentPluginBuilder()));
+    bloc.add(const AppEvent.createView("1", ViewLayoutPB.Document));
     await blocResponseFuture();
-    bloc.add(AppEvent.createView("2", DocumentPluginBuilder()));
+    bloc.add(const AppEvent.createView("2", ViewLayoutPB.Document));
     await blocResponseFuture();
-    bloc.add(AppEvent.createView("3", DocumentPluginBuilder()));
+    bloc.add(const AppEvent.createView("3", ViewLayoutPB.Document));
     await blocResponseFuture();
 
     assert(bloc.state.views[0].name == '1');
@@ -55,18 +54,18 @@ void main() {
 
   test('reorder documents test', () async {
     final app = await testContext.createTestApp();
-    final bloc = AppBloc(app: app)..add(const AppEvent.initial());
+    final bloc = AppBloc(view: app)..add(const AppEvent.initial());
     await blocResponseFuture();
 
-    bloc.add(AppEvent.createView("1", DocumentPluginBuilder()));
+    bloc.add(const AppEvent.createView("1", ViewLayoutPB.Document));
     await blocResponseFuture();
-    bloc.add(AppEvent.createView("2", DocumentPluginBuilder()));
+    bloc.add(const AppEvent.createView("2", ViewLayoutPB.Document));
     await blocResponseFuture();
-    bloc.add(AppEvent.createView("3", DocumentPluginBuilder()));
+    bloc.add(const AppEvent.createView("3", ViewLayoutPB.Document));
     await blocResponseFuture();
     assert(bloc.state.views.length == 3);
 
-    final appViewData = AppViewDataContext(appId: app.id);
+    final appViewData = ViewDataContext(viewId: app.id);
     appViewData.views = bloc.state.views;
 
     final viewSectionBloc = ViewSectionBloc(
@@ -84,21 +83,21 @@ void main() {
 
   test('open latest view test', () async {
     final app = await testContext.createTestApp();
-    final bloc = AppBloc(app: app)..add(const AppEvent.initial());
+    final bloc = AppBloc(view: app)..add(const AppEvent.initial());
     await blocResponseFuture();
     assert(
       bloc.state.latestCreatedView == null,
       "assert initial latest create view is null after initialize",
     );
 
-    bloc.add(AppEvent.createView("1", DocumentPluginBuilder()));
+    bloc.add(const AppEvent.createView("1", ViewLayoutPB.Document));
     await blocResponseFuture();
     assert(
       bloc.state.latestCreatedView!.id == bloc.state.views.last.id,
       "create a view and assert the latest create view is this view",
     );
 
-    bloc.add(AppEvent.createView("2", DocumentPluginBuilder()));
+    bloc.add(const AppEvent.createView("2", ViewLayoutPB.Document));
     await blocResponseFuture();
     assert(
       bloc.state.latestCreatedView!.id == bloc.state.views.last.id,
@@ -108,15 +107,15 @@ void main() {
 
   test('open latest documents test', () async {
     final app = await testContext.createTestApp();
-    final bloc = AppBloc(app: app)..add(const AppEvent.initial());
+    final bloc = AppBloc(view: app)..add(const AppEvent.initial());
     await blocResponseFuture();
 
-    bloc.add(AppEvent.createView("document 1", DocumentPluginBuilder()));
+    bloc.add(const AppEvent.createView("document 1", ViewLayoutPB.Document));
     await blocResponseFuture();
     final document1 = bloc.state.latestCreatedView;
     assert(document1!.name == "document 1");
 
-    bloc.add(AppEvent.createView("document 2", DocumentPluginBuilder()));
+    bloc.add(const AppEvent.createView("document 2", ViewLayoutPB.Document));
     await blocResponseFuture();
     final document2 = bloc.state.latestCreatedView;
     assert(document2!.name == "document 2");
@@ -127,7 +126,7 @@ void main() {
       ..add(const DocumentEvent.initial());
     await blocResponseFuture();
 
-    final workspaceSetting = await FolderEventReadCurrentWorkspace()
+    final workspaceSetting = await FolderEventGetCurrentWorkspace()
         .send()
         .then((result) => result.fold((l) => l, (r) => throw Exception()));
     workspaceSetting.latestView.id == document1.id;
@@ -135,20 +134,20 @@ void main() {
 
   test('open latest document test', () async {
     final app = await testContext.createTestApp();
-    final bloc = AppBloc(app: app)..add(const AppEvent.initial());
+    final bloc = AppBloc(view: app)..add(const AppEvent.initial());
     await blocResponseFuture();
 
-    bloc.add(AppEvent.createView("document 1", DocumentPluginBuilder()));
+    bloc.add(const AppEvent.createView("document 1", ViewLayoutPB.Document));
     await blocResponseFuture();
     final document = bloc.state.latestCreatedView;
     assert(document!.name == "document 1");
 
-    bloc.add(AppEvent.createView("grid 2", GridPluginBuilder()));
+    bloc.add(const AppEvent.createView("grid 2", ViewLayoutPB.Grid));
     await blocResponseFuture();
     final grid = bloc.state.latestCreatedView;
     assert(grid!.name == "grid 2");
 
-    var workspaceSetting = await FolderEventReadCurrentWorkspace()
+    var workspaceSetting = await FolderEventGetCurrentWorkspace()
         .send()
         .then((result) => result.fold((l) => l, (r) => throw Exception()));
     workspaceSetting.latestView.id == grid!.id;
@@ -159,7 +158,7 @@ void main() {
       ..add(const DocumentEvent.initial());
     await blocResponseFuture();
 
-    workspaceSetting = await FolderEventReadCurrentWorkspace()
+    workspaceSetting = await FolderEventGetCurrentWorkspace()
         .send()
         .then((result) => result.fold((l) => l, (r) => throw Exception()));
     workspaceSetting.latestView.id == document.id;

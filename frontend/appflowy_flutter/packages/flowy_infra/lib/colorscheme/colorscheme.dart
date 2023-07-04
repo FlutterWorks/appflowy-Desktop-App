@@ -1,9 +1,13 @@
+import 'package:flowy_infra/utils/color_converter.dart';
 import 'package:flutter/material.dart';
 
 import 'package:flowy_infra/theme.dart';
+import 'package:freezed_annotation/freezed_annotation.dart';
 import 'default_colorscheme.dart';
 import 'dandelion.dart';
 import 'lavender.dart';
+
+part 'colorscheme.g.dart';
 
 /// A map of all the built-in themes.
 ///
@@ -25,8 +29,12 @@ const Map<String, List<FlowyColorScheme>> themeMap = {
   ],
 };
 
-@immutable
-abstract class FlowyColorScheme {
+@JsonSerializable(
+  converters: [
+    ColorConverter(),
+  ],
+)
+class FlowyColorScheme {
   final Color surface;
   final Color hover;
   final Color selector;
@@ -73,9 +81,10 @@ abstract class FlowyColorScheme {
   //the text color when it is hovered
   final Color hoverFG;
   final Color questionBubbleBG;
-  final Color progressBarBGcolor;
+  final Color progressBarBGColor;
   //editor toolbar BG color
   final Color toolbarColor;
+  final Color toggleButtonBGColor;
 
   const FlowyColorScheme({
     required this.surface,
@@ -121,16 +130,13 @@ abstract class FlowyColorScheme {
     required this.hoverBG3,
     required this.hoverFG,
     required this.questionBubbleBG,
-    required this.progressBarBGcolor,
+    required this.progressBarBGColor,
     required this.toolbarColor,
+    required this.toggleButtonBGColor,
   });
 
-  factory FlowyColorScheme.builtIn(String themeName, Brightness brightness) {
-    switch (brightness) {
-      case Brightness.light:
-        return themeMap[themeName]?[0] ?? const DefaultColorScheme.light();
-      case Brightness.dark:
-        return themeMap[themeName]?[1] ?? const DefaultColorScheme.dark();
-    }
-  }
+  factory FlowyColorScheme.fromJson(Map<String, dynamic> json) =>
+      _$FlowyColorSchemeFromJson(json);
+
+  Map<String, dynamic> toJson() => _$FlowyColorSchemeToJson(this);
 }

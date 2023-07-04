@@ -23,7 +23,7 @@ CARGO_MAKE_EXTEND_WORKSPACE_MAKEFILE = true
 CARGO_MAKE_CRATE_FS_NAME = "dart_ffi"
 CARGO_MAKE_CRATE_NAME = "dart-ffi"
 LIB_NAME = "dart_ffi"
-CURRENT_APP_VERSION = "0.1.3"
+CURRENT_APP_VERSION = "0.2.5"
 FLUTTER_DESKTOP_FEATURES = "dart,rev-sqlite"
 PRODUCT_NAME = "AppFlowy"
 # CRATE_TYPE: https://doc.rust-lang.org/reference/linkage.html
@@ -59,6 +59,7 @@ BUILD_FLAG = "debug"
 FLUTTER_OUTPUT_DIR = "Debug"
 PRODUCT_EXT = "app"
 BUILD_ARCHS = "arm64"
+CRATE_TYPE = "staticlib"
 
 [env.development-mac-x86_64]
 RUST_LOG = "info"
@@ -68,6 +69,7 @@ BUILD_FLAG = "debug"
 FLUTTER_OUTPUT_DIR = "Debug"
 PRODUCT_EXT = "app"
 BUILD_ARCHS = "x86_64"
+CRATE_TYPE = "staticlib"
 
 [env.production-mac-arm64]
 BUILD_FLAG = "release"
@@ -77,6 +79,7 @@ FLUTTER_OUTPUT_DIR = "Release"
 PRODUCT_EXT = "app"
 APP_ENVIRONMENT = "production"
 BUILD_ARCHS = "arm64"
+CRATE_TYPE = "staticlib"
 
 [env.production-mac-x86_64]
 BUILD_FLAG = "release"
@@ -86,6 +89,7 @@ FLUTTER_OUTPUT_DIR = "Release"
 PRODUCT_EXT = "app"
 APP_ENVIRONMENT = "production"
 BUILD_ARCHS = "x86_64"
+CRATE_TYPE = "staticlib"
 
 [env.development-windows-x86]
 TARGET_OS = "windows"

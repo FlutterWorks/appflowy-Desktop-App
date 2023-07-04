@@ -36,10 +36,10 @@ class AppearanceSettingsCubit extends Cubit<AppearanceSettingsState> {
 
   /// Update selected theme in the user's settings and emit an updated state
   /// with the AppTheme named [themeName].
-  void setTheme(String themeName) {
+  Future<void> setTheme(String themeName) async {
     _setting.theme = themeName;
     _saveAppearanceSettings();
-    emit(state.copyWith(appTheme: AppTheme.fromName(themeName)));
+    emit(state.copyWith(appTheme: await AppTheme.fromName(themeName)));
   }
 
   /// Update the theme mode in the user's settings and emit an updated state.
@@ -53,17 +53,18 @@ class AppearanceSettingsCubit extends Cubit<AppearanceSettingsState> {
   /// changed. Fallback to [en] locale if [newLocale] is not supported.
   void setLocale(BuildContext context, Locale newLocale) {
     if (!context.supportedLocales.contains(newLocale)) {
-      Log.warn("Unsupported locale: $newLocale, Fallback to locale: en");
+      // Log.warn("Unsupported locale: $newLocale, Fallback to locale: en");
       newLocale = const Locale('en');
     }
 
-    if (state.locale != newLocale) {
-      context.setLocale(newLocale);
+    context.setLocale(newLocale).catchError((e) {
+      Log.warn('Catch error in setLocale: $e}');
+    });
 
+    if (state.locale != newLocale) {
       _setting.locale.languageCode = newLocale.languageCode;
       _setting.locale.countryCode = newLocale.countryCode ?? "";
       _saveAppearanceSettings();
-
       emit(state.copyWith(locale: newLocale));
     }
   }
@@ -181,7 +182,7 @@ class AppearanceSettingsState with _$AppearanceSettingsState {
     double menuOffset,
   ) {
     return AppearanceSettingsState(
-      appTheme: AppTheme.fromName(themeName),
+      appTheme: AppTheme.fallback,
       font: font,
       monospaceFont: monospaceFont,
       themeMode: _themeModeFromPB(themeModePB),
@@ -250,6 +251,7 @@ class AppearanceSettingsState with _$AppearanceSettingsState {
 
     return ThemeData(
       brightness: brightness,
+      dialogBackgroundColor: theme.surface,
       textTheme: _getTextTheme(fontFamily: fontFamily, fontColor: theme.text),
       textSelectionTheme: TextSelectionThemeData(
         cursorColor: theme.main2,
@@ -283,7 +285,7 @@ class AppearanceSettingsState with _$AppearanceSettingsState {
           return 3.0;
         }),
         crossAxisMargin: 0.0,
-        mainAxisMargin: 0.0,
+        mainAxisMargin: 6.0,
         radius: Corners.s10Radius,
       ),
       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -316,7 +318,8 @@ class AppearanceSettingsState with _$AppearanceSettingsState {
           greySelect: theme.bg3,
           lightGreyHover: theme.hoverBG3,
           toggleOffFill: theme.shader5,
-          progressBarBGcolor: theme.progressBarBGcolor,
+          progressBarBGColor: theme.progressBarBGColor,
+          toggleButtonBGColor: theme.toggleButtonBGColor,
           code: _getFontStyle(
             fontFamily: monospaceFontFamily,
             fontColor: theme.shader3,

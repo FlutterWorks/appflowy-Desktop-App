@@ -1,6 +1,6 @@
 import 'package:appflowy/plugins/database_view/application/cell/cell_controller_builder.dart';
 import 'package:appflowy/plugins/database_view/application/field/field_controller.dart';
-import 'package:appflowy_backend/protobuf/flowy-database/date_type_option_entities.pb.dart';
+import 'package:appflowy_backend/protobuf/flowy-database2/date_entities.pb.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'dart:async';
@@ -79,7 +79,11 @@ class DateCellState with _$DateCellState {
 String _dateStrFromCellData(DateCellDataPB? cellData) {
   String dateStr = "";
   if (cellData != null) {
-    dateStr = "${cellData.date} ${cellData.time}";
+    if (cellData.includeTime) {
+      dateStr = "${cellData.date} ${cellData.time}";
+    } else {
+      dateStr = cellData.date;
+    }
   }
   return dateStr;
 }

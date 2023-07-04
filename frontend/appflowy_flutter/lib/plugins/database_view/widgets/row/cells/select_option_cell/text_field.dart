@@ -1,14 +1,13 @@
 import 'dart:collection';
 
+import 'package:appflowy_backend/protobuf/flowy-database2/select_option.pb.dart';
 import 'package:flowy_infra/size.dart';
-import 'package:appflowy_backend/protobuf/flowy-database/select_type_option.pb.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:appflowy/generated/locale_keys.g.dart';
 import 'package:flutter/services.dart';
 import 'package:textfield_tags/textfield_tags.dart';
-import 'package:textstyle_extensions/textstyle_extensions.dart';
 
 import 'extension.dart';
 
@@ -126,7 +125,7 @@ class _SelectOptionTextFieldState extends State<SelectOptionTextField> {
               hintStyle: Theme.of(context)
                   .textTheme
                   .bodySmall!
-                  .textColor(Theme.of(context).hintColor),
+                  .copyWith(color: Theme.of(context).hintColor),
               suffixText: _suffixText(),
               counterText: "",
               prefixIconConstraints:
@@ -200,7 +199,7 @@ class _SelectOptionTextFieldState extends State<SelectOptionTextField> {
 
 @visibleForTesting
 List splitInput(String input, List<String> textSeparators) {
-  List<String> splits = [];
+  final List<String> splits = [];
   String currentString = '';
 
   // split the string into tokens

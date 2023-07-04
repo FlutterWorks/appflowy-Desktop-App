@@ -1,25 +1,17 @@
-import { TypeOptionController } from '../../../stores/effects/database/field/type_option/type_option_controller';
+import { TypeOptionController } from '$app/stores/effects/database/field/type_option/type_option_controller';
 import { Some } from 'ts-results';
-import { IDatabaseField, ISelectOption } from '../../../stores/reducers/database/slice';
-import {
-  ChecklistTypeOptionPB,
-  DateFormat,
-  FieldType,
-  MultiSelectTypeOptionPB,
-  NumberFormat,
-  SingleSelectTypeOptionPB,
-  TimeFormat,
-} from '@/services/backend';
+import { IDatabaseField, ISelectOption } from '$app_reducers/database/slice';
+import { ChecklistTypeOptionPB, FieldType, MultiSelectTypeOptionPB, SingleSelectTypeOptionPB } from '@/services/backend';
 import {
   makeChecklistTypeOptionContext,
   makeDateTypeOptionContext,
   makeMultiSelectTypeOptionContext,
   makeNumberTypeOptionContext,
   makeSingleSelectTypeOptionContext,
-} from '../../../stores/effects/database/field/type_option/type_option_context';
-import { boardActions } from '../../../stores/reducers/board/slice';
-import { FieldInfo } from '../../../stores/effects/database/field/field_controller';
-import { AppDispatch } from '../../../stores/store';
+} from '$app/stores/effects/database/field/type_option/type_option_context';
+import { boardActions } from '$app_reducers/board/slice';
+import { FieldInfo } from '$app/stores/effects/database/field/field_controller';
+import { AppDispatch } from '$app/stores/store';
 
 export default async function (viewId: string, fieldInfo: FieldInfo, dispatch?: AppDispatch): Promise<IDatabaseField> {
   const field = fieldInfo.field;
@@ -30,10 +22,9 @@ export default async function (viewId: string, fieldInfo: FieldInfo, dispatch?: 
 
   switch (field.field_type) {
     case FieldType.SingleSelect:
-    case FieldType.MultiSelect:
-    case FieldType.Checklist: {
+    case FieldType.MultiSelect: {
       let selectOptions: ISelectOption[] = [];
-      let typeOption: SingleSelectTypeOptionPB | MultiSelectTypeOptionPB | ChecklistTypeOptionPB | undefined;
+      let typeOption: SingleSelectTypeOptionPB | MultiSelectTypeOptionPB | undefined;
 
       if (field.field_type === FieldType.SingleSelect) {
         typeOption = (await makeSingleSelectTypeOptionContext(typeOptionController).getTypeOption()).unwrap();
@@ -46,9 +37,6 @@ export default async function (viewId: string, fieldInfo: FieldInfo, dispatch?: 
       }
       if (field.field_type === FieldType.MultiSelect) {
         typeOption = (await makeMultiSelectTypeOptionContext(typeOptionController).getTypeOption()).unwrap();
-      }
-      if (field.field_type === FieldType.Checklist) {
-        typeOption = (await makeChecklistTypeOptionContext(typeOptionController).getTypeOption()).unwrap();
       }
 
       if (typeOption) {
@@ -65,6 +53,7 @@ export default async function (viewId: string, fieldInfo: FieldInfo, dispatch?: 
         fieldId: field.id,
         title: field.name,
         fieldType: field.field_type,
+        visible: field.visibility,
         fieldOptions: {
           selectOptions,
         },
@@ -76,6 +65,7 @@ export default async function (viewId: string, fieldInfo: FieldInfo, dispatch?: 
       return {
         fieldId: field.id,
         title: field.name,
+        visible: field.visibility,
         fieldType: field.field_type,
         fieldOptions: {
           numberFormat: typeOption.format,
@@ -88,11 +78,11 @@ export default async function (viewId: string, fieldInfo: FieldInfo, dispatch?: 
       return {
         fieldId: field.id,
         title: field.name,
+        visible: field.visibility,
         fieldType: field.field_type,
         fieldOptions: {
           dateFormat: typeOption.date_format,
           timeFormat: typeOption.time_format,
-          includeTime: typeOption.include_time,
         },
       };
     }
@@ -101,6 +91,7 @@ export default async function (viewId: string, fieldInfo: FieldInfo, dispatch?: 
       return {
         fieldId: field.id,
         title: field.name,
+        visible: field.visibility,
         fieldType: field.field_type,
       };
     }

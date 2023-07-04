@@ -1,6 +1,6 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import { FieldType } from '@/services/backend/models/flowy-database/field_entities';
-import { DateFormat, NumberFormat, SelectOptionColorPB, TimeFormat } from '@/services/backend';
+import { FieldType } from '@/services/backend/models/flowy-database2/field_entities';
+import { DateFormatPB, NumberFormatPB, SelectOptionColorPB, TimeFormatPB } from '@/services/backend';
 
 export interface ISelectOption {
   selectOptionId: string;
@@ -13,18 +13,19 @@ export interface ISelectOptionType {
 }
 
 export interface IDateType {
-  dateFormat: DateFormat;
-  timeFormat: TimeFormat;
-  includeTime: boolean;
+  dateFormat: DateFormatPB;
+  timeFormat: TimeFormatPB;
+  // includeTime: boolean;
 }
 
 export interface INumberType {
-  numberFormat: NumberFormat;
+  numberFormat: NumberFormatPB;
 }
 
 export interface IDatabaseField {
   fieldId: string;
   title: string;
+  visible: boolean;
   fieldType: FieldType;
   fieldOptions?: ISelectOptionType | IDateType | INumberType;
 }
@@ -112,11 +113,10 @@ export const databaseSlice = createSlice({
       });
     },*/
 
-    /*updateField: (state, action: PayloadAction<{ field: IDatabaseField }>) => {
+    updateField: (state, action: PayloadAction<{ field: IDatabaseField }>) => {
       const { field } = action.payload;
-
       state.fields[field.fieldId] = field;
-    },*/
+    },
 
     /*addFieldSelectOption: (state, action: PayloadAction<{ fieldId: string; option: ISelectOption }>) => {
       const { fieldId, option } = action.payload;

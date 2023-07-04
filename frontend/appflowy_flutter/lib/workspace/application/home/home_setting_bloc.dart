@@ -1,7 +1,7 @@
 import 'package:appflowy/user/application/user_listener.dart';
 import 'package:appflowy/workspace/application/appearance.dart';
 import 'package:appflowy/workspace/application/edit_panel/edit_context.dart';
-import 'package:appflowy_backend/protobuf/flowy-folder/workspace.pb.dart'
+import 'package:appflowy_backend/protobuf/flowy-folder2/workspace.pb.dart'
     show WorkspaceSettingPB;
 import 'package:appflowy_backend/protobuf/flowy-user/user_profile.pb.dart';
 import 'package:dartz/dartz.dart';
@@ -41,7 +41,7 @@ class HomeSettingBloc extends Bloc<HomeSettingEvent, HomeSettingState> {
             emit(state.copyWith(workspaceSetting: value.setting));
           },
           collapseMenu: (_CollapseMenu e) {
-            var isMenuCollapsed = !state.isMenuCollapsed;
+            final isMenuCollapsed = !state.isMenuCollapsed;
             _appearanceSettingsCubit.saveIsMenuCollapsed(isMenuCollapsed);
             emit(state.copyWith(isMenuCollapsed: isMenuCollapsed));
           },

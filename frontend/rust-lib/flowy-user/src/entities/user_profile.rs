@@ -1,10 +1,10 @@
-use crate::errors::ErrorCode;
-use flowy_derive::ProtoBuf;
 use std::convert::TryInto;
-use user_model::{
-  UpdateUserProfileParams, UserEmail, UserIcon, UserId, UserName, UserOpenaiKey, UserPassword,
-  UserProfile,
-};
+
+use flowy_derive::ProtoBuf;
+
+use crate::entities::parser::{UserEmail, UserIcon, UserName, UserOpenaiKey, UserPassword};
+use crate::entities::{AuthTypePB, UpdateUserProfileParams, UserProfile};
+use crate::errors::ErrorCode;
 
 #[derive(Default, ProtoBuf)]
 pub struct UserTokenPB {
@@ -21,7 +21,7 @@ pub struct UserSettingPB {
 #[derive(ProtoBuf, Default, Debug, PartialEq, Eq, Clone)]
 pub struct UserProfilePB {
   #[pb(index = 1)]
-  pub id: String,
+  pub id: i64,
 
   #[pb(index = 2)]
   pub email: String,
@@ -55,7 +55,7 @@ impl std::convert::From<UserProfile> for UserProfilePB {
 #[derive(ProtoBuf, Default)]
 pub struct UpdateUserProfilePayloadPB {
   #[pb(index = 1)]
-  pub id: String,
+  pub id: i64,
 
   #[pb(index = 2, one_of)]
   pub name: Option<String>,
@@ -71,12 +71,15 @@ pub struct UpdateUserProfilePayloadPB {
 
   #[pb(index = 6, one_of)]
   pub openai_key: Option<String>,
+
+  #[pb(index = 7)]
+  pub auth_type: AuthTypePB,
 }
 
 impl UpdateUserProfilePayloadPB {
-  pub fn new(id: &str) -> Self {
+  pub fn new(id: i64) -> Self {
     Self {
-      id: id.to_owned(),
+      id,
       ..Default::default()
     }
   }
@@ -111,8 +114,6 @@ impl TryInto<UpdateUserProfileParams> for UpdateUserProfilePayloadPB {
   type Error = ErrorCode;
 
   fn try_into(self) -> Result<UpdateUserProfileParams, Self::Error> {
-    let id = UserId::parse(self.id)?.0;
-
     let name = match self.name {
       None => None,
       Some(name) => Some(UserName::parse(name)?.0),
@@ -139,7 +140,8 @@ impl TryInto<UpdateUserProfileParams> for UpdateUserProfilePayloadPB {
     };
 
     Ok(UpdateUserProfileParams {
-      id,
+      id: self.id,
+      auth_type: self.auth_type.into(),
       name,
       email,
       password,

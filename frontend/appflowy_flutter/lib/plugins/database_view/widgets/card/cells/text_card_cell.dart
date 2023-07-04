@@ -2,7 +2,6 @@ import 'package:appflowy/plugins/database_view/application/cell/cell_controller_
 import 'package:flowy_infra_ui/style_widget/text.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:textstyle_extensions/textstyle_extensions.dart';
 import '../../row/cell_builder.dart';
 import '../bloc/text_card_cell_bloc.dart';
 import '../define.dart';
@@ -14,18 +13,21 @@ class TextCardCellStyle extends CardCellStyle {
   TextCardCellStyle(this.fontSize);
 }
 
-class TextCardCell extends CardCell<String, TextCardCellStyle>
-    with EditableCell {
+class TextCardCell<CustomCardData>
+    extends CardCell<CustomCardData, TextCardCellStyle> with EditableCell {
   @override
   final EditableCardNotifier? editableNotifier;
   final CellControllerBuilder cellControllerBuilder;
+  final CellRenderHook<String, CustomCardData>? renderHook;
 
   const TextCardCell({
     required this.cellControllerBuilder,
+    required CustomCardData? cardData,
     this.editableNotifier,
+    this.renderHook,
     TextCardCellStyle? style,
     Key? key,
-  }) : super(key: key, style: style);
+  }) : super(key: key, style: style, cardData: cardData);
 
   @override
   State<TextCardCell> createState() => _TextCardCellState();
@@ -104,6 +106,16 @@ class _TextCardCellState extends State<TextCardCell> {
             return previous != current;
           },
           builder: (context, state) {
+            // Returns a custom render widget
+            final Widget? custom = widget.renderHook?.call(
+              state.content,
+              widget.cardData,
+              context,
+            );
+            if (custom != null) {
+              return custom;
+            }
+
             if (state.content.isEmpty &&
                 state.enableEdit == false &&
                 focusWhenInit == false) {
@@ -165,7 +177,10 @@ class _TextCardCellState extends State<TextCardCell> {
         onChanged: (value) => focusChanged(),
         onEditingComplete: () => focusNode.unfocus(),
         maxLines: null,
-        style: Theme.of(context).textTheme.bodyMedium!.size(_fontSize()),
+        style: Theme.of(context)
+            .textTheme
+            .bodyMedium!
+            .copyWith(fontSize: _fontSize()),
         decoration: InputDecoration(
           // Magic number 4 makes the textField take up the same space as FlowyText
           contentPadding: EdgeInsets.symmetric(

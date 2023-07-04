@@ -1,6 +1,6 @@
-import 'package:appflowy/plugins/document/document.dart';
 import 'package:appflowy/workspace/application/app/app_bloc.dart';
 import 'package:appflowy/workspace/application/view/view_bloc.dart';
+import 'package:appflowy_backend/protobuf/flowy-folder2/view.pb.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../util.dart';
@@ -13,13 +13,12 @@ void main() {
 
   test('rename view test', () async {
     final app = await testContext.createTestApp();
-    final appBloc = AppBloc(app: app)..add(const AppEvent.initial());
+
+    final appBloc = AppBloc(view: app)..add(const AppEvent.initial());
     appBloc.add(
-      AppEvent.createView(
-        "Test document",
-        DocumentPluginBuilder(),
-      ),
+      const AppEvent.createView("Test document", ViewLayoutPB.Document),
     );
+
     await blocResponseFuture();
 
     final viewBloc = ViewBloc(view: appBloc.state.views.first)
@@ -32,14 +31,11 @@ void main() {
 
   test('duplicate view test', () async {
     final app = await testContext.createTestApp();
-    final appBloc = AppBloc(app: app)..add(const AppEvent.initial());
+    final appBloc = AppBloc(view: app)..add(const AppEvent.initial());
     await blocResponseFuture();
 
     appBloc.add(
-      AppEvent.createView(
-        "Test document",
-        DocumentPluginBuilder(),
-      ),
+      const AppEvent.createView("Test document", ViewLayoutPB.Document),
     );
     await blocResponseFuture();
 
@@ -55,14 +51,11 @@ void main() {
 
   test('delete view test', () async {
     final app = await testContext.createTestApp();
-    final appBloc = AppBloc(app: app)..add(const AppEvent.initial());
+    final appBloc = AppBloc(view: app)..add(const AppEvent.initial());
     await blocResponseFuture();
 
     appBloc.add(
-      AppEvent.createView(
-        "Test document",
-        DocumentPluginBuilder(),
-      ),
+      const AppEvent.createView("Test document", ViewLayoutPB.Document),
     );
     await blocResponseFuture();
     expect(appBloc.state.views.length, 1);

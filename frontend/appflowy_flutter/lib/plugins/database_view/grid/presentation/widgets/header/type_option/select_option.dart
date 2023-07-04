@@ -1,9 +1,9 @@
 import 'package:appflowy/plugins/database_view/application/field/type_option/select_option_type_option_bloc.dart';
+import 'package:appflowy_backend/protobuf/flowy-database2/select_option.pb.dart';
 import 'package:appflowy_popover/appflowy_popover.dart';
 import 'package:flowy_infra/image.dart';
 import 'package:flowy_infra/theme_extension.dart';
 import 'package:flowy_infra_ui/flowy_infra_ui.dart';
-import 'package:appflowy_backend/protobuf/flowy-database/select_type_option.pb.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:easy_localization/easy_localization.dart';
@@ -38,7 +38,7 @@ class SelectOptionTypeOptionWidget extends StatelessWidget {
       child:
           BlocBuilder<SelectOptionTypeOptionBloc, SelectOptionTypeOptionState>(
         builder: (context, state) {
-          List<Widget> children = [
+          final List<Widget> children = [
             const TypeOptionSeparator(),
             const OptionTitle(),
             if (state.isEditingOption)
@@ -70,7 +70,7 @@ class OptionTitle extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocBuilder<SelectOptionTypeOptionBloc, SelectOptionTypeOptionState>(
       builder: (context, state) {
-        List<Widget> children = [
+        final List<Widget> children = [
           Padding(
             padding: const EdgeInsets.only(left: 9),
             child: FlowyText.medium(
@@ -209,7 +209,7 @@ class _OptionCellState extends State<_OptionCell> {
       offset: const Offset(8, 0),
       margin: EdgeInsets.zero,
       asBarrier: true,
-      constraints: BoxConstraints.loose(const Size(460, 460)),
+      constraints: BoxConstraints.loose(const Size(460, 470)),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12.0),
         child: child,

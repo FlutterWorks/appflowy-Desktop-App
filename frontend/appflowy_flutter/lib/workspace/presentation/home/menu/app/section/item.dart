@@ -7,7 +7,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flowy_infra_ui/style_widget/hover.dart';
 import 'package:flowy_infra_ui/style_widget/text.dart';
 import 'package:flowy_infra_ui/widget/spacing.dart';
-import 'package:appflowy_backend/protobuf/flowy-folder/view.pb.dart';
+import 'package:appflowy_backend/protobuf/flowy-folder2/view.pb.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:styled_widget/styled_widget.dart';
@@ -24,12 +24,12 @@ class ViewSectionItem extends StatelessWidget {
   final ViewPB view;
   final void Function(ViewPB) onSelected;
 
-  ViewSectionItem({
+  const ViewSectionItem({
     Key? key,
     required this.view,
     required this.isSelected,
     required this.onSelected,
-  }) : super(key: ValueKey('$view.hashCode/$isSelected'));
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -74,7 +74,7 @@ class ViewSectionItem extends StatelessWidget {
     bool onHover,
     ViewState state,
   ) {
-    List<Widget> children = [
+    final List<Widget> children = [
       SizedBox(
         width: 16,
         height: 16,
@@ -99,6 +99,7 @@ class ViewSectionItem extends StatelessWidget {
               case ViewDisclosureAction.rename:
                 NavigatorTextFieldDialog(
                   title: LocaleKeys.disclosureAction_rename.tr(),
+                  autoSelectAllText: true,
                   value: blocContext.read<ViewBloc>().state.view.name,
                   confirm: (newValue) {
                     blocContext

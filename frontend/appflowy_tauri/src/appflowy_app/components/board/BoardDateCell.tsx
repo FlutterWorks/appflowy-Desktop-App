@@ -1,8 +1,8 @@
-import { DateCellDataPB } from '../../../services/backend';
+import { DateCellDataPB } from '@/services/backend';
 import { useCell } from '../_shared/database-hooks/useCell';
-import { CellIdentifier } from '../../stores/effects/database/cell/cell_bd_svc';
-import { CellCache } from '../../stores/effects/database/cell/cell_cache';
-import { FieldController } from '../../stores/effects/database/field/field_controller';
+import { CellIdentifier } from '$app/stores/effects/database/cell/cell_bd_svc';
+import { CellCache } from '$app/stores/effects/database/cell/cell_cache';
+import { FieldController } from '$app/stores/effects/database/field/field_controller';
 
 export const BoardDateCell = ({
   cellIdentifier,
@@ -14,5 +14,5 @@ export const BoardDateCell = ({
   fieldController: FieldController;
 }) => {
   const { data } = useCell(cellIdentifier, cellCache, fieldController);
-  return <div>{(data as DateCellDataPB | undefined)?.date || ''}</div>;
+  return <div>{(data as DateCellDataPB | undefined)?.date ?? ''}&nbsp;</div>;
 };

@@ -8,8 +8,8 @@ import 'package:appflowy/workspace/application/home/home_setting_bloc.dart';
 import 'package:appflowy/workspace/application/menu/menu_bloc.dart';
 import 'package:appflowy/workspace/presentation/home/home_sizes.dart';
 import 'package:appflowy/workspace/presentation/home/home_stack.dart';
-import 'package:appflowy_backend/protobuf/flowy-folder/view.pb.dart';
-import 'package:appflowy_backend/protobuf/flowy-folder/workspace.pb.dart';
+import 'package:appflowy_backend/protobuf/flowy-folder2/view.pb.dart';
+import 'package:appflowy_backend/protobuf/flowy-folder2/workspace.pb.dart';
 import 'package:appflowy_backend/protobuf/flowy-user/protobuf.dart'
     show UserProfilePB;
 import 'package:easy_localization/easy_localization.dart';
@@ -114,7 +114,7 @@ class HomeMenu extends StatelessWidget {
         child: ScrollConfiguration(
           behavior: const ScrollBehavior().copyWith(scrollbars: false),
           child: BlocSelector<MenuBloc, MenuState, List<Widget>>(
-            selector: (state) => state.apps
+            selector: (state) => state.views
                 .map((app) => MenuApp(app, key: ValueKey(app.id)))
                 .toList(),
             builder: (context, menuItems) {
@@ -131,7 +131,7 @@ class HomeMenu extends StatelessWidget {
                   //  expect:   oldIndex: 0, newIndex: 1
                   //  receive:  oldIndex: 0, newIndex: 2
                   //  Workaround: if newIndex > oldIndex, we just minus one
-                  int index = newIndex > oldIndex ? newIndex - 1 : newIndex;
+                  final int index = newIndex > oldIndex ? newIndex - 1 : newIndex;
                   context
                       .read<MenuBloc>()
                       .add(MenuEvent.moveApp(oldIndex, index));
@@ -149,6 +149,8 @@ class HomeMenu extends StatelessWidget {
                     ),
                   );
                 },
+                proxyDecorator: (child, index, animation) =>
+                    Material(color: Colors.transparent, child: child),
               );
             },
           ),

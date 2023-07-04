@@ -37,7 +37,7 @@ export class FieldController {
   };
 
   subscribe = (callbacks: { onNumOfFieldsChanged?: (fieldInfos: readonly FieldInfo[]) => void }) => {
-    this.numOfFieldsNotifier.observer.subscribe((fieldInfos) => {
+    this.numOfFieldsNotifier.observer?.subscribe((fieldInfos) => {
       callbacks.onNumOfFieldsChanged?.(fieldInfos);
     });
   };

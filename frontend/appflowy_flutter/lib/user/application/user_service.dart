@@ -1,20 +1,23 @@
 import 'dart:async';
 
+import 'package:appflowy_backend/protobuf/flowy-user/protobuf.dart';
 import 'package:dartz/dartz.dart';
 import 'package:appflowy_backend/dispatch/dispatch.dart';
 import 'package:appflowy_backend/protobuf/flowy-error/errors.pb.dart';
-import 'package:appflowy_backend/protobuf/flowy-folder/workspace.pb.dart';
-import 'package:appflowy_backend/protobuf/flowy-user/user_profile.pb.dart';
+import 'package:appflowy_backend/protobuf/flowy-folder2/workspace.pb.dart';
+import 'package:fixnum/fixnum.dart';
 
 class UserBackendService {
   UserBackendService({
     required this.userId,
   });
 
-  final String userId;
+  final Int64 userId;
 
-  static Future<Either<UserProfilePB, FlowyError>> getCurrentUserProfile() {
-    return UserEventGetUserProfile().send();
+  static Future<Either<FlowyError, UserProfilePB>>
+      getCurrentUserProfile() async {
+    final result = await UserEventGetUserProfile().send();
+    return result.swap();
   }
 
   Future<Either<Unit, FlowyError>> updateUserProfile({
@@ -24,7 +27,7 @@ class UserBackendService {
     String? iconUrl,
     String? openAIKey,
   }) {
-    var payload = UpdateUserProfilePayloadPB.create()..id = userId;
+    final payload = UpdateUserProfilePayloadPB.create()..id = userId;
 
     if (name != null) {
       payload.name = name;
@@ -55,8 +58,9 @@ class UserBackendService {
     throw UnimplementedError();
   }
 
-  Future<Either<Unit, FlowyError>> signOut() {
-    return UserEventSignOut().send();
+  Future<Either<Unit, FlowyError>> signOut(AuthTypePB authType) {
+    final payload = SignOutPB()..authType = authType;
+    return UserEventSignOut(payload).send();
   }
 
   Future<Either<Unit, FlowyError>> initUser() async {
@@ -66,7 +70,7 @@ class UserBackendService {
   Future<Either<List<WorkspacePB>, FlowyError>> getWorkspaces() {
     final request = WorkspaceIdPB.create();
 
-    return FolderEventReadWorkspaces(request).send().then((result) {
+    return FolderEventReadAllWorkspaces(request).send().then((result) {
       return result.fold(
         (workspaces) => left(workspaces.items),
         (error) => right(error),

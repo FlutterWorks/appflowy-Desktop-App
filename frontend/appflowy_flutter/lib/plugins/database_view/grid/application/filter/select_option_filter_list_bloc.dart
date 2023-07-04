@@ -1,6 +1,6 @@
 import 'package:appflowy/plugins/database_view/grid/presentation/widgets/filter/choicechip/select_option/select_option_loader.dart';
-import 'package:appflowy_backend/protobuf/flowy-database/field_entities.pb.dart';
-import 'package:appflowy_backend/protobuf/flowy-database/select_type_option.pb.dart';
+import 'package:appflowy_backend/protobuf/flowy-database2/field_entities.pb.dart';
+import 'package:appflowy_backend/protobuf/flowy-database2/select_option.pb.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
@@ -41,7 +41,7 @@ class SelectOptionFilterListBloc<T>
             );
           },
           didReceiveOptions: (newOptions) {
-            List<SelectOptionPB> options = List.from(newOptions);
+            final List<SelectOptionPB> options = List.from(newOptions);
             options.retainWhere(
               (element) => element.name.contains(state.predicate),
             );
@@ -91,7 +91,7 @@ class SelectOptionFilterListBloc<T>
     String predicate,
     Set<String> selectedOptionIds,
   ) {
-    List<SelectOptionPB> options = List.from(state.options);
+    final List<SelectOptionPB> options = List.from(state.options);
     options.retainWhere((element) => element.name.contains(predicate));
 
     return options.map((option) {

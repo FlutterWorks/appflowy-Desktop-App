@@ -10,7 +10,7 @@ import 'package:appflowy/workspace/presentation/home/hotkeys.dart';
 import 'package:appflowy/workspace/presentation/widgets/edit_panel/panel_animation.dart';
 import 'package:appflowy/workspace/presentation/widgets/float_bubble/question_bubble.dart';
 import 'package:appflowy_backend/log.dart';
-import 'package:appflowy_backend/protobuf/flowy-folder/protobuf.dart';
+import 'package:appflowy_backend/protobuf/flowy-folder2/protobuf.dart';
 import 'package:appflowy_backend/protobuf/flowy-user/protobuf.dart'
     show UserProfilePB;
 import 'package:flowy_infra_ui/style_widget/container.dart';
@@ -76,13 +76,11 @@ class _HomeScreenState extends State<HomeScreen> {
                   if (view != null) {
                     // Only open the last opened view if the [HomeStackManager] current opened plugin is blank and the last opened view is not null.
                     // All opened widgets that display on the home screen are in the form of plugins. There is a list of built-in plugins defined in the [PluginType] enum, including board, grid and trash.
-                    if (getIt<HomeStackManager>().plugin.ty ==
+                    if (getIt<HomeStackManager>().plugin.pluginType ==
                         PluginType.blank) {
-                      final plugin = makePlugin(
-                        pluginType: view.pluginType,
-                        data: view,
+                      getIt<HomeStackManager>().setPlugin(
+                        view.plugin(listenOnViewChanged: true),
                       );
-                      getIt<HomeStackManager>().setPlugin(plugin);
                       getIt<MenuSharedState>().latestOpenView = view;
                     }
                   }
@@ -272,22 +270,20 @@ class HomeScreenStackAdaptor extends HomeStackDelegate {
   @override
   void didDeleteStackWidget(ViewPB view, int? index) {
     final homeService = HomeService();
-    homeService.readApp(appId: view.appId).then((result) {
+    homeService.readApp(appId: view.parentViewId).then((result) {
       result.fold(
-        (appPB) {
-          final List<ViewPB> views = appPB.belongings.items;
+        (parentView) {
+          final List<ViewPB> views = parentView.childViews;
           if (views.isNotEmpty) {
             var lastView = views.last;
             if (index != null && index != 0 && views.length > index - 1) {
               lastView = views[index - 1];
             }
 
-            final plugin = makePlugin(
-              pluginType: lastView.pluginType,
-              data: lastView,
-            );
             getIt<MenuSharedState>().latestOpenView = lastView;
-            getIt<HomeStackManager>().setPlugin(plugin);
+            getIt<HomeStackManager>().setPlugin(
+              lastView.plugin(listenOnViewChanged: true),
+            );
           } else {
             getIt<MenuSharedState>().latestOpenView = null;
             getIt<HomeStackManager>().setPlugin(BlankPagePlugin());

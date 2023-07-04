@@ -1,7 +1,7 @@
 import 'package:appflowy/plugins/database_view/application/cell/cell_controller_builder.dart';
+import 'package:appflowy_backend/protobuf/flowy-database2/select_option.pb.dart';
 import 'package:appflowy_popover/appflowy_popover.dart';
 import 'package:flowy_infra_ui/flowy_infra_ui.dart';
-import 'package:appflowy_backend/protobuf/flowy-database/select_type_option.pb.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -62,7 +62,7 @@ class _SingleSelectCellState extends GridCellState<GridSingleSelectCell> {
           return SelectOptionWrap(
             selectOptions: state.selectedOptions,
             cellStyle: widget.cellStyle,
-            onCellEditing: widget.onCellEditing,
+            onCellEditing: widget.onCellFocus,
             popoverController: _popover,
             cellControllerBuilder: widget.cellControllerBuilder,
           );
@@ -125,7 +125,7 @@ class _MultiSelectCellState extends GridCellState<GridMultiSelectCell> {
           return SelectOptionWrap(
             selectOptions: state.selectedOptions,
             cellStyle: widget.cellStyle,
-            onCellEditing: widget.onCellEditing,
+            onCellEditing: widget.onCellFocus,
             popoverController: _popover,
             cellControllerBuilder: widget.cellControllerBuilder,
           );
@@ -167,7 +167,7 @@ class SelectOptionWrap extends StatefulWidget {
 class _SelectOptionWrapState extends State<SelectOptionWrap> {
   @override
   Widget build(BuildContext context) {
-    Widget child = _buildOptions(context);
+    final Widget child = _buildOptions(context);
 
     final constraints = BoxConstraints.loose(
       Size(

@@ -1,6 +1,10 @@
 import 'package:appflowy/generated/locale_keys.g.dart';
+import 'package:appflowy/plugins/database_view/application/database_controller.dart';
 import 'package:appflowy/plugins/database_view/calendar/application/calendar_bloc.dart';
-import 'package:appflowy_backend/protobuf/flowy-folder/view.pb.dart';
+import 'package:appflowy/plugins/database_view/grid/presentation/layout/sizes.dart';
+import 'package:appflowy/plugins/database_view/tar_bar/tab_bar_view.dart';
+import 'package:appflowy_backend/protobuf/flowy-database2/calendar_entities.pb.dart';
+import 'package:appflowy_backend/protobuf/flowy-folder2/view.pb.dart';
 import 'package:calendar_view/calendar_view.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flowy_infra/image.dart';
@@ -9,13 +13,57 @@ import 'package:flowy_infra_ui/flowy_infra_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../application/row/row_cache.dart';
+import '../../application/row/row_data_controller.dart';
+import '../../widgets/row/cell_builder.dart';
+import '../../widgets/row/row_detail.dart';
 import 'calendar_day.dart';
 import 'layout/sizes.dart';
-import 'toolbar/calendar_toolbar.dart';
+import 'toolbar/calendar_setting_bar.dart';
+
+class CalendarPageTabBarBuilderImpl implements DatabaseTabBarItemBuilder {
+  @override
+  Widget content(
+    BuildContext context,
+    ViewPB view,
+    DatabaseController controller,
+  ) {
+    return CalendarPage(
+      key: _makeValueKey(controller),
+      view: view,
+      databaseController: controller,
+    );
+  }
+
+  @override
+  Widget settingBar(BuildContext context, DatabaseController controller) {
+    return CalendarSettingBar(
+      key: _makeValueKey(controller),
+      databaseController: controller,
+    );
+  }
+
+  @override
+  Widget settingBarExtension(
+    BuildContext context,
+    DatabaseController controller,
+  ) {
+    return SizedBox.fromSize();
+  }
+
+  ValueKey _makeValueKey(DatabaseController controller) {
+    return ValueKey(controller.viewId);
+  }
+}
 
 class CalendarPage extends StatefulWidget {
   final ViewPB view;
-  const CalendarPage({required this.view, super.key});
+  final DatabaseController databaseController;
+  const CalendarPage({
+    required this.view,
+    required this.databaseController,
+    super.key,
+  });
 
   @override
   State<CalendarPage> createState() => _CalendarPageState();
@@ -29,8 +77,10 @@ class _CalendarPageState extends State<CalendarPage> {
   @override
   void initState() {
     _calendarState = GlobalKey<MonthViewState>();
-    _calendarBloc = CalendarBloc(view: widget.view)
-      ..add(const CalendarEvent.initial());
+    _calendarBloc = CalendarBloc(
+      view: widget.view,
+      databaseController: widget.databaseController,
+    )..add(const CalendarEvent.initial());
 
     super.initState();
   }
@@ -70,23 +120,39 @@ class _CalendarPageState extends State<CalendarPage> {
               },
             ),
             BlocListener<CalendarBloc, CalendarState>(
+              listenWhen: (p, c) => p.editingEvent != c.editingEvent,
+              listener: (context, state) {
+                if (state.editingEvent != null) {
+                  showEventDetails(
+                    context: context,
+                    event: state.editingEvent!.event!.event,
+                    viewId: widget.view.id,
+                    rowCache: _calendarBloc.rowCache,
+                  );
+                }
+              },
+            ),
+            BlocListener<CalendarBloc, CalendarState>(
+              // Event create by click the + button or double click on the
+              // calendar
+              listenWhen: (p, c) => p.newEvent != c.newEvent,
+              listener: (context, state) {
+                if (state.newEvent != null) {
+                  _eventController.add(state.newEvent!);
+                }
+              },
+            ),
+            BlocListener<CalendarBloc, CalendarState>(
+              // When an event is rescheduled
               listenWhen: (p, c) => p.updateEvent != c.updateEvent,
               listener: (context, state) {
                 if (state.updateEvent != null) {
                   _eventController.removeWhere(
                     (element) =>
-                        state.updateEvent!.event!.eventId ==
-                        element.event!.eventId,
+                        element.event!.eventId ==
+                        state.updateEvent!.event!.eventId,
                   );
                   _eventController.add(state.updateEvent!);
-                }
-              },
-            ),
-            BlocListener<CalendarBloc, CalendarState>(
-              listenWhen: (p, c) => p.newEvent != c.newEvent,
-              listener: (context, state) {
-                if (state.newEvent != null) {
-                  _eventController.add(state.newEvent!);
                 }
               },
             ),
@@ -95,8 +161,6 @@ class _CalendarPageState extends State<CalendarPage> {
             builder: (context, state) {
               return Column(
                 children: [
-                  // const _ToolbarBlocAdaptor(),
-                  const CalendarToolbar(),
                   _buildCalendar(
                     _eventController,
                     state.settings
@@ -113,15 +177,18 @@ class _CalendarPageState extends State<CalendarPage> {
 
   Widget _buildCalendar(EventController eventController, int firstDayOfWeek) {
     return Expanded(
-      child: MonthView(
-        key: _calendarState,
-        controller: _eventController,
-        cellAspectRatio: .9,
-        startDay: _weekdayFromInt(firstDayOfWeek),
-        borderColor: Theme.of(context).dividerColor,
-        headerBuilder: _headerNavigatorBuilder,
-        weekDayBuilder: _headerWeekDayBuilder,
-        cellBuilder: _calendarDayBuilder,
+      child: Padding(
+        padding: GridSize.contentInsets,
+        child: MonthView(
+          key: _calendarState,
+          controller: _eventController,
+          cellAspectRatio: .6,
+          startDay: _weekdayFromInt(firstDayOfWeek),
+          borderColor: Theme.of(context).dividerColor,
+          headerBuilder: _headerNavigatorBuilder,
+          weekDayBuilder: _headerWeekDayBuilder,
+          cellBuilder: _calendarDayBuilder,
+        ),
       ),
     );
   }
@@ -137,7 +204,7 @@ class _CalendarPageState extends State<CalendarPage> {
         FlowyIconButton(
           width: CalendarSize.navigatorButtonWidth,
           height: CalendarSize.navigatorButtonHeight,
-          icon: svgWidget('home/arrow_left'),
+          icon: const FlowySvg(name: 'home/arrow_left'),
           tooltipText: LocaleKeys.calendar_navigation_previousMonth.tr(),
           hoverColor: AFThemeExtension.of(context).lightGreyHover,
           onPressed: () => _calendarState?.currentState?.previousPage(),
@@ -155,7 +222,7 @@ class _CalendarPageState extends State<CalendarPage> {
         FlowyIconButton(
           width: CalendarSize.navigatorButtonWidth,
           height: CalendarSize.navigatorButtonHeight,
-          icon: svgWidget('home/arrow_right'),
+          icon: const FlowySvg(name: 'home/arrow_right'),
           tooltipText: LocaleKeys.calendar_navigation_nextMonth.tr(),
           hoverColor: AFThemeExtension.of(context).lightGreyHover,
           onPressed: () => _calendarState?.currentState?.nextPage(),
@@ -165,8 +232,9 @@ class _CalendarPageState extends State<CalendarPage> {
   }
 
   Widget _headerWeekDayBuilder(day) {
+    // incoming day starts from Monday, the symbols start from Sunday
     final symbols = DateFormat.EEEE(context.locale.toLanguageTag()).dateSymbols;
-    final weekDayString = symbols.WEEKDAYS[day];
+    final weekDayString = symbols.WEEKDAYS[(day + 1) % 7];
     return Center(
       child: Padding(
         padding: CalendarSize.daysOfWeekInsets,
@@ -185,7 +253,12 @@ class _CalendarPageState extends State<CalendarPage> {
     isInMonth,
   ) {
     final events = calenderEvents.map((value) => value.event!).toList();
-
+    // Sort the events by timestamp. Because the database view is not
+    // reserving the order of the events. Reserving the order of the rows/events
+    // is implemnted in the develop branch(WIP). Will be replaced with that.
+    events.sort(
+      (a, b) => a.event.timestamp.compareTo(b.event.timestamp),
+    );
     return CalendarDayCard(
       viewId: widget.view.id,
       isToday: isToday,
@@ -205,7 +278,32 @@ class _CalendarPageState extends State<CalendarPage> {
   }
 
   WeekDays _weekdayFromInt(int dayOfWeek) {
-    // MonthView places the first day of week on the second column for some reason.
-    return WeekDays.values[(dayOfWeek + 1) % 7];
+    // dayOfWeek starts from Sunday, WeekDays starts from Monday
+    return WeekDays.values[(dayOfWeek - 1) % 7];
   }
+}
+
+void showEventDetails({
+  required BuildContext context,
+  required CalendarEventPB event,
+  required String viewId,
+  required RowCache rowCache,
+}) {
+  final dataController = RowController(
+    rowMeta: event.rowMeta,
+    viewId: viewId,
+    rowCache: rowCache,
+  );
+
+  FlowyOverlay.show(
+    context: context,
+    builder: (BuildContext context) {
+      return RowDetailPage(
+        cellBuilder: GridCellBuilder(
+          cellCache: rowCache.cellCache,
+        ),
+        rowController: dataController,
+      );
+    },
+  );
 }

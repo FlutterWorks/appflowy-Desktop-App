@@ -1,7 +1,7 @@
 import 'package:appflowy/plugins/database_view/application/cell/cell_controller_builder.dart';
 import 'package:appflowy/plugins/database_view/widgets/row/cells/select_option_cell/extension.dart';
 import 'package:appflowy/plugins/database_view/widgets/row/cells/select_option_cell/select_option_editor.dart';
-import 'package:appflowy_backend/protobuf/flowy-database/select_type_option.pb.dart';
+import 'package:appflowy_backend/protobuf/flowy-database2/select_option.pb.dart';
 import 'package:appflowy_popover/appflowy_popover.dart';
 import 'package:flowy_infra_ui/flowy_infra_ui.dart';
 import 'package:flutter/material.dart';
@@ -11,17 +11,18 @@ import 'card_cell.dart';
 
 class SelectOptionCardCellStyle extends CardCellStyle {}
 
-class SelectOptionCardCell<T> extends CardCell<T, SelectOptionCardCellStyle>
+class SelectOptionCardCell<CustomCardData>
+    extends CardCell<CustomCardData, SelectOptionCardCellStyle>
     with EditableCell {
   final CellControllerBuilder cellControllerBuilder;
-  final CellRenderHook<List<SelectOptionPB>, T>? renderHook;
+  final CellRenderHook<List<SelectOptionPB>, CustomCardData>? renderHook;
 
   @override
   final EditableCardNotifier? editableNotifier;
 
   SelectOptionCardCell({
     required this.cellControllerBuilder,
-    required T? cardData,
+    required CustomCardData? cardData,
     this.renderHook,
     this.editableNotifier,
     Key? key,
@@ -54,9 +55,10 @@ class _SelectOptionCardCellState extends State<SelectOptionCardCell> {
           return previous.selectedOptions != current.selectedOptions;
         },
         builder: (context, state) {
-          Widget? custom = widget.renderHook?.call(
+          final Widget? custom = widget.renderHook?.call(
             state.selectedOptions,
             widget.cardData,
+            context,
           );
           if (custom != null) {
             return custom;

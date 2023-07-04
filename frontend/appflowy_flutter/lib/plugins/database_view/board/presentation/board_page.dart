@@ -3,13 +3,16 @@
 import 'dart:collection';
 
 import 'package:appflowy/generated/locale_keys.g.dart';
+import 'package:appflowy/plugins/database_view/application/database_controller.dart';
 import 'package:appflowy/plugins/database_view/application/field/field_controller.dart';
 import 'package:appflowy/plugins/database_view/application/row/row_cache.dart';
 import 'package:appflowy/plugins/database_view/application/row/row_data_controller.dart';
+import 'package:appflowy/plugins/database_view/grid/presentation/layout/sizes.dart';
+import 'package:appflowy/plugins/database_view/tar_bar/tab_bar_view.dart';
 import 'package:appflowy/plugins/database_view/widgets/row/row_detail.dart';
-import 'package:appflowy_backend/protobuf/flowy-folder/view.pb.dart';
-import 'package:appflowy_backend/protobuf/flowy-database/field_entities.pb.dart';
-import 'package:appflowy_backend/protobuf/flowy-database/row_entities.pb.dart';
+import 'package:appflowy_backend/protobuf/flowy-folder2/view.pb.dart';
+import 'package:appflowy_backend/protobuf/flowy-database2/field_entities.pb.dart';
+import 'package:appflowy_backend/protobuf/flowy-database2/row_entities.pb.dart';
 import 'package:appflowy_board/appflowy_board.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flowy_infra/image.dart';
@@ -24,11 +27,48 @@ import '../../widgets/card/card_cell_builder.dart';
 import '../../widgets/row/cell_builder.dart';
 import '../application/board_bloc.dart';
 import '../../widgets/card/card.dart';
-import 'toolbar/board_toolbar.dart';
+import 'toolbar/board_setting_bar.dart';
+
+class BoardPageTabBarBuilderImpl implements DatabaseTabBarItemBuilder {
+  @override
+  Widget content(
+    BuildContext context,
+    ViewPB view,
+    DatabaseController controller,
+  ) {
+    return BoardPage(
+      key: _makeValueKey(controller),
+      view: view,
+      databaseController: controller,
+    );
+  }
+
+  @override
+  Widget settingBar(BuildContext context, DatabaseController controller) {
+    return BoardSettingBar(
+      key: _makeValueKey(controller),
+      databaseController: controller,
+    );
+  }
+
+  @override
+  Widget settingBarExtension(
+    BuildContext context,
+    DatabaseController controller,
+  ) {
+    return SizedBox.fromSize();
+  }
+
+  ValueKey _makeValueKey(DatabaseController controller) {
+    return ValueKey(controller.viewId);
+  }
+}
 
 class BoardPage extends StatelessWidget {
+  final DatabaseController databaseController;
   BoardPage({
     required this.view,
+    required this.databaseController,
     Key? key,
     this.onEditStateChanged,
   }) : super(key: ValueKey(view.id));
@@ -41,8 +81,10 @@ class BoardPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (context) =>
-          BoardBloc(view: view)..add(const BoardEvent.initial()),
+      create: (context) => BoardBloc(
+        view: view,
+        databaseController: databaseController,
+      )..add(const BoardEvent.initial()),
       child: BlocBuilder<BoardBloc, BoardState>(
         buildWhen: (p, c) => p.loadingState != c.loadingState,
         builder: (context, state) {
@@ -54,7 +96,7 @@ class BoardPage extends StatelessWidget {
                 (_) => BoardContent(
                   onEditStateChanged: onEditStateChanged,
                 ),
-                (err) => FlowyErrorPage(err.toString()),
+                (err) => FlowyErrorPage.message(err.toString(), howToFix: LocaleKeys.errorDialog_howToFixFallback.tr(),),
               );
             },
           );
@@ -78,7 +120,7 @@ class BoardContent extends StatefulWidget {
 
 class _BoardContentState extends State<BoardContent> {
   late AppFlowyBoardScrollController scrollManager;
-  final cardConfiguration = CardConfiguration<String>();
+  final renderHook = RowCardRenderHook<String>();
 
   final config = const AppFlowyBoardConfig(
     groupBackgroundColor: Color(0xffF7F8FC),
@@ -87,7 +129,7 @@ class _BoardContentState extends State<BoardContent> {
   @override
   void initState() {
     scrollManager = AppFlowyBoardScrollController();
-    cardConfiguration.addSelectOptionHook((options, groupId) {
+    renderHook.addSelectOptionHook((options, groupId, _) {
       // The cell should hide if the option id is equal to the groupId.
       final isInGroup =
           options.where((element) => element.id == groupId).isNotEmpty;
@@ -110,14 +152,9 @@ class _BoardContentState extends State<BoardContent> {
       child: BlocBuilder<BoardBloc, BoardState>(
         buildWhen: (previous, current) => previous.groupIds != current.groupIds,
         builder: (context, state) {
-          final column = Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [const _ToolbarBlocAdaptor(), _buildBoard(context)],
-          );
-
           return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: column,
+            padding: GridSize.contentInsets,
+            child: _buildBoard(context),
           );
         },
       ),
@@ -125,22 +162,20 @@ class _BoardContentState extends State<BoardContent> {
   }
 
   Widget _buildBoard(BuildContext context) {
-    return Expanded(
-      child: AppFlowyBoard(
-        boardScrollController: scrollManager,
-        scrollController: ScrollController(),
-        controller: context.read<BoardBloc>().boardController,
-        headerBuilder: _buildHeader,
-        footerBuilder: _buildFooter,
-        cardBuilder: (_, column, columnItem) => _buildCard(
-          context,
-          column,
-          columnItem,
-        ),
-        groupConstraints: const BoxConstraints.tightFor(width: 300),
-        config: AppFlowyBoardConfig(
-          groupBackgroundColor: Theme.of(context).colorScheme.surfaceVariant,
-        ),
+    return AppFlowyBoard(
+      boardScrollController: scrollManager,
+      scrollController: ScrollController(),
+      controller: context.read<BoardBloc>().boardController,
+      headerBuilder: _buildHeader,
+      footerBuilder: _buildFooter,
+      cardBuilder: (_, column, columnItem) => _buildCard(
+        context,
+        column,
+        columnItem,
+      ),
+      groupConstraints: const BoxConstraints.tightFor(width: 300),
+      config: AppFlowyBoardConfig(
+        groupBackgroundColor: Theme.of(context).colorScheme.surfaceVariant,
       ),
     );
   }
@@ -231,8 +266,8 @@ class _BoardContentState extends State<BoardContent> {
   ) {
     final groupItem = afGroupItem as GroupItem;
     final groupData = afGroupData.customData as GroupData;
-    final rowPB = groupItem.row;
-    final rowCache = context.read<BoardBloc>().getRowCache(rowPB.blockId);
+    final rowMeta = groupItem.row;
+    final rowCache = context.read<BoardBloc>().getRowCache();
 
     /// Return placeholder widget if the rowCache is null.
     if (rowCache == null) return SizedBox(key: ObjectKey(groupItem));
@@ -254,19 +289,20 @@ class _BoardContentState extends State<BoardContent> {
       key: ValueKey(groupItemId),
       margin: config.cardPadding,
       decoration: _makeBoxDecoration(context),
-      child: Card<String>(
-        row: rowPB,
+      child: RowCard<String>(
+        rowMeta: rowMeta,
         viewId: viewId,
         rowCache: rowCache,
         cardData: groupData.group.groupId,
-        fieldId: groupItem.fieldInfo.id,
+        groupingFieldId: groupItem.fieldInfo.id,
         isEditing: isEditing,
         cellBuilder: cellBuilder,
-        configuration: cardConfiguration,
+        renderHook: renderHook,
         openCard: (context) => _openCard(
           viewId,
+          groupData.group.groupId,
           fieldController,
-          rowPB,
+          rowMeta,
           rowCache,
           context,
         ),
@@ -302,21 +338,24 @@ class _BoardContentState extends State<BoardContent> {
 
   void _openCard(
     String viewId,
+    String groupId,
     FieldController fieldController,
-    RowPB rowPB,
+    RowMetaPB rowMetaPB,
     RowCache rowCache,
     BuildContext context,
   ) {
     final rowInfo = RowInfo(
       viewId: viewId,
       fields: UnmodifiableListView(fieldController.fieldInfos),
-      rowPB: rowPB,
+      rowMeta: rowMetaPB,
+      rowId: rowMetaPB.id,
     );
 
     final dataController = RowController(
-      rowId: rowInfo.rowPB.id,
+      rowMeta: rowInfo.rowMeta,
       viewId: rowInfo.viewId,
       rowCache: rowCache,
+      groupId: groupId,
     );
 
     FlowyOverlay.show(
@@ -324,27 +363,8 @@ class _BoardContentState extends State<BoardContent> {
       builder: (BuildContext context) {
         return RowDetailPage(
           cellBuilder: GridCellBuilder(cellCache: dataController.cellCache),
-          dataController: dataController,
+          rowController: dataController,
         );
-      },
-    );
-  }
-}
-
-class _ToolbarBlocAdaptor extends StatelessWidget {
-  const _ToolbarBlocAdaptor({Key? key}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return BlocBuilder<BoardBloc, BoardState>(
-      builder: (context, state) {
-        final bloc = context.read<BoardBloc>();
-        final toolbarContext = BoardToolbarContext(
-          viewId: bloc.viewId,
-          fieldController: bloc.fieldController,
-        );
-
-        return BoardToolbar(toolbarContext: toolbarContext);
       },
     );
   }
@@ -362,6 +382,8 @@ Widget? _buildHeaderIcon(GroupData customData) {
       }
       break;
     case FieldType.DateTime:
+    case FieldType.LastEditedTime:
+    case FieldType.CreatedTime:
       break;
     case FieldType.MultiSelect:
       break;

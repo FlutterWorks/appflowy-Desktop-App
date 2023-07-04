@@ -1,5 +1,5 @@
 import 'package:appflowy/plugins/database_view/application/cell/cell_controller_builder.dart';
-import 'package:appflowy_backend/protobuf/flowy-database/field_entities.pb.dart';
+import 'package:appflowy_backend/protobuf/flowy-database2/field_entities.pb.dart';
 import 'package:flutter/material.dart';
 
 import '../../application/cell/cell_service.dart';
@@ -15,44 +15,47 @@ import 'cells/url_card_cell.dart';
 // T represents as the Generic card data
 class CardCellBuilder<CustomCardData> {
   final CellCache cellCache;
+  final Map<FieldType, CardCellStyle>? styles;
 
-  CardCellBuilder(this.cellCache);
+  CardCellBuilder(this.cellCache, {this.styles});
 
   Widget buildCell({
     CustomCardData? cardData,
-    required CellIdentifier cellId,
+    required DatabaseCellContext cellContext,
     EditableCardNotifier? cellNotifier,
-    CardConfiguration<CustomCardData>? cardConfiguration,
-    Map<FieldType, CardCellStyle>? styles,
+    RowCardRenderHook<CustomCardData>? renderHook,
   }) {
     final cellControllerBuilder = CellControllerBuilder(
-      cellId: cellId,
+      cellContext: cellContext,
       cellCache: cellCache,
     );
 
-    final key = cellId.key();
-    final style = styles?[cellId.fieldType];
-    switch (cellId.fieldType) {
+    final key = cellContext.key();
+    final style = styles?[cellContext.fieldType];
+    switch (cellContext.fieldType) {
       case FieldType.Checkbox:
         return CheckboxCardCell(
           cellControllerBuilder: cellControllerBuilder,
           key: key,
         );
       case FieldType.DateTime:
-        return DateCardCell(
+      case FieldType.LastEditedTime:
+      case FieldType.CreatedTime:
+        return DateCardCell<CustomCardData>(
+          renderHook: renderHook?.renderHook[FieldType.DateTime],
           cellControllerBuilder: cellControllerBuilder,
           key: key,
         );
       case FieldType.SingleSelect:
         return SelectOptionCardCell<CustomCardData>(
-          renderHook: cardConfiguration?.renderHook[FieldType.SingleSelect],
+          renderHook: renderHook?.renderHook[FieldType.SingleSelect],
           cellControllerBuilder: cellControllerBuilder,
           cardData: cardData,
           key: key,
         );
       case FieldType.MultiSelect:
         return SelectOptionCardCell<CustomCardData>(
-          renderHook: cardConfiguration?.renderHook[FieldType.MultiSelect],
+          renderHook: renderHook?.renderHook[FieldType.MultiSelect],
           cellControllerBuilder: cellControllerBuilder,
           cardData: cardData,
           editableNotifier: cellNotifier,
@@ -64,19 +67,24 @@ class CardCellBuilder<CustomCardData> {
           key: key,
         );
       case FieldType.Number:
-        return NumberCardCell(
+        return NumberCardCell<CustomCardData>(
+          renderHook: renderHook?.renderHook[FieldType.Number],
+          style: isStyleOrNull<NumberCardCellStyle>(style),
           cellControllerBuilder: cellControllerBuilder,
           key: key,
         );
       case FieldType.RichText:
-        return TextCardCell(
+        return TextCardCell<CustomCardData>(
+          renderHook: renderHook?.renderHook[FieldType.RichText],
           cellControllerBuilder: cellControllerBuilder,
           editableNotifier: cellNotifier,
+          cardData: cardData,
           style: isStyleOrNull<TextCardCellStyle>(style),
           key: key,
         );
       case FieldType.URL:
-        return URLCardCell(
+        return URLCardCell<CustomCardData>(
+          style: isStyleOrNull<URLCardCellStyle>(style),
           cellControllerBuilder: cellControllerBuilder,
           key: key,
         );

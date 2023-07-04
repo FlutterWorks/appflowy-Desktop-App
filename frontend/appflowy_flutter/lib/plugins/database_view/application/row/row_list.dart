@@ -1,6 +1,7 @@
 import 'dart:collection';
-import 'package:appflowy_backend/protobuf/flowy-database/row_entities.pb.dart';
+import 'package:appflowy_backend/protobuf/flowy-database2/row_entities.pb.dart';
 import 'row_cache.dart';
+import 'row_service.dart';
 
 class RowList {
   /// Use List to reverse the order of the row.
@@ -9,13 +10,13 @@ class RowList {
   List<RowInfo> get rows => List.from(_rowInfos);
 
   /// Use Map for faster access the raw row data.
-  final HashMap<String, RowInfo> rowInfoByRowId = HashMap();
+  final HashMap<RowId, RowInfo> rowInfoByRowId = HashMap();
 
-  RowInfo? get(String rowId) {
+  RowInfo? get(RowId rowId) {
     return rowInfoByRowId[rowId];
   }
 
-  int? indexOfRow(String rowId) {
+  int? indexOfRow(RowId rowId) {
     final rowInfo = rowInfoByRowId[rowId];
     if (rowInfo != null) {
       return _rowInfos.indexOf(rowInfo);
@@ -24,10 +25,9 @@ class RowList {
   }
 
   void add(RowInfo rowInfo) {
-    final rowId = rowInfo.rowPB.id;
+    final rowId = rowInfo.rowId;
     if (contains(rowId)) {
-      final index =
-          _rowInfos.indexWhere((element) => element.rowPB.id == rowId);
+      final index = _rowInfos.indexWhere((element) => element.rowId == rowId);
       _rowInfos.removeAt(index);
       _rowInfos.insert(index, rowInfo);
     } else {
@@ -37,7 +37,7 @@ class RowList {
   }
 
   InsertedIndex? insert(int index, RowInfo rowInfo) {
-    final rowId = rowInfo.rowPB.id;
+    final rowId = rowInfo.rowId;
     var insertedIndex = index;
     if (_rowInfos.length <= insertedIndex) {
       insertedIndex = _rowInfos.length;
@@ -56,12 +56,12 @@ class RowList {
     }
   }
 
-  DeletedIndex? remove(String rowId) {
+  DeletedIndex? remove(RowId rowId) {
     final rowInfo = rowInfoByRowId[rowId];
     if (rowInfo != null) {
       final index = _rowInfos.indexOf(rowInfo);
       if (index != -1) {
-        rowInfoByRowId.remove(rowInfo.rowPB.id);
+        rowInfoByRowId.remove(rowInfo.rowId);
         _rowInfos.remove(rowInfo);
       }
       return DeletedIndex(index: index, rowInfo: rowInfo);
@@ -72,23 +72,23 @@ class RowList {
 
   InsertedIndexs insertRows(
     List<InsertedRowPB> insertedRows,
-    RowInfo Function(RowPB) builder,
+    RowInfo Function(RowMetaPB) builder,
   ) {
-    InsertedIndexs insertIndexs = [];
+    final InsertedIndexs insertIndexs = [];
     for (final insertRow in insertedRows) {
-      final isContains = contains(insertRow.row.id);
+      final isContains = contains(insertRow.rowMeta.id);
 
       var index = insertRow.index;
       if (_rowInfos.length < index) {
         index = _rowInfos.length;
       }
-      insert(index, builder(insertRow.row));
+      insert(index, builder(insertRow.rowMeta));
 
       if (!isContains) {
         insertIndexs.add(
           InsertedIndex(
             index: index,
-            rowId: insertRow.row.id,
+            rowId: insertRow.rowMeta.id,
           ),
         );
       }
@@ -104,10 +104,10 @@ class RowList {
     };
 
     _rowInfos.asMap().forEach((index, RowInfo rowInfo) {
-      if (deletedRowByRowId[rowInfo.rowPB.id] == null) {
+      if (deletedRowByRowId[rowInfo.rowId] == null) {
         newRows.add(rowInfo);
       } else {
-        rowInfoByRowId.remove(rowInfo.rowPB.id);
+        rowInfoByRowId.remove(rowInfo.rowId);
         deletedIndex.add(DeletedIndex(index: index, rowInfo: rowInfo));
       }
     });
@@ -116,19 +116,21 @@ class RowList {
   }
 
   UpdatedIndexMap updateRows(
-    List<RowPB> updatedRows,
-    RowInfo Function(RowPB) builder,
+    List<RowMetaPB> rowMetas,
+    RowInfo Function(RowMetaPB) builder,
   ) {
     final UpdatedIndexMap updatedIndexs = UpdatedIndexMap();
-    for (final RowPB updatedRow in updatedRows) {
-      final rowId = updatedRow.id;
+    for (final rowMeta in rowMetas) {
       final index = _rowInfos.indexWhere(
-        (rowInfo) => rowInfo.rowPB.id == rowId,
+        (rowInfo) => rowInfo.rowId == rowMeta.id,
       );
       if (index != -1) {
-        final rowInfo = builder(updatedRow);
+        final rowInfo = builder(rowMeta);
         insert(index, rowInfo);
-        updatedIndexs[rowId] = UpdatedIndex(index: index, rowId: rowId);
+        updatedIndexs[rowMeta.id] = UpdatedIndex(
+          index: index,
+          rowId: rowMeta.id,
+        );
       }
     }
     return updatedIndexs;
@@ -145,18 +147,17 @@ class RowList {
     }
   }
 
-  void moveRow(String rowId, int oldIndex, int newIndex) {
+  void moveRow(RowId rowId, int oldIndex, int newIndex) {
     final index = _rowInfos.indexWhere(
-      (rowInfo) => rowInfo.rowPB.id == rowId,
+      (rowInfo) => rowInfo.rowId == rowId,
     );
     if (index != -1) {
-      assert(index == oldIndex);
       final rowInfo = remove(rowId)!.rowInfo;
       insert(newIndex, rowInfo);
     }
   }
 
-  bool contains(String rowId) {
+  bool contains(RowId rowId) {
     return rowInfoByRowId[rowId] != null;
   }
 }

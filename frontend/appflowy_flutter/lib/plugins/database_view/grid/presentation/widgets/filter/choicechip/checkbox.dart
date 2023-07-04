@@ -5,7 +5,7 @@ import 'package:appflowy_popover/appflowy_popover.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flowy_infra/image.dart';
 import 'package:flowy_infra_ui/flowy_infra_ui.dart';
-import 'package:appflowy_backend/protobuf/flowy-database/checkbox_filter.pbenum.dart';
+import 'package:appflowy_backend/protobuf/flowy-database2/checkbox_filter.pbenum.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -109,7 +109,7 @@ class _CheckboxFilterEditorState extends State<CheckboxFilterEditor> {
         children: [
           FlowyText(state.filterInfo.fieldInfo.name),
           const HSpace(4),
-          CheckboxFilterConditionPBList(
+          CheckboxFilterConditionList(
             filterInfo: state.filterInfo,
             popoverMutex: popoverMutex,
             onCondition: (condition) {
@@ -137,11 +137,11 @@ class _CheckboxFilterEditorState extends State<CheckboxFilterEditor> {
   }
 }
 
-class CheckboxFilterConditionPBList extends StatelessWidget {
+class CheckboxFilterConditionList extends StatelessWidget {
   final FilterInfo filterInfo;
   final PopoverMutex popoverMutex;
   final Function(CheckboxFilterConditionPB) onCondition;
-  const CheckboxFilterConditionPBList({
+  const CheckboxFilterConditionList({
     required this.filterInfo,
     required this.popoverMutex,
     required this.onCondition,

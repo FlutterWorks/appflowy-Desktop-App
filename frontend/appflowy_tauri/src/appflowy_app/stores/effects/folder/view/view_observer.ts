@@ -12,7 +12,8 @@ export class ViewObserver {
   private _deleteViewNotifier = new ChangeNotifier<DeleteViewNotifyValue>();
   private _updateViewNotifier = new ChangeNotifier<UpdateViewNotifyValue>();
   private _restoreViewNotifier = new ChangeNotifier<RestoreViewNotifyValue>();
-  private _moveToTashNotifier = new ChangeNotifier<MoveToTrashViewNotifyValue>();
+  private _moveToTrashNotifier = new ChangeNotifier<MoveToTrashViewNotifyValue>();
+  private _childViewsNotifier = new ChangeNotifier<void>();
   private _listener?: FolderNotificationObserver;
 
   constructor(public readonly viewId: string) {}
@@ -22,21 +23,26 @@ export class ViewObserver {
     onViewDelete?: (value: DeleteViewNotifyValue) => void;
     onViewRestored?: (value: RestoreViewNotifyValue) => void;
     onViewMoveToTrash?: (value: MoveToTrashViewNotifyValue) => void;
+    onChildViewsChanged?: () => void;
   }) => {
     if (callbacks.onViewDelete !== undefined) {
-      this._deleteViewNotifier.observer.subscribe(callbacks.onViewDelete);
+      this._deleteViewNotifier.observer?.subscribe(callbacks.onViewDelete);
     }
 
     if (callbacks.onViewUpdate !== undefined) {
-      this._updateViewNotifier.observer.subscribe(callbacks.onViewUpdate);
+      this._updateViewNotifier.observer?.subscribe(callbacks.onViewUpdate);
     }
 
     if (callbacks.onViewRestored !== undefined) {
-      this._restoreViewNotifier.observer.subscribe(callbacks.onViewRestored);
+      this._restoreViewNotifier.observer?.subscribe(callbacks.onViewRestored);
     }
 
     if (callbacks.onViewMoveToTrash !== undefined) {
-      this._moveToTashNotifier.observer.subscribe(callbacks.onViewMoveToTrash);
+      this._moveToTrashNotifier.observer?.subscribe(callbacks.onViewMoveToTrash);
+    }
+
+    if (callbacks.onChildViewsChanged !== undefined) {
+      this._childViewsNotifier.observer?.subscribe(callbacks.onChildViewsChanged);
     }
 
     this._listener = new FolderNotificationObserver({
@@ -66,9 +72,14 @@ export class ViewObserver {
             break;
           case FolderNotification.DidMoveViewToTrash:
             if (result.ok) {
-              this._moveToTashNotifier.notify(Ok(DeletedViewPB.deserializeBinary(result.val)));
+              this._moveToTrashNotifier.notify(Ok(DeletedViewPB.deserializeBinary(result.val)));
             } else {
-              this._moveToTashNotifier.notify(result);
+              this._moveToTrashNotifier.notify(result);
+            }
+            break;
+          case FolderNotification.DidUpdateChildViews:
+            if (result.ok) {
+              this._childViewsNotifier?.notify();
             }
             break;
           default:
@@ -83,7 +94,8 @@ export class ViewObserver {
     this._deleteViewNotifier.unsubscribe();
     this._updateViewNotifier.unsubscribe();
     this._restoreViewNotifier.unsubscribe();
-    this._moveToTashNotifier.unsubscribe();
+    this._moveToTrashNotifier.unsubscribe();
+    this._childViewsNotifier.unsubscribe();
     await this._listener?.stop();
   };
 }

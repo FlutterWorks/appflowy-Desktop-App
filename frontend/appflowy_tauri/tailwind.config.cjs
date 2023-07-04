@@ -38,6 +38,7 @@ module.exports = {
           4: '#BDBDBD',
           5: '#E0E0E0',
           6: '#F2F2F2',
+          7: '#FFFFFF',
         },
         surface: {
           1: '#F7F8FC',
@@ -45,6 +46,10 @@ module.exports = {
           3: '#E2E4EB',
           fiol: '#2C144B',
         },
+        custom: {
+          code: 'rgba(221, 221, 221, 0.4)',
+          caret: 'rgb(55, 53, 47)'
+        }
       },
       boxShadow: {
         md: '0px 0px 20px rgba(0, 0, 0, 0.1);',

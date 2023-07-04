@@ -4,10 +4,9 @@ import 'package:dartz/dartz.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:appflowy_backend/dispatch/dispatch.dart';
 import 'package:appflowy_backend/protobuf/flowy-error/errors.pb.dart';
-import 'package:appflowy_backend/protobuf/flowy-folder/app.pb.dart';
-import 'package:appflowy_backend/protobuf/flowy-folder/view.pb.dart'
-    show MoveFolderItemPayloadPB, MoveFolderItemType;
-import 'package:appflowy_backend/protobuf/flowy-folder/workspace.pb.dart';
+import 'package:appflowy_backend/protobuf/flowy-folder2/view.pb.dart'
+    show CreateViewPayloadPB, MoveViewPayloadPB, ViewLayoutPB, ViewPB;
+import 'package:appflowy_backend/protobuf/flowy-folder2/workspace.pb.dart';
 
 import 'package:appflowy/generated/locale_keys.g.dart';
 
@@ -16,20 +15,22 @@ class WorkspaceService {
   WorkspaceService({
     required this.workspaceId,
   });
-  Future<Either<AppPB, FlowyError>> createApp({
+  Future<Either<ViewPB, FlowyError>> createApp({
     required String name,
     String? desc,
   }) {
-    final payload = CreateAppPayloadPB.create()
+    final payload = CreateViewPayloadPB.create()
+      ..parentViewId = workspaceId
       ..name = name
-      ..workspaceId = workspaceId
-      ..desc = desc ?? "";
-    return FolderEventCreateApp(payload).send();
+      ..desc = desc ?? ""
+      ..layout = ViewLayoutPB.Document;
+
+    return FolderEventCreateView(payload).send();
   }
 
   Future<Either<WorkspacePB, FlowyError>> getWorkspace() {
     final payload = WorkspaceIdPB.create()..value = workspaceId;
-    return FolderEventReadWorkspaces(payload).send().then((result) {
+    return FolderEventReadAllWorkspaces(payload).send().then((result) {
       return result.fold(
         (workspaces) {
           assert(workspaces.items.length == 1);
@@ -48,9 +49,9 @@ class WorkspaceService {
     });
   }
 
-  Future<Either<List<AppPB>, FlowyError>> getApps() {
+  Future<Either<List<ViewPB>, FlowyError>> getViews() {
     final payload = WorkspaceIdPB.create()..value = workspaceId;
-    return FolderEventReadWorkspaceApps(payload).send().then((result) {
+    return FolderEventReadWorkspaceViews(payload).send().then((result) {
       return result.fold(
         (apps) => left(apps.items),
         (error) => right(error),
@@ -63,12 +64,11 @@ class WorkspaceService {
     required int fromIndex,
     required int toIndex,
   }) {
-    final payload = MoveFolderItemPayloadPB.create()
-      ..itemId = appId
+    final payload = MoveViewPayloadPB.create()
+      ..viewId = appId
       ..from = fromIndex
-      ..to = toIndex
-      ..ty = MoveFolderItemType.MoveApp;
+      ..to = toIndex;
 
-    return FolderEventMoveItem(payload).send();
+    return FolderEventMoveView(payload).send();
   }
 }

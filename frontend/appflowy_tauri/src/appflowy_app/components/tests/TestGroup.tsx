@@ -5,7 +5,7 @@ import {
   createTestDatabaseView,
   openTestDatabase,
 } from './DatabaseTestHelper';
-import { FieldType, ViewLayoutTypePB } from '../../../services/backend';
+import { FieldType, ViewLayoutPB } from '../../../services/backend';
 import React from 'react';
 
 export const TestAllKanbanTests = () => {
@@ -29,7 +29,7 @@ export const TestAllKanbanTests = () => {
 };
 
 async function createBuildInBoard() {
-  const view = await createTestDatabaseView(ViewLayoutTypePB.Board);
+  const view = await createTestDatabaseView(ViewLayoutPB.Board);
   const databaseController = await openTestDatabase(view.id);
   databaseController.subscribe({
     onGroupByField: (groups) => {
@@ -49,7 +49,7 @@ async function createBuildInBoard() {
 }
 
 async function createKanbanBoardRow() {
-  const view = await createTestDatabaseView(ViewLayoutTypePB.Board);
+  const view = await createTestDatabaseView(ViewLayoutPB.Board);
   const databaseController = await openTestDatabase(view.id);
   await databaseController.open().then((result) => result.unwrap());
 
@@ -62,7 +62,7 @@ async function createKanbanBoardRow() {
 }
 
 async function moveKanbanBoardRow() {
-  const view = await createTestDatabaseView(ViewLayoutTypePB.Board);
+  const view = await createTestDatabaseView(ViewLayoutPB.Board);
   const databaseController = await openTestDatabase(view.id);
   await databaseController.open().then((result) => result.unwrap());
 
@@ -101,7 +101,7 @@ async function moveKanbanBoardRow() {
   });
 
   const row = firstGroup.rowAtIndex(0).unwrap();
-  await databaseController.moveRow(row.id, secondGroup.groupId);
+  await databaseController.moveGroupRow(row.id, secondGroup.groupId);
 
   assert(firstGroup.rows.length === 2);
   await assertNumberOfRowsInGroup(view.id, firstGroup.groupId, 2);
@@ -113,7 +113,7 @@ async function moveKanbanBoardRow() {
 }
 
 async function createKanbanBoardColumn() {
-  const view = await createTestDatabaseView(ViewLayoutTypePB.Board);
+  const view = await createTestDatabaseView(ViewLayoutPB.Board);
   const databaseController = await openTestDatabase(view.id);
   await databaseController.open().then((result) => result.unwrap());
 
@@ -128,7 +128,7 @@ async function createKanbanBoardColumn() {
 }
 
 async function createColumnInBoard() {
-  const view = await createTestDatabaseView(ViewLayoutTypePB.Board);
+  const view = await createTestDatabaseView(ViewLayoutPB.Board);
   const databaseController = await openTestDatabase(view.id);
   await databaseController.open().then((result) => result.unwrap());
 

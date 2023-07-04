@@ -1,4 +1,4 @@
-import { IPopupItem, Popup } from './Popup';
+import { IPopupItem, PopupSelect } from './PopupSelect';
 import i18n from 'i18next';
 
 const supportedLanguages: { key: string; title: string }[] = [
@@ -6,6 +6,7 @@ const supportedLanguages: { key: string; title: string }[] = [
     key: 'en',
     title: 'English',
   },
+  { key: 'ar-SA', title: 'ar-SA' },
   { key: 'ca-ES', title: 'ca-ES' },
   { key: 'de-DE', title: 'de-DE' },
   { key: 'es-VE', title: 'es-VE' },
@@ -37,11 +38,11 @@ export const LanguageSelectPopup = ({ onClose }: { onClose: () => void }) => {
     icon: <></>,
   }));
   return (
-    <Popup
+    <PopupSelect
       items={items}
       className={'absolute top-full right-0 z-10 w-[200px]'}
       onOutsideClick={onClose}
       columns={2}
-    ></Popup>
+    ></PopupSelect>
   );
 };

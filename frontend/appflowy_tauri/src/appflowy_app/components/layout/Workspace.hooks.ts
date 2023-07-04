@@ -1,49 +1,69 @@
-import { foldersActions } from '../../stores/reducers/folders/slice';
-import { useAppDispatch, useAppSelector } from '../../stores/store';
-import { pagesActions } from '../../stores/reducers/pages/slice';
-import { workspaceActions } from '../../stores/reducers/workspace/slice';
-import { UserBackendService } from '../../stores/effects/user/user_bd_svc';
-import { useError } from '../error/Error.hooks';
+import { foldersActions } from '$app_reducers/folders/slice';
+import { useAppDispatch, useAppSelector } from '$app/stores/store';
+import { IPage, pagesActions } from '$app_reducers/pages/slice';
+import { workspaceActions } from '$app_reducers/workspace/slice';
+import { UserBackendService } from '$app/stores/effects/user/user_bd_svc';
+import { useEffect, useState } from 'react';
+import { WorkspaceBackendService } from '$app/stores/effects/folder/workspace/workspace_bd_svc';
 
 export const useWorkspace = () => {
-  const appDispatch = useAppDispatch();
   const currentUser = useAppSelector((state) => state.currentUser);
-  const error = useError();
+  const appDispatch = useAppDispatch();
 
-  const userBackendService: UserBackendService = new UserBackendService(currentUser.id || '');
+  const [userService, setUserService] = useState<UserBackendService | null>(null);
+  const [workspaceService, setWorkspaceService] = useState<WorkspaceBackendService | null>(null);
+  const [isReady, setIsReady] = useState(false);
 
-  const loadWorkspaceItems = async () => {
-    try {
-      const workspaceSettingPB = await userBackendService.getCurrentWorkspace();
-      const workspace = workspaceSettingPB.workspace;
-      appDispatch(workspaceActions.updateWorkspace({ id: workspace.id, name: workspace.name }));
-      appDispatch(foldersActions.clearFolders());
-      appDispatch(pagesActions.clearPages());
+  useEffect(() => {
+    if (currentUser.id) {
+      setUserService(new UserBackendService(currentUser.id));
+    }
+  }, [currentUser]);
 
-      const apps = workspace.apps.items;
-      for (const app of apps) {
-        appDispatch(foldersActions.addFolder({ id: app.id, title: app.name }));
+  useEffect(() => {
+    if (!userService) return;
 
-        const views = app.belongings.items;
-        for (const view of views) {
-          appDispatch(pagesActions.addPage({ folderId: app.id, id: view.id, pageType: view.layout, title: view.name }));
-        }
-      }
-    } catch (e1) {
-      // create workspace for first start
+    void (async () => {
       try {
-        const workspace = await userBackendService.createWorkspace({ name: 'New Workspace', desc: '' });
+        const workspaceSettingPB = await userService.getCurrentWorkspace();
+        const workspace = workspaceSettingPB.workspace;
+        appDispatch(workspaceActions.updateWorkspace({ id: workspace.id, name: workspace.name }));
+        appDispatch(foldersActions.clearFolders());
+        appDispatch(pagesActions.clearPages());
+
+        setWorkspaceService(new WorkspaceBackendService(workspace.id));
+      } catch (e1) {
+        // create workspace for first start
+        const workspace = await userService.createWorkspace({ name: 'New Workspace', desc: '' });
         appDispatch(workspaceActions.updateWorkspace({ id: workspace.id, name: workspace.name }));
 
         appDispatch(foldersActions.clearFolders());
         appDispatch(pagesActions.clearPages());
-      } catch (e2: any) {
-        error.showError(e2?.message);
       }
-    }
-  };
+    })();
+  }, [userService]);
 
-  return {
-    loadWorkspaceItems,
-  };
+  useEffect(() => {
+    if (!workspaceService) return;
+    void (async () => {
+      const rootViews = await workspaceService.getAllViews();
+      if (rootViews.ok) {
+        appDispatch(
+          pagesActions.addInsidePages({
+            currentPageId: workspaceService.workspaceId,
+            insidePages: rootViews.val.map<IPage>((v) => ({
+              id: v.id,
+              title: v.name,
+              pageType: v.layout,
+              showPagesInside: false,
+              parentPageId: workspaceService.workspaceId,
+            })),
+          })
+        );
+        setIsReady(true);
+      }
+    })();
+  }, [workspaceService]);
+
+  return {};
 };

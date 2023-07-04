@@ -1,10 +1,9 @@
 import 'package:appflowy/plugins/database_view/grid/application/filter/select_option_filter_list_bloc.dart';
 import 'package:appflowy/plugins/database_view/grid/presentation/layout/sizes.dart';
+import 'package:appflowy_backend/protobuf/flowy-database2/select_option.pb.dart';
 import 'package:flowy_infra/image.dart';
-import 'package:flowy_infra_ui/style_widget/scrolling/styled_list.dart';
 import 'package:flowy_infra_ui/widget/spacing.dart';
-import 'package:appflowy_backend/protobuf/flowy-database/field_entities.pbenum.dart';
-import 'package:appflowy_backend/protobuf/flowy-database/select_type_option.pb.dart';
+import 'package:appflowy_backend/protobuf/flowy-database2/field_entities.pbenum.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -58,16 +57,16 @@ class SelectOptionFilterList extends StatelessWidget {
             SelectOptionFilterListState>(
           builder: (context, state) {
             return ListView.separated(
+              physics: const NeverScrollableScrollPhysics(),
               shrinkWrap: true,
               controller: ScrollController(),
               itemCount: state.visibleOptions.length,
               separatorBuilder: (context, index) {
                 return VSpace(GridSize.typeOptionSeparatorHeight);
               },
-              physics: StyledScrollPhysics(),
               itemBuilder: (BuildContext context, int index) {
                 final option = state.visibleOptions[index];
-                return _SelectOptionFilterCell(
+                return SelectOptionFilterCell(
                   option: option.optionPB,
                   isSelected: option.isSelected,
                 );
@@ -80,21 +79,20 @@ class SelectOptionFilterList extends StatelessWidget {
   }
 }
 
-class _SelectOptionFilterCell extends StatefulWidget {
+class SelectOptionFilterCell extends StatefulWidget {
   final SelectOptionPB option;
   final bool isSelected;
-  const _SelectOptionFilterCell({
+  const SelectOptionFilterCell({
     required this.option,
     required this.isSelected,
     Key? key,
   }) : super(key: key);
 
   @override
-  State<_SelectOptionFilterCell> createState() =>
-      _SelectOptionFilterCellState();
+  State<SelectOptionFilterCell> createState() => _SelectOptionFilterCellState();
 }
 
-class _SelectOptionFilterCellState extends State<_SelectOptionFilterCell> {
+class _SelectOptionFilterCellState extends State<SelectOptionFilterCell> {
   @override
   Widget build(BuildContext context) {
     return SizedBox(

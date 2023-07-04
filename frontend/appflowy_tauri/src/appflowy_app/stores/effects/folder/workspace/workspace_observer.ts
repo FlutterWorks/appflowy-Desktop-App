@@ -1,9 +1,9 @@
-import { Ok, Result } from 'ts-results';
-import { AppPB, FolderNotification, RepeatedAppPB, WorkspacePB, FlowyError } from '@/services/backend';
-import { ChangeNotifier } from '$app/utils/change_notifier';
-import { FolderNotificationObserver } from '../notifications/observer';
+import { Ok, Result } from "ts-results";
+import { FolderNotification, WorkspacePB, FlowyError, RepeatedViewPB, ViewPB } from "@/services/backend";
+import { ChangeNotifier } from "$app/utils/change_notifier";
+import { FolderNotificationObserver } from "../notifications/observer";
 
-export type AppListNotifyValue = Result<AppPB[], FlowyError>;
+export type AppListNotifyValue = Result<ViewPB[], FlowyError>;
 export type AppListNotifyCallback = (value: AppListNotifyValue) => void;
 export type WorkspaceNotifyValue = Result<WorkspacePB, FlowyError>;
 export type WorkspaceNotifyCallback = (value: WorkspaceNotifyValue) => void;
@@ -13,14 +13,15 @@ export class WorkspaceObserver {
   private workspaceNotifier = new ChangeNotifier<WorkspaceNotifyValue>();
   private listener?: FolderNotificationObserver;
 
-  constructor(public readonly workspaceId: string) {}
+  constructor(public readonly workspaceId: string) {
+  }
 
   subscribe = async (callbacks: {
     onAppListChanged: AppListNotifyCallback;
     onWorkspaceChanged: WorkspaceNotifyCallback;
   }) => {
-    this.appListNotifier?.observer.subscribe(callbacks.onAppListChanged);
-    this.workspaceNotifier?.observer.subscribe(callbacks.onWorkspaceChanged);
+    this.appListNotifier?.observer?.subscribe(callbacks.onAppListChanged);
+    this.workspaceNotifier?.observer?.subscribe(callbacks.onWorkspaceChanged);
 
     this.listener = new FolderNotificationObserver({
       viewId: this.workspaceId,
@@ -33,9 +34,9 @@ export class WorkspaceObserver {
               this.workspaceNotifier?.notify(result);
             }
             break;
-          case FolderNotification.DidUpdateWorkspaceApps:
+          case FolderNotification.DidUpdateWorkspaceViews:
             if (result.ok) {
-              this.appListNotifier?.notify(Ok(RepeatedAppPB.deserializeBinary(result.val).items));
+              this.appListNotifier?.notify(Ok(RepeatedViewPB.deserializeBinary(result.val).items));
             } else {
               this.appListNotifier?.notify(result);
             }
@@ -43,7 +44,7 @@ export class WorkspaceObserver {
           default:
             break;
         }
-      },
+      }
     });
     await this.listener.start();
   };

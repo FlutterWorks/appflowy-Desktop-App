@@ -1,5 +1,5 @@
 import 'package:appflowy_backend/log.dart';
-import 'package:appflowy_backend/protobuf/flowy-database/field_entities.pb.dart';
+import 'package:appflowy_backend/protobuf/flowy-database2/field_entities.pb.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'field_service.dart';
@@ -10,7 +10,7 @@ class FieldActionSheetBloc
     extends Bloc<FieldActionSheetEvent, FieldActionSheetState> {
   final FieldBackendService fieldService;
 
-  FieldActionSheetBloc({required FieldCellContext fieldCellContext})
+  FieldActionSheetBloc({required FieldContext fieldCellContext})
       : fieldService = FieldBackendService(
           viewId: fieldCellContext.viewId,
           fieldId: fieldCellContext.field.id,

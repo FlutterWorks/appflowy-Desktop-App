@@ -1,6 +1,7 @@
+import 'package:appflowy/plugins/database_view/application/database_controller.dart';
 import 'package:appflowy/plugins/database_view/application/setting/group_bloc.dart';
 import 'package:appflowy/plugins/database_view/board/application/board_bloc.dart';
-import 'package:appflowy_backend/protobuf/flowy-database/field_entities.pb.dart';
+import 'package:appflowy_backend/protobuf/flowy-database2/field_entities.pb.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'util.dart';
@@ -15,8 +16,10 @@ void main() {
   // Group by checkbox field
   test('group by checkbox field test', () async {
     final context = await boardTest.createTestBoard();
-    final boardBloc = BoardBloc(view: context.gridView)
-      ..add(const BoardEvent.initial());
+    final boardBloc = BoardBloc(
+      view: context.gridView,
+      databaseController: DatabaseController(view: context.gridView),
+    )..add(const BoardEvent.initial());
     await boardResponseFuture();
 
     // assert the initial values

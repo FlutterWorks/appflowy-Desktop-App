@@ -1,17 +1,17 @@
-import 'package:appflowy_backend/protobuf/flowy-database/database_entities.pb.dart';
+import 'package:appflowy_backend/protobuf/flowy-database2/database_entities.pb.dart';
 import 'package:dartz/dartz.dart';
 import 'package:appflowy_backend/dispatch/dispatch.dart';
 import 'package:appflowy_backend/log.dart';
 import 'package:appflowy_backend/protobuf/flowy-error/errors.pb.dart';
-import 'package:appflowy_backend/protobuf/flowy-database/checkbox_filter.pbserver.dart';
-import 'package:appflowy_backend/protobuf/flowy-database/checklist_filter.pb.dart';
-import 'package:appflowy_backend/protobuf/flowy-database/date_filter.pbserver.dart';
-import 'package:appflowy_backend/protobuf/flowy-database/field_entities.pb.dart';
-import 'package:appflowy_backend/protobuf/flowy-database/number_filter.pb.dart';
-import 'package:appflowy_backend/protobuf/flowy-database/select_option_filter.pbserver.dart';
-import 'package:appflowy_backend/protobuf/flowy-database/setting_entities.pb.dart';
-import 'package:appflowy_backend/protobuf/flowy-database/text_filter.pb.dart';
-import 'package:appflowy_backend/protobuf/flowy-database/util.pb.dart';
+import 'package:appflowy_backend/protobuf/flowy-database2/checkbox_filter.pbserver.dart';
+import 'package:appflowy_backend/protobuf/flowy-database2/checklist_filter.pb.dart';
+import 'package:appflowy_backend/protobuf/flowy-database2/date_filter.pbserver.dart';
+import 'package:appflowy_backend/protobuf/flowy-database2/field_entities.pb.dart';
+import 'package:appflowy_backend/protobuf/flowy-database2/number_filter.pb.dart';
+import 'package:appflowy_backend/protobuf/flowy-database2/select_option_filter.pbserver.dart';
+import 'package:appflowy_backend/protobuf/flowy-database2/setting_entities.pb.dart';
+import 'package:appflowy_backend/protobuf/flowy-database2/text_filter.pb.dart';
+import 'package:appflowy_backend/protobuf/flowy-database2/util.pb.dart';
 import 'package:fixnum/fixnum.dart' as $fixnum;
 
 class FilterBackendService {
@@ -84,11 +84,20 @@ class FilterBackendService {
     required String fieldId,
     String? filterId,
     required DateFilterConditionPB condition,
+    required FieldType fieldType,
     int? start,
     int? end,
     int? timestamp,
   }) {
-    var filter = DateFilterPB();
+    assert(
+      [
+        FieldType.DateTime,
+        FieldType.LastEditedTime,
+        FieldType.CreatedTime,
+      ].contains(fieldType),
+    );
+
+    final filter = DateFilterPB();
     if (timestamp != null) {
       filter.timestamp = $fixnum.Int64(timestamp);
     } else {
@@ -105,7 +114,7 @@ class FilterBackendService {
     return insertFilter(
       fieldId: fieldId,
       filterId: filterId,
-      fieldType: FieldType.DateTime,
+      fieldType: fieldType,
       data: filter.writeToBuffer(),
     );
   }
@@ -169,7 +178,7 @@ class FilterBackendService {
     required FieldType fieldType,
     required List<int> data,
   }) {
-    var insertFilterPayload = AlterFilterPayloadPB.create()
+    final insertFilterPayload = UpdateFilterPayloadPB.create()
       ..fieldId = fieldId
       ..fieldType = fieldType
       ..viewId = viewId
@@ -181,7 +190,7 @@ class FilterBackendService {
 
     final payload = DatabaseSettingChangesetPB.create()
       ..viewId = viewId
-      ..alterFilter = insertFilterPayload;
+      ..updateFilter = insertFilterPayload;
     return DatabaseEventUpdateDatabaseSetting(payload).send().then((result) {
       return result.fold(
         (l) => left(l),

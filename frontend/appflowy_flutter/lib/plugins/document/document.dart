@@ -10,7 +10,7 @@ import 'package:appflowy/startup/plugin/plugin.dart';
 import 'package:appflowy/workspace/presentation/home/home_stack.dart';
 import 'package:appflowy/workspace/presentation/widgets/left_bar_item.dart';
 import 'package:easy_localization/easy_localization.dart';
-import 'package:appflowy_backend/protobuf/flowy-folder/view.pb.dart';
+import 'package:appflowy_backend/protobuf/flowy-folder2/view.pb.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -34,7 +34,7 @@ class DocumentPluginBuilder extends PluginBuilder {
   PluginType get pluginType => PluginType.editor;
 
   @override
-  ViewLayoutTypePB? get layoutType => ViewLayoutTypePB.Document;
+  ViewLayoutPB? get layoutType => ViewLayoutPB.Document;
 }
 
 class DocumentPlugin extends Plugin<int> {
@@ -48,6 +48,7 @@ class DocumentPlugin extends Plugin<int> {
   DocumentPlugin({
     required PluginType pluginType,
     required ViewPB view,
+    bool listenOnViewChanged = false,
     Key? key,
   }) : notifier = ViewPluginNotifier(view: view) {
     _pluginType = pluginType;
@@ -61,34 +62,38 @@ class DocumentPlugin extends Plugin<int> {
   }
 
   @override
-  PluginDisplay get display {
-    return DocumentPluginDisplay(
+  PluginWidgetBuilder get widgetBuilder {
+    return DocumentPluginWidgetBuilder(
       notifier: notifier,
       documentAppearanceCubit: _documentAppearanceCubit,
     );
   }
 
   @override
-  PluginType get ty => _pluginType;
+  PluginType get pluginType => _pluginType;
 
   @override
   PluginId get id => notifier.view.id;
 }
 
-class DocumentPluginDisplay extends PluginDisplay with NavigationItem {
+class DocumentPluginWidgetBuilder extends PluginWidgetBuilder
+    with NavigationItem {
   final ViewPluginNotifier notifier;
   ViewPB get view => notifier.view;
   int? deletedViewIndex;
   DocumentAppearanceCubit documentAppearanceCubit;
 
-  DocumentPluginDisplay({
+  DocumentPluginWidgetBuilder({
     required this.notifier,
     required this.documentAppearanceCubit,
     Key? key,
   });
 
   @override
-  Widget buildWidget(PluginContext context) {
+  EdgeInsets get contentPadding => EdgeInsets.zero;
+
+  @override
+  Widget buildWidget({PluginContext? context}) {
     notifier.isDeleted.addListener(() {
       notifier.isDeleted.value.fold(() => null, (deletedView) {
         if (deletedView.hasIndex()) {
@@ -103,7 +108,7 @@ class DocumentPluginDisplay extends PluginDisplay with NavigationItem {
         builder: (_, state) {
           return DocumentPage(
             view: view,
-            onDeleted: () => context.onDeleted(view, deletedViewIndex),
+            onDeleted: () => context?.onDeleted(view, deletedViewIndex),
             key: ValueKey(view.id),
           );
         },
@@ -118,7 +123,10 @@ class DocumentPluginDisplay extends PluginDisplay with NavigationItem {
   Widget? get rightBarItem {
     return Row(
       children: [
-        DocumentShareButton(view: view),
+        DocumentShareButton(
+          key: ValueKey(view.id),
+          view: view,
+        ),
         const SizedBox(width: 10),
         BlocProvider.value(
           value: documentAppearanceCubit,
