@@ -4,7 +4,7 @@ use std::str::FromStr;
 use std::sync::Arc;
 
 use collab_database::fields::Field;
-use collab_database::rows::{Cell, Row, RowId};
+use collab_database::rows::{Cell, Row, RowDetail, RowId};
 use rayon::prelude::ParallelSliceMut;
 use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
@@ -16,7 +16,6 @@ use lib_infra::future::Fut;
 use crate::entities::FieldType;
 use crate::entities::SortChangesetNotificationPB;
 use crate::services::cell::CellCache;
-use crate::services::database::RowDetail;
 use crate::services::database_view::{DatabaseViewChanged, DatabaseViewChangedNotifier};
 use crate::services::field::{default_order, TypeOptionCellExt};
 use crate::services::sort::{
@@ -157,7 +156,7 @@ impl SortController {
     }
 
     let fields = self.delegate.get_fields(&self.view_id, None).await;
-    for sort in self.sorts.iter() {
+    for sort in self.sorts.iter().rev() {
       rows
         .par_sort_by(|left, right| cmp_row(&left.row, &right.row, sort, &fields, &self.cell_cache));
     }
@@ -241,35 +240,46 @@ fn cmp_row(
   fields: &[Arc<Field>],
   cell_data_cache: &CellCache,
 ) -> Ordering {
-  let order = match (
-    left.cells.get(&sort.field_id),
-    right.cells.get(&sort.field_id),
-  ) {
-    (Some(left_cell), Some(right_cell)) => {
-      let field_type = sort.field_type.clone();
-      match fields
-        .iter()
-        .find(|field_rev| field_rev.id == sort.field_id)
-      {
-        None => default_order(),
-        Some(field_rev) => cmp_cell(
-          left_cell,
-          right_cell,
-          field_rev,
-          field_type,
-          cell_data_cache,
-        ),
-      }
+  let field_type = sort.field_type.clone();
+  match fields
+    .iter()
+    .find(|field_rev| field_rev.id == sort.field_id)
+  {
+    None => default_order(),
+    Some(field_rev) => match (
+      left.cells.get(&sort.field_id),
+      right.cells.get(&sort.field_id),
+    ) {
+      (Some(left_cell), Some(right_cell)) => cmp_cell(
+        left_cell,
+        right_cell,
+        field_rev,
+        field_type,
+        cell_data_cache,
+        sort.condition,
+      ),
+      (Some(_), None) => {
+        if field_type.is_checkbox() {
+          match sort.condition {
+            SortCondition::Ascending => Ordering::Greater,
+            SortCondition::Descending => Ordering::Less,
+          }
+        } else {
+          Ordering::Less
+        }
+      },
+      (None, Some(_)) => {
+        if field_type.is_checkbox() {
+          match sort.condition {
+            SortCondition::Ascending => Ordering::Less,
+            SortCondition::Descending => Ordering::Greater,
+          }
+        } else {
+          Ordering::Greater
+        }
+      },
+      _ => default_order(),
     },
-    (Some(_), None) => Ordering::Greater,
-    (None, Some(_)) => Ordering::Less,
-    _ => default_order(),
-  };
-
-  // The order is calculated by Ascending. So reverse the order if the SortCondition is descending.
-  match sort.condition {
-    SortCondition::Ascending => order,
-    SortCondition::Descending => order.reverse(),
   }
 }
 
@@ -279,6 +289,7 @@ fn cmp_cell(
   field: &Arc<Field>,
   field_type: FieldType,
   cell_data_cache: &CellCache,
+  sort_condition: SortCondition,
 ) -> Ordering {
   match TypeOptionCellExt::new_with_cell_data_cache(field.as_ref(), Some(cell_data_cache.clone()))
     .get_type_option_cell_data_handler(&field_type)
@@ -286,7 +297,8 @@ fn cmp_cell(
     None => default_order(),
     Some(handler) => {
       let cal_order = || {
-        let order = handler.handle_cell_compare(left_cell, right_cell, field.as_ref());
+        let order =
+          handler.handle_cell_compare(left_cell, right_cell, field.as_ref(), sort_condition);
         Option::<Ordering>::Some(order)
       };
 

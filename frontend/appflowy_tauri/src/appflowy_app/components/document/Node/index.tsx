@@ -19,6 +19,9 @@ import CodeBlock from '$app/components/document/CodeBlock';
 import { NodeIdContext } from '$app/components/document/_shared/SubscribeNode.hooks';
 import EquationBlock from '$app/components/document/EquationBlock';
 import ImageBlock from '$app/components/document/ImageBlock';
+import { useTranslation } from 'react-i18next';
+import BlockDraggable from '$app/components/_shared/BlockDraggable';
+import { BlockDraggableType } from '$app_reducers/block-draggable/slice';
 
 function NodeComponent({ id, ...props }: { id: string } & React.HTMLAttributes<HTMLDivElement>) {
   const { node, childIds, isSelected, ref } = useNode(id);
@@ -78,13 +81,23 @@ function NodeComponent({ id, ...props }: { id: string } & React.HTMLAttributes<H
 
   return (
     <NodeIdContext.Provider value={id}>
-      <div {...props} ref={ref} data-block-id={node.id} className={`relative ${className}`}>
+      <BlockDraggable
+        id={id}
+        type={BlockDraggableType.BLOCK}
+        getAnchorEl={() => {
+          return ref.current?.querySelector(`[data-draggable-anchor="${id}"]`) || null;
+        }}
+        {...props}
+        ref={ref}
+        data-block-id={node.id}
+        className={`pt-[0.5px] ${className}`}
+      >
         {renderBlock()}
         <BlockOverlay id={id} />
         {isSelected ? (
-          <div className='pointer-events-none absolute inset-0 z-[-1] m-[1px] rounded-[4px] bg-[#E0F8FF]' />
+          <div className='pointer-events-none absolute inset-0 z-[-1] my-[1px] rounded-[4px] bg-content-blue-100' />
         ) : null}
-      </div>
+      </BlockDraggable>
     </NodeIdContext.Provider>
   );
 }
@@ -94,9 +107,11 @@ const NodeWithErrorBoundary = withErrorBoundary(NodeComponent, {
 });
 
 const UnSupportedBlock = () => {
+  const { t } = useTranslation();
+
   return (
     <Alert severity='info' className='mb-2'>
-      <p>The current version does not support this Block.</p>
+      <p>{t('unSupportBlock')}</p>
     </Alert>
   );
 };

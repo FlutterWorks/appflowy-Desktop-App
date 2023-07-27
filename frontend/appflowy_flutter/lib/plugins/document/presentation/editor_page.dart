@@ -1,6 +1,7 @@
 import 'package:appflowy/plugins/document/application/doc_bloc.dart';
 import 'package:appflowy/plugins/document/presentation/editor_plugins/plugins.dart';
 import 'package:appflowy/plugins/document/presentation/editor_style.dart';
+import 'package:appflowy/workspace/application/settings/shortcuts/settings_shortcuts_service.dart';
 import 'package:appflowy/plugins/document/presentation/editor_plugins/inline_page/inline_page_reference.dart';
 import 'package:appflowy_editor/appflowy_editor.dart';
 import 'package:collection/collection.dart';
@@ -31,12 +32,22 @@ class AppFlowyEditorPage extends StatefulWidget {
   State<AppFlowyEditorPage> createState() => _AppFlowyEditorPageState();
 }
 
+final List<CommandShortcutEvent> commandShortcutEvents = [
+  ...codeBlockCommands,
+  ...standardCommandShortcutEvents,
+];
+
+final List<CommandShortcutEvent> defaultCommandShortcutEvents = [
+  ...commandShortcutEvents.map((e) => e.copyWith()).toList(),
+];
+
 class _AppFlowyEditorPageState extends State<AppFlowyEditorPage> {
   late final ScrollController effectiveScrollController;
 
   final inlinePageReferenceService = InlinePageReferenceService();
 
   final List<CommandShortcutEvent> commandShortcutEvents = [
+    toggleToggleListCommand,
     ...codeBlockCommands,
     ...standardCommandShortcutEvents,
   ];
@@ -49,9 +60,10 @@ class _AppFlowyEditorPageState extends State<AppFlowyEditorPage> {
     quoteItem,
     bulletedListItem,
     numberedListItem,
+    inlineMathEquationItem,
     linkItem,
-    textColorItem,
-    highlightColorItem,
+    buildTextColorItem(),
+    buildHighlightColorItem(),
   ];
 
   late final List<SelectionMenuItem> slashMenuItems;
@@ -67,7 +79,8 @@ class _AppFlowyEditorPageState extends State<AppFlowyEditorPage> {
         ...codeBlockCharacterEvents,
 
         // toggle list
-        // formatGreaterToToggleList,
+        formatGreaterToToggleList,
+        insertChildNodeInsideToggleList,
 
         // customize the slash menu command
         customSlashCommand(
@@ -106,8 +119,10 @@ class _AppFlowyEditorPageState extends State<AppFlowyEditorPage> {
   void initState() {
     super.initState();
 
+    _initializeShortcuts();
+    indentableBlockTypes.add(ToggleListBlockKeys.type);
+    convertibleBlockTypes.add(ToggleListBlockKeys.type);
     slashMenuItems = _customSlashMenuItems();
-
     effectiveScrollController = widget.scrollController ?? ScrollController();
   }
 
@@ -125,7 +140,7 @@ class _AppFlowyEditorPageState extends State<AppFlowyEditorPage> {
     final (bool autoFocus, Selection? selection) =
         _computeAutoFocusParameters();
 
-    final editor = AppFlowyEditor.custom(
+    final editor = AppFlowyEditor(
       editorState: widget.editorState,
       editable: true,
       shrinkWrap: widget.shrinkWrap,
@@ -285,6 +300,7 @@ class _AppFlowyEditorPageState extends State<AppFlowyEditorPage> {
         TodoListBlockKeys.type,
         CalloutBlockKeys.type,
         OutlineBlockKeys.type,
+        ToggleListBlockKeys.type,
       ];
 
       final supportAlignBuilderType = [
@@ -309,9 +325,10 @@ class _AppFlowyEditorPageState extends State<AppFlowyEditorPage> {
 
       builder.showActions = (_) => true;
       builder.actionBuilder = (context, state) {
+        final top = builder.configuration.padding(context.node).top;
         final padding = context.node.type == HeadingBlockKeys.type
-            ? const EdgeInsets.only(top: 8.0)
-            : const EdgeInsets.all(0);
+            ? EdgeInsets.only(top: top + 8.0)
+            : EdgeInsets.only(top: top + 2.0);
         return Padding(
           padding: padding,
           child: BlockActionList(
@@ -319,9 +336,7 @@ class _AppFlowyEditorPageState extends State<AppFlowyEditorPage> {
             blockComponentState: state,
             editorState: widget.editorState,
             actions: actions,
-            showSlashMenu: () => showSlashMenu(
-              widget.editorState,
-            ),
+            showSlashMenu: () => showSlashMenu(widget.editorState),
           ),
         );
       };
@@ -353,6 +368,7 @@ class _AppFlowyEditorPageState extends State<AppFlowyEditorPage> {
       outlineItem,
       mathEquationItem,
       codeBlockItem,
+      toggleListBlockItem,
       emojiMenuItem,
       autoGeneratorMenuItem,
     ];
@@ -370,5 +386,17 @@ class _AppFlowyEditorPageState extends State<AppFlowyEditorPage> {
       return (true, Selection.collapse(nodes.first.path, 0));
     }
     return const (false, null);
+  }
+
+  Future<void> _initializeShortcuts() async {
+    //TODO(Xazin): Refactor lazy initialization
+    defaultCommandShortcutEvents;
+    final settingsShortcutService = SettingsShortcutService();
+    final customizeShortcuts =
+        await settingsShortcutService.getCustomizeShortcuts();
+    await settingsShortcutService.updateCommandShortcuts(
+      standardCommandShortcutEvents,
+      customizeShortcuts,
+    );
   }
 }
