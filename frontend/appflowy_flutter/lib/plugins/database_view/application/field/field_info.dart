@@ -19,6 +19,8 @@ class FieldInfo with _$FieldInfo {
 
   String get name => field.name;
 
+  bool get isPrimary => field.isPrimary;
+
   factory FieldInfo.initial(FieldPB field) => FieldInfo(
         field: field,
         hasFilter: false,
@@ -32,6 +34,7 @@ class FieldInfo with _$FieldInfo {
       case FieldType.Checkbox:
       case FieldType.MultiSelect:
       case FieldType.SingleSelect:
+      case FieldType.DateTime:
         return true;
       default:
         return false;
