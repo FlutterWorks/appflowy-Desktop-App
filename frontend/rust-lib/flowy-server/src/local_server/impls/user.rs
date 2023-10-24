@@ -1,15 +1,17 @@
 use std::sync::Arc;
 
 use anyhow::Error;
-use collab_define::CollabObject;
+use collab_entity::CollabObject;
 use lazy_static::lazy_static;
 use parking_lot::Mutex;
 
+use flowy_error::FlowyError;
 use flowy_user_deps::cloud::UserCloudService;
 use flowy_user_deps::entities::*;
 use flowy_user_deps::DEFAULT_USER_NAME;
 use lib_infra::box_any::BoxAny;
 use lib_infra::future::FutureResult;
+use lib_infra::util::timestamp;
 
 use crate::local_server::uid::UserIDGenerator;
 use crate::local_server::LocalServerDB;
@@ -45,6 +47,8 @@ impl UserCloudService for LocalServerUserAuthServiceImpl {
         token: None,
         device_id: params.device_id,
         encryption_type: EncryptionType::NoEncryption,
+        updated_at: timestamp(),
+        metadata: None,
       })
     })
   }
@@ -68,6 +72,8 @@ impl UserCloudService for LocalServerUserAuthServiceImpl {
         token: None,
         device_id: params.device_id,
         encryption_type: EncryptionType::NoEncryption,
+        updated_at: timestamp(),
+        metadata: None,
       })
     })
   }
@@ -76,12 +82,16 @@ impl UserCloudService for LocalServerUserAuthServiceImpl {
     FutureResult::new(async { Ok(()) })
   }
 
-  fn generate_sign_in_callback_url(&self, _email: &str) -> FutureResult<String, Error> {
+  fn generate_sign_in_url_with_email(&self, _email: &str) -> FutureResult<String, Error> {
     FutureResult::new(async {
       Err(anyhow::anyhow!(
         "Can't generate callback url when using offline mode"
       ))
     })
+  }
+
+  fn generate_oauth_url_with_provider(&self, _provider: &str) -> FutureResult<String, Error> {
+    FutureResult::new(async { Err(anyhow::anyhow!("Can't oauth url when using offline mode")) })
   }
 
   fn update_user(
@@ -95,11 +105,11 @@ impl UserCloudService for LocalServerUserAuthServiceImpl {
   fn get_user_profile(
     &self,
     _credential: UserCredentials,
-  ) -> FutureResult<Option<UserProfile>, Error> {
+  ) -> FutureResult<Option<UserProfile>, FlowyError> {
     FutureResult::new(async { Ok(None) })
   }
 
-  fn get_user_workspaces(&self, _uid: i64) -> FutureResult<Vec<UserWorkspace>, Error> {
+  fn get_all_user_workspaces(&self, _uid: i64) -> FutureResult<Vec<UserWorkspace>, Error> {
     FutureResult::new(async { Ok(vec![]) })
   }
 

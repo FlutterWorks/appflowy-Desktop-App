@@ -26,7 +26,7 @@ packages:
     source: hosted
     version: "2.0.7"
   app_links:
-    dependency: "direct overridden"
+    dependency: "direct main"
     description:
       path: "."
       ref: c64ce17
@@ -54,11 +54,11 @@ packages:
     dependency: "direct main"
     description:
       path: "."
-      ref: "0fdca2f"
-      resolved-ref: "0fdca2f702485eeec1bfbe50127c06f2a8fd8b1e"
+      ref: "6d163b8"
+      resolved-ref: "6d163b88976f6481c4eea5e91c0ed4d68378e56f"
       url: "https://github.com/AppFlowy-IO/appflowy-editor.git"
     source: git
-    version: "1.4.3"
+    version: "1.4.4"
   appflowy_popover:
     dependency: "direct main"
     description:
@@ -525,6 +525,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.0.15"
+  flutter_slidable:
+    dependency: "direct main"
+    description:
+      name: flutter_slidable
+      sha256: cc4231579e3eae41ae166660df717f4bad1359c87f4a4322ad8ba1befeb3d2be
+      url: "https://pub.dev"
+    source: hosted
+    version: "3.0.0"
   flutter_svg:
     dependency: "direct main"
     description:
@@ -741,18 +749,18 @@ packages:
     dependency: transitive
     description:
       name: irondash_engine_context
-      sha256: "6431b11844472574a90803c02f1e55221e6a390a872786735f6757a67dacd678"
+      sha256: "559d4f156ba4d9a33c48185a1d7d5e887083bb601b0b130180d0aae3c1449338"
       url: "https://pub.dev"
     source: hosted
-    version: "0.3.0"
+    version: "0.4.0-dev.2"
   irondash_message_channel:
     dependency: transitive
     description:
       name: irondash_message_channel
-      sha256: "4114739083d1c63e6a1a8b93f09dd69b3cf9a9d6ee215ae7f23079307197ebba"
+      sha256: "500daa1fbe679f7d28a5258df3ff47dab6de352e680dc93c1ca9eae1555d8db5"
       url: "https://pub.dev"
     source: hosted
-    version: "0.3.0"
+    version: "0.3.1"
   isolates:
     dependency: transitive
     description:
@@ -889,6 +897,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.0.4"
+  mockito:
+    dependency: transitive
+    description:
+      name: mockito
+      sha256: "8b46d7eb40abdda92d62edd01546051f0c27365e65608c284de336dccfef88cc"
+      url: "https://pub.dev"
+    source: hosted
+    version: "5.4.1"
   mocktail:
     dependency: "direct main"
     description:
@@ -1217,6 +1233,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.0.2"
+  run_with_network_images:
+    dependency: "direct dev"
+    description:
+      name: run_with_network_images
+      sha256: "8bf2de4e5120ab24037eda09596408938aa8f5b09f6afabd49683bd01c7baa36"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.0.1"
   rxdart:
     dependency: transitive
     description:
@@ -1447,7 +1471,7 @@ packages:
     source: hosted
     version: "1.2.0"
   string_validator:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: string_validator
       sha256: b419cf5d21d608522e6e7cafed4deb34b6f268c43df866e63c320bab98a08cf6
@@ -1483,18 +1507,18 @@ packages:
     dependency: "direct main"
     description:
       name: super_clipboard
-      sha256: ba484eb42ce621b69241d18d2a8494109589e8796eb6a3399e6c8f9cdaab8303
+      sha256: "80f7f42e9778101d77e930dcd9206cf72a1d8b696b3cbc1e3f9cbeb71ac4cde7"
       url: "https://pub.dev"
     source: hosted
-    version: "0.6.3"
+    version: "0.7.0-dev.5"
   super_native_extensions:
     dependency: transitive
     description:
       name: super_native_extensions
-      sha256: dfe0a1c74430db946be973878da3f8611b8f124137f1dcbdf883e4605db40bd8
+      sha256: e3903ee807e82a930288811cf1b31a0dee30378bb544f30e3ea58d0ed2f884f2
       url: "https://pub.dev"
     source: hosted
-    version: "0.6.3"
+    version: "0.7.0-dev.5"
   sync_http:
     dependency: transitive
     description:
@@ -1615,6 +1639,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.0.0+1"
+  unsplash_client:
+    dependency: "direct main"
+    description:
+      name: unsplash_client
+      sha256: "832011981ef358ef4f816f356375620791d24dc6e1afb33a37f066df9aaea537"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.1.1"
   url_launcher:
     dependency: "direct main"
     description:

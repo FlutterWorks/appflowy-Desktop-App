@@ -1,7 +1,7 @@
 use std::convert::TryFrom;
 use std::sync::Arc;
 
-use collab_define::{CollabObject, CollabType};
+use collab_entity::{CollabObject, CollabType};
 
 use flowy_error::{FlowyError, FlowyResult};
 use flowy_sqlite::schema::user_workspace_table;
@@ -74,7 +74,7 @@ impl UserManager {
     if let Ok(service) = self.cloud_services.get_user_service() {
       if let Ok(pool) = self.db_pool(uid) {
         tokio::spawn(async move {
-          if let Ok(new_user_workspaces) = service.get_user_workspaces(uid).await {
+          if let Ok(new_user_workspaces) = service.get_all_user_workspaces(uid).await {
             let _ = save_user_workspaces(uid, pool, &new_user_workspaces);
             let repeated_workspace_pbs = RepeatedUserWorkspacePB::from(new_user_workspaces);
             send_notification(&uid.to_string(), UserNotification::DidUpdateUserWorkspaces)
