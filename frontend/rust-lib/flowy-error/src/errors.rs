@@ -3,6 +3,7 @@ use std::fmt::Debug;
 
 use protobuf::ProtobufError;
 use thiserror::Error;
+use validator::{ValidationError, ValidationErrors};
 
 use flowy_derive::ProtoBuf;
 
@@ -100,6 +101,7 @@ impl FlowyError {
   );
   static_flowy_error!(collab_not_sync, ErrorCode::CollabDataNotSync);
   static_flowy_error!(server_error, ErrorCode::InternalServerError);
+  static_flowy_error!(not_support, ErrorCode::NotSupportYet);
 }
 
 impl std::convert::From<ErrorCode> for FlowyError {
@@ -132,6 +134,18 @@ impl std::convert::From<protobuf::ProtobufError> for FlowyError {
   }
 }
 
+impl From<ValidationError> for FlowyError {
+  fn from(value: ValidationError) -> Self {
+    FlowyError::new(ErrorCode::InvalidParams, value)
+  }
+}
+
+impl From<ValidationErrors> for FlowyError {
+  fn from(value: ValidationErrors) -> Self {
+    FlowyError::new(ErrorCode::InvalidParams, value)
+  }
+}
+
 impl From<anyhow::Error> for FlowyError {
   fn from(e: anyhow::Error) -> Self {
     e.downcast::<FlowyError>()
@@ -141,6 +155,12 @@ impl From<anyhow::Error> for FlowyError {
 
 impl From<fancy_regex::Error> for FlowyError {
   fn from(e: fancy_regex::Error) -> Self {
+    FlowyError::internal().with_context(e)
+  }
+}
+
+impl From<tokio::sync::oneshot::error::RecvError> for FlowyError {
+  fn from(e: tokio::sync::oneshot::error::RecvError) -> Self {
     FlowyError::internal().with_context(e)
   }
 }

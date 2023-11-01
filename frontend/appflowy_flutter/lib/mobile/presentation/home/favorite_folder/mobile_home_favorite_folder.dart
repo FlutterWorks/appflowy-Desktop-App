@@ -66,7 +66,9 @@ class MobileFavoriteFolder extends StatelessWidget {
                       await context.pushView(view);
                     },
                     endActionPane: (context) => buildEndActionPane(context, [
-                      MobilePaneActionType.removeFromFavorites,
+                      view.isFavorite
+                          ? MobilePaneActionType.removeFromFavorites
+                          : MobilePaneActionType.addToFavorites,
                       MobilePaneActionType.more,
                     ]),
                   ),

@@ -33,14 +33,14 @@ class _FileExporterWidgetState extends State<FileExporterWidget> {
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<dartz.Either<WorkspaceSettingPB, FlowyError>>(
-      future: FolderEventGetCurrentWorkspace().send(),
+    return FutureBuilder<dartz.Either<WorkspacePB, FlowyError>>(
+      future: FolderEventReadCurrentWorkspace().send(),
       builder: (context, snapshot) {
         if (snapshot.hasData &&
             snapshot.connectionState == ConnectionState.done) {
-          final workspaces = snapshot.data?.getLeftOrNull<WorkspaceSettingPB>();
-          if (workspaces != null) {
-            final views = workspaces.workspace.views;
+          final workspace = snapshot.data?.getLeftOrNull<WorkspacePB>();
+          if (workspace != null) {
+            final views = workspace.views;
             cubit ??= SettingsFileExporterCubit(views: views);
             return BlocProvider<SettingsFileExporterCubit>.value(
               value: cubit!,
@@ -91,14 +91,14 @@ class _FileExporterWidgetState extends State<FileExporterWidget> {
       children: [
         const Spacer(),
         FlowyTextButton(
-          LocaleKeys.button_Cancel.tr(),
+          LocaleKeys.button_cancel.tr(),
           onPressed: () {
             Navigator.of(context).pop();
           },
         ),
         const HSpace(8),
         FlowyTextButton(
-          LocaleKeys.button_OK.tr(),
+          LocaleKeys.button_ok.tr(),
           onPressed: () async {
             await getIt<FilePickerService>()
                 .getDirectoryPath()

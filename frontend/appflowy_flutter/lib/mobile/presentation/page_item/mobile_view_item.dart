@@ -1,5 +1,7 @@
 import 'package:appflowy/generated/locale_keys.g.dart';
 import 'package:appflowy/mobile/application/mobile_router.dart';
+import 'package:appflowy/mobile/presentation/bottom_sheet/bottom_sheet.dart';
+import 'package:appflowy/mobile/presentation/bottom_sheet/bottom_sheet_add_new_page.dart';
 import 'package:appflowy/mobile/presentation/page_item/mobile_view_item_add_button.dart';
 import 'package:appflowy/workspace/application/sidebar/folder/folder_bloc.dart';
 import 'package:appflowy/workspace/application/view/view_bloc.dart';
@@ -11,6 +13,7 @@ import 'package:flowy_infra_ui/flowy_infra_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
+import 'package:go_router/go_router.dart';
 
 typedef ViewItemOnSelected = void Function(ViewPB);
 typedef ActionPaneBuilder = ActionPane Function(BuildContext context);
@@ -141,7 +144,6 @@ class InnerMobileViewItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     Widget child = SingleMobileInnerViewItem(
-      key: ValueKey('${categoryType.name} ${view.id} $isExpanded'),
       view: view,
       parentView: parentView,
       level: level,
@@ -229,7 +231,10 @@ class InnerMobileViewItem extends StatelessWidget {
       child = DraggableViewItem(
         isFirstChild: isFirstChild,
         view: view,
-        child: child,
+        // FIXME: use better color
+        centerHighlightColor: Colors.blue.shade200,
+        topHighlightColor: Colors.blue.shade200,
+        bottomHighlightColor: Colors.blue.shade200,
         feedback: (context) {
           return MobileViewItem(
             view: view,
@@ -244,6 +249,7 @@ class InnerMobileViewItem extends StatelessWidget {
             endActionPane: endActionPane,
           );
         },
+        child: child,
       );
     }
 
@@ -317,13 +323,14 @@ class _SingleMobileInnerViewItemState extends State<SingleMobileInnerViewItem> {
     // ··· more action button
     // children.add(_buildViewMoreActionButton(context));
     // only support add button for document layout
-    if (widget.view.layout == ViewLayoutPB.Document) {
+    if (!widget.isFeedback && widget.view.layout == ViewLayoutPB.Document) {
       // + button
       children.add(_buildViewAddButton(context));
     }
 
-    Widget child = GestureDetector(
-      behavior: HitTestBehavior.translucent,
+    Widget child = InkWell(
+      borderRadius: BorderRadius.circular(4.0),
+      enableFeedback: true,
       onTap: () => widget.onSelected(widget.view),
       child: SizedBox(
         height: _itemHeight,
@@ -359,7 +366,7 @@ class _SingleMobileInnerViewItemState extends State<SingleMobileInnerViewItem> {
 
     return GestureDetector(
       child: AnimatedRotation(
-        duration: const Duration(milliseconds: 200),
+        duration: const Duration(milliseconds: 250),
         turns: widget.isExpanded ? 0 : -0.25,
         child: const Icon(
           Icons.keyboard_arrow_down_rounded,
@@ -378,12 +385,21 @@ class _SingleMobileInnerViewItemState extends State<SingleMobileInnerViewItem> {
   Widget _buildViewAddButton(BuildContext context) {
     return MobileViewAddButton(
       onPressed: () {
-        context.read<ViewBloc>().add(
-              ViewEvent.createView(
-                LocaleKeys.menuAppHeader_defaultNewPageName.tr(),
-                ViewLayoutPB.Document,
-              ),
-            );
+        showMobileBottomSheet(
+          context: context,
+          builder: (_) => AddNewPageWidgetBottomSheet(
+            view: widget.view,
+            onAction: (layout) {
+              context.pop();
+              context.read<ViewBloc>().add(
+                    ViewEvent.createView(
+                      LocaleKeys.menuAppHeader_defaultNewPageName.tr(),
+                      layout,
+                    ),
+                  );
+            },
+          ),
+        );
       },
     );
   }

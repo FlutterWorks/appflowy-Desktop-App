@@ -19,7 +19,7 @@ class MobileFavoriteScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return FutureBuilder(
       future: Future.wait([
-        FolderEventGetCurrentWorkspace().send(),
+        FolderEventGetCurrentWorkspaceSetting().send(),
         getIt<AuthService>().getUser(),
       ]),
       builder: (context, snapshots) {
@@ -82,15 +82,11 @@ class MobileFavoritePage extends StatelessWidget {
 
         // Folder
         Expanded(
-          child: Scrollbar(
-            child: SingleChildScrollView(
-              child: Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: MobileFavoritePageFolder(
-                  userProfile: userProfile,
-                  workspaceSetting: workspaceSetting,
-                ),
-              ),
+          child: Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: MobileFavoritePageFolder(
+              userProfile: userProfile,
+              workspaceSetting: workspaceSetting,
             ),
           ),
         ),
