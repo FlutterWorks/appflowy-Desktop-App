@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use anyhow::{anyhow, Error};
 use client_api::entity::workspace_dto::{CreateWorkspaceMember, WorkspaceMemberChangeset};
-use client_api::entity::{AFRole, AFWorkspace, InsertCollabParams, OAuthProvider};
+use client_api::entity::{AFRole, AFWorkspace, AuthProvider, InsertCollabParams};
 use collab_entity::CollabObject;
 use parking_lot::RwLock;
 
@@ -18,7 +18,7 @@ use crate::af_cloud::impls::user::dto::{
 };
 use crate::af_cloud::impls::user::util::encryption_type_from_profile;
 use crate::af_cloud::{AFCloudClient, AFServer};
-use crate::supabase::define::{USER_DEVICE_ID, USER_SIGN_IN_URL};
+use crate::supabase::define::USER_SIGN_IN_URL;
 
 pub(crate) struct AFCloudUserAuthServiceImpl<T> {
   server: T,
@@ -38,7 +38,7 @@ impl<T> UserCloudService for AFCloudUserAuthServiceImpl<T>
 where
   T: AFServer,
 {
-  fn sign_up(&self, params: BoxAny) -> FutureResult<AuthResponse, Error> {
+  fn sign_up(&self, params: BoxAny) -> FutureResult<AuthResponse, FlowyError> {
     let try_get_client = self.server.try_get_client();
     FutureResult::new(async move {
       let params = oauth_params_from_box_any(params)?;
@@ -48,7 +48,7 @@ where
   }
 
   // Zack: Not sure if this is needed anymore since sign_up handles both cases
-  fn sign_in(&self, params: BoxAny) -> FutureResult<AuthResponse, Error> {
+  fn sign_in(&self, params: BoxAny) -> FutureResult<AuthResponse, FlowyError> {
     let try_get_client = self.server.try_get_client();
     FutureResult::new(async move {
       let client = try_get_client?;
@@ -58,12 +58,12 @@ where
     })
   }
 
-  fn sign_out(&self, _token: Option<String>) -> FutureResult<(), Error> {
+  fn sign_out(&self, _token: Option<String>) -> FutureResult<(), FlowyError> {
     let try_get_client = self.server.try_get_client();
     FutureResult::new(async move { Ok(try_get_client?.sign_out().await?) })
   }
 
-  fn generate_sign_in_url_with_email(&self, email: &str) -> FutureResult<String, Error> {
+  fn generate_sign_in_url_with_email(&self, email: &str) -> FutureResult<String, FlowyError> {
     let email = email.to_string();
     let try_get_client = self.server.try_get_client();
     FutureResult::new(async move {
@@ -82,8 +82,7 @@ where
         client_api::Client::new(client.base_url(), client.ws_addr(), client.gotrue_url());
       admin_client
         .sign_in_password(&admin_email, &admin_password)
-        .await
-        .unwrap();
+        .await?;
 
       let action_link = admin_client.generate_sign_in_action_link(&email).await?;
       let sign_in_url = client.extract_sign_in_url(&action_link).await?;
@@ -91,8 +90,8 @@ where
     })
   }
 
-  fn generate_oauth_url_with_provider(&self, provider: &str) -> FutureResult<String, Error> {
-    let provider = OAuthProvider::from(provider);
+  fn generate_oauth_url_with_provider(&self, provider: &str) -> FutureResult<String, FlowyError> {
+    let provider = AuthProvider::from(provider);
     let try_get_client = self.server.try_get_client();
     FutureResult::new(async move {
       let provider = provider.ok_or(anyhow!("invalid provider"))?;
@@ -107,7 +106,7 @@ where
     &self,
     _credential: UserCredentials,
     params: UpdateUserProfileParams,
-  ) -> FutureResult<(), Error> {
+  ) -> FutureResult<(), FlowyError> {
     let try_get_client = self.server.try_get_client();
     FutureResult::new(async move {
       let client = try_get_client?;
@@ -142,11 +141,11 @@ where
     })
   }
 
-  fn get_all_workspace(&self, _uid: i64) -> FutureResult<Vec<UserWorkspace>, Error> {
+  fn get_all_workspace(&self, _uid: i64) -> FutureResult<Vec<UserWorkspace>, FlowyError> {
     let try_get_client = self.server.try_get_client();
     FutureResult::new(async move {
       let workspaces = try_get_client?.get_workspaces().await?;
-      Ok(to_user_workspaces(workspaces.0)?)
+      to_user_workspaces(workspaces.0)
     })
   }
 
@@ -276,7 +275,6 @@ pub async fn user_sign_in_with_url(
     user_workspaces,
     email: user_profile.email,
     token: Some(client.get_token()?),
-    device_id: params.device_id,
     encryption_type,
     is_new_user,
     updated_at: user_profile.updated_at,
@@ -307,9 +305,7 @@ fn oauth_params_from_box_any(any: BoxAny) -> Result<AFCloudOAuthParams, Error> {
     .get(USER_SIGN_IN_URL)
     .ok_or_else(|| FlowyError::new(ErrorCode::MissingAuthField, "Missing token field"))?
     .as_str();
-  let device_id = map.get(USER_DEVICE_ID).cloned().unwrap_or_default();
   Ok(AFCloudOAuthParams {
     sign_in_url: sign_in_url.to_string(),
-    device_id,
   })
 }

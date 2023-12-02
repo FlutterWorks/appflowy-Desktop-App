@@ -1,3 +1,4 @@
+import 'package:appflowy/plugins/base/emoji/emoji_text.dart';
 import 'package:appflowy/plugins/document/presentation/editor_plugins/base/emoji_picker_button.dart';
 import 'package:appflowy/startup/tasks/app_window_size_manager.dart';
 import 'package:appflowy/workspace/application/tabs/tabs_bloc.dart';
@@ -7,6 +8,7 @@ import 'package:appflowy/workspace/application/view/view_service.dart';
 import 'package:appflowy_backend/protobuf/flowy-folder2/view.pb.dart';
 import 'package:appflowy_popover/appflowy_popover.dart';
 import 'package:flowy_infra_ui/flowy_infra_ui.dart';
+import 'package:flowy_infra_ui/widget/flowy_tooltip.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -51,7 +53,7 @@ class _ViewTitleBarState extends State<ViewTitleBar> {
         if (ancestors == null) {
           return const SizedBox.shrink();
         }
-        const maxWidth = WindowSizeManager.minWindowWidth - 100;
+        const maxWidth = WindowSizeManager.minWindowWidth - 200;
         final replacement = Row(
           // refresh the view title bar when the ancestors changed
           key: ValueKey(ancestors.hashCode),
@@ -64,6 +66,7 @@ class _ViewTitleBarState extends State<ViewTitleBar> {
               replacement: replacement,
               // if the width is too small, only show one view title bar without the ancestors
               child: _ViewTitle(
+                key: ValueKey(ancestors.last),
                 view: ancestors.last,
                 behavior: _ViewTitleBehavior.editable,
                 maxTitleWidth: constraints.maxWidth - 50.0,
@@ -93,12 +96,15 @@ class _ViewTitleBarState extends State<ViewTitleBar> {
         continue;
       }
       children.add(
-        _ViewTitle(
-          view: view,
-          behavior: i == views.length - 1
-              ? _ViewTitleBehavior.editable // only the last one is editable
-              : _ViewTitleBehavior.uneditable, // others are not editable
-          onUpdated: () => setState(() => _reloadAncestors()),
+        FlowyTooltip(
+          message: view.name,
+          child: _ViewTitle(
+            view: view,
+            behavior: i == views.length - 1
+                ? _ViewTitleBehavior.editable // only the last one is editable
+                : _ViewTitleBehavior.uneditable, // others are not editable
+            onUpdated: () => setState(() => _reloadAncestors()),
+          ),
         ),
       );
       if (i != views.length - 1) {
@@ -123,6 +129,7 @@ enum _ViewTitleBehavior {
 
 class _ViewTitle extends StatefulWidget {
   const _ViewTitle({
+    super.key,
     required this.view,
     this.behavior = _ViewTitleBehavior.editable,
     this.maxTitleWidth = 180,
@@ -189,8 +196,8 @@ class _ViewTitleState extends State<_ViewTitle> {
 
     final child = Row(
       children: [
-        FlowyText.regular(
-          icon,
+        EmojiText(
+          emoji: icon,
           fontSize: 18.0,
         ),
         const HSpace(2.0),
@@ -226,6 +233,7 @@ class _ViewTitleState extends State<_ViewTitle> {
       offset: const Offset(0, 18),
       popupBuilder: (context) {
         // icon + textfield
+        _resetTextEditingController();
         return Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -255,8 +263,8 @@ class _ViewTitleState extends State<_ViewTitle> {
                       viewId: widget.view.id,
                       name: text,
                     );
-                    popoverController.close();
                   }
+                  popoverController.close();
                 },
               ),
             ),

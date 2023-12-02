@@ -1,9 +1,11 @@
 import 'dart:async';
+
 import 'package:appflowy/plugins/database_view/application/cell/cell_controller_builder.dart';
 import 'package:appflowy/plugins/database_view/widgets/row/cells/text_cell/text_cell_bloc.dart';
 import 'package:flowy_infra_ui/flowy_infra_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+
 import '../../../../grid/presentation/layout/sizes.dart';
 import '../../cell_builder.dart';
 
@@ -122,9 +124,14 @@ class _GridTextCellState extends GridEditableTextCell<GridTextCell> {
                             bottom: GridSize.cellContentInsets.bottom,
                           ),
                           border: InputBorder.none,
+                          focusedBorder: InputBorder.none,
+                          enabledBorder: InputBorder.none,
+                          errorBorder: InputBorder.none,
+                          disabledBorder: InputBorder.none,
                           hintText: widget.cellStyle.placeholder,
                           isDense: true,
                         ),
+                        onTapOutside: (_) => focusNode.unfocus(),
                       ),
               ),
             ],
@@ -136,6 +143,7 @@ class _GridTextCellState extends GridEditableTextCell<GridTextCell> {
 
   @override
   Future<void> dispose() async {
+    _controller.dispose();
     _cellBloc.close();
     super.dispose();
   }

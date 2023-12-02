@@ -7,8 +7,7 @@
 use std::sync::{Arc, Weak};
 
 use collab_document::blocks::{
-  json_str_to_hashmap, Block, BlockAction, BlockActionPayload, BlockActionType, BlockEvent,
-  BlockEventPayload, DeltaType,
+  BlockAction, BlockActionPayload, BlockActionType, BlockEvent, BlockEventPayload, DeltaType,
 };
 
 use flowy_error::{FlowyError, FlowyResult};
@@ -18,12 +17,11 @@ use lib_dispatch::prelude::{
 
 use crate::entities::*;
 use crate::parser::document_data_parser::DocumentDataParser;
+use crate::parser::external::parser::ExternalDataToNestedJSONParser;
 use crate::parser::parser_entities::{
   ConvertDataToJsonParams, ConvertDataToJsonPayloadPB, ConvertDataToJsonResponsePB,
   ConvertDocumentParams, ConvertDocumentPayloadPB, ConvertDocumentResponsePB,
 };
-
-use crate::parser::external::parser::ExternalDataToNestedJSONParser;
 use crate::{manager::DocumentManager, parser::json::parser::JsonToDocumentParser};
 
 fn upgrade_document(
@@ -69,7 +67,7 @@ pub(crate) async fn close_document_handler(
   let manager = upgrade_document(manager)?;
   let params: CloseDocumentParams = data.into_inner().try_into()?;
   let doc_id = params.document_id;
-  manager.close_document(&doc_id)?;
+  manager.close_document(&doc_id).await?;
   Ok(())
 }
 
@@ -251,24 +249,6 @@ impl From<BlockActionPayloadPB> for BlockActionPayload {
       prev_id: pb.prev_id,
       text_id: pb.text_id,
       delta: pb.delta,
-    }
-  }
-}
-
-impl From<BlockPB> for Block {
-  fn from(pb: BlockPB) -> Self {
-    // Use `json_str_to_hashmap()` from the `collab_document` crate to convert the JSON data to a hashmap
-    let data = json_str_to_hashmap(&pb.data).unwrap_or_default();
-
-    // Convert the protobuf `BlockPB` to our internal `Block` struct
-    Self {
-      id: pb.id,
-      ty: pb.ty,
-      children: pb.children_id,
-      parent: pb.parent_id,
-      data,
-      external_id: pb.external_id,
-      external_type: pb.external_type,
     }
   }
 }

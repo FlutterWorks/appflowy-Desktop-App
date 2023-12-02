@@ -1,27 +1,40 @@
+import 'package:flowy_infra_ui/flowy_infra_ui.dart';
 import 'package:flutter/material.dart';
 
 class MobileSettingItem extends StatelessWidget {
   const MobileSettingItem({
     super.key,
     required this.name,
+    this.padding = const EdgeInsets.only(bottom: 4),
+    this.trailing,
+    this.leadingIcon,
     this.subtitle,
-    required this.trailing,
     this.onTap,
   });
+
   final String name;
+  final EdgeInsets padding;
+  final Widget? trailing;
+  final Widget? leadingIcon;
   final Widget? subtitle;
-  final Widget trailing;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+      padding: padding,
       child: ListTile(
-        title: Text(
-          name,
-          style: theme.textTheme.labelMedium,
+        title: Row(
+          children: [
+            if (leadingIcon != null) ...[
+              leadingIcon!,
+              const HSpace(8),
+            ],
+            FlowyText.medium(
+              name,
+              fontSize: 14.0,
+            ),
+          ],
         ),
         subtitle: subtitle,
         trailing: trailing,

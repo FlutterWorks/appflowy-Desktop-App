@@ -1,8 +1,8 @@
 import 'package:appflowy/generated/locale_keys.g.dart';
 import 'package:appflowy/mobile/application/mobile_router.dart';
-import 'package:appflowy/mobile/presentation/bottom_sheet/bottom_sheet_add_new_page.dart';
+import 'package:appflowy/mobile/presentation/bottom_sheet/bottom_sheet.dart';
 import 'package:appflowy/mobile/presentation/page_item/mobile_view_item_add_button.dart';
-import 'package:appflowy/mobile/presentation/widgets/widgets.dart';
+import 'package:appflowy/plugins/base/emoji/emoji_text.dart';
 import 'package:appflowy/workspace/application/sidebar/folder/folder_bloc.dart';
 import 'package:appflowy/workspace/application/view/view_bloc.dart';
 import 'package:appflowy/workspace/application/view/view_ext.dart';
@@ -303,7 +303,7 @@ class _SingleMobileInnerViewItemState extends State<SingleMobileInnerViewItem> {
       _buildLeftIcon(),
       const HSpace(4),
       // icon
-      _buildViewIconButton(),
+      _buildViewIcon(),
       const HSpace(8),
       // title
       Expanded(
@@ -353,10 +353,10 @@ class _SingleMobileInnerViewItemState extends State<SingleMobileInnerViewItem> {
     return child;
   }
 
-  Widget _buildViewIconButton() {
+  Widget _buildViewIcon() {
     final icon = widget.view.icon.value.isNotEmpty
-        ? FlowyText(
-            widget.view.icon.value,
+        ? EmojiText(
+            emoji: widget.view.icon.value,
             fontSize: 24.0,
           )
         : SizedBox.square(
@@ -396,9 +396,12 @@ class _SingleMobileInnerViewItemState extends State<SingleMobileInnerViewItem> {
     return MobileViewAddButton(
       onPressed: () {
         final title = widget.view.name;
-        showFlowyMobileBottomSheet(
+        showMobileBottomSheet(
           context,
+          showHeader: true,
           title: title,
+          showCloseButton: true,
+          showDragHandle: true,
           builder: (_) {
             return AddNewPageWidgetBottomSheet(
               view: widget.view,

@@ -16,7 +16,6 @@ import 'package:styled_widget/styled_widget.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../generated/locale_keys.g.dart';
-import '../../../../startup/launch_configuration.dart';
 import '../../../../startup/startup.dart';
 import '../../../../startup/tasks/prelude.dart';
 
@@ -44,47 +43,26 @@ class SettingsFileLocationCustomizerState
               child: CircularProgressIndicator(),
             ),
             didReceivedPath: (path) {
-              return Row(
-                mainAxisSize: MainAxisSize.min,
+              return Column(
                 children: [
-                  // display file paths.
-                  Flexible(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        FlowyText.medium(
-                          LocaleKeys.settings_files_defaultLocation.tr(),
-                          fontSize: 13,
-                          overflow: TextOverflow.visible,
-                        ).padding(horizontal: 5),
-                        const VSpace(5),
-                        _CopyableText(
-                          usingPath: path,
-                        ),
-                      ],
-                    ),
-                  ),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // display file paths.
+                      _path(path),
 
-                  // display the icons
-                  Flexible(
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        Flexible(
-                          child: _ChangeStoragePathButton(
-                            usingPath: path,
-                          ),
-                        ),
-                        const HSpace(10),
-                        _OpenStorageButton(
-                          usingPath: path,
-                        ),
-                        _RecoverDefaultStorageButton(
-                          usingPath: path,
-                        ),
-                      ],
+                      // display the icons
+                      _buttons(path),
+                    ],
+                  ),
+                  const VSpace(10),
+                  IntrinsicHeight(
+                    child: Opacity(
+                      opacity: 0.6,
+                      child: FlowyText.medium(
+                        LocaleKeys.settings_menu_customPathPrompt.tr(),
+                        maxLines: 13,
+                      ),
                     ),
                   ),
                 ],
@@ -93,6 +71,55 @@ class SettingsFileLocationCustomizerState
           );
         },
       ),
+    );
+  }
+
+  Widget _path(String path) {
+    return Flexible(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          FlowyText.medium(
+            LocaleKeys.settings_files_defaultLocation.tr(),
+            fontSize: 13,
+            overflow: TextOverflow.visible,
+          ).padding(horizontal: 5),
+          const VSpace(5),
+          _CopyableText(
+            usingPath: path,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buttons(String path) {
+    final List<Widget> children = [];
+    children.addAll([
+      Flexible(
+        child: _ChangeStoragePathButton(
+          usingPath: path,
+        ),
+      ),
+      const HSpace(10),
+    ]);
+
+    children.add(
+      _OpenStorageButton(
+        usingPath: path,
+      ),
+    );
+
+    children.add(
+      _RecoverDefaultStorageButton(
+        usingPath: path,
+      ),
+    );
+
+    return Flexible(
+      child: Row(mainAxisAlignment: MainAxisAlignment.end, children: children),
     );
   }
 }
@@ -182,10 +209,8 @@ class _ChangeStoragePathButtonState extends State<_ChangeStoragePathButton> {
           await context.read<SettingsLocationCubit>().setCustomPath(path);
           await FlowyRunner.run(
             FlowyApp(),
-            integrationMode(),
-            config: const LaunchConfiguration(
-              autoRegistrationSupported: true,
-            ),
+            FlowyRunner.currentMode,
+            isAnon: true,
           );
           if (mounted) {
             Navigator.of(context).pop();
@@ -260,10 +285,8 @@ class _RecoverDefaultStorageButtonState
             .resetDataStoragePathToApplicationDefault();
         await FlowyRunner.run(
           FlowyApp(),
-          integrationMode(),
-          config: const LaunchConfiguration(
-            autoRegistrationSupported: true,
-          ),
+          FlowyRunner.currentMode,
+          isAnon: true,
         );
         if (mounted) {
           Navigator.of(context).pop();

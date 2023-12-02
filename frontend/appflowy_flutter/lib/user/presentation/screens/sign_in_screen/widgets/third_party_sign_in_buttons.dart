@@ -1,11 +1,7 @@
-import 'package:appflowy/core/config/kv.dart';
-import 'package:appflowy/core/config/kv_keys.dart';
 import 'package:appflowy/generated/flowy_svgs.g.dart';
 import 'package:appflowy/generated/locale_keys.g.dart';
-import 'package:appflowy/startup/startup.dart';
 import 'package:appflowy/user/application/sign_in_bloc.dart';
 import 'package:appflowy/user/presentation/presentation.dart';
-import 'package:appflowy/util/platform_extension.dart';
 import 'package:appflowy/workspace/application/settings/appearance/appearance_cubit.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flowy_infra/size.dart';
@@ -23,9 +19,13 @@ class ThirdPartySignInButtons extends StatelessWidget {
   Widget build(BuildContext context) {
     // Get themeMode from AppearanceSettingsCubit
     // When user changes themeMode, it changes the state in AppearanceSettingsCubit, but the themeMode for the MaterialApp won't change, it only got updated(get value from AppearanceSettingsCubit) when user open the app again. Thus, we should get themeMode from AppearanceSettingsCubit rather than MediaQuery.
-    final isDarkMode =
-        context.read<AppearanceSettingsCubit>().state.themeMode ==
-            ThemeMode.dark;
+
+    final themeModeFromCubit =
+        context.read<AppearanceSettingsCubit>().state.themeMode;
+
+    final isDarkMode = themeModeFromCubit == ThemeMode.system
+        ? MediaQuery.of(context).platformBrightness == Brightness.dark
+        : themeModeFromCubit == ThemeMode.dark;
 
     return Column(
       children: [
@@ -79,40 +79,6 @@ class _ThirdPartySignInButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final style = Theme.of(context);
-    final isMobile = PlatformExtension.isMobile;
-    if (isMobile) {
-      // Use LayoutBuilder to get the maxWidth of parent widget(Column) and set the icon occupied area to 1/4 of maxWidth.
-      return LayoutBuilder(
-        builder: (context, constraints) {
-          return SizedBox(
-            height: 48,
-            child: OutlinedButton.icon(
-              icon: Container(
-                width: constraints.maxWidth / 4,
-                alignment: Alignment.centerRight,
-                child: SizedBox(
-                  width: 24,
-                  child: FlowySvg(
-                    icon,
-                    blendMode: null,
-                  ),
-                ),
-              ),
-              label: Container(
-                padding: const EdgeInsets.only(left: 4),
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  labelText,
-                  style: Theme.of(context).textTheme.titleSmall,
-                ),
-              ),
-              onPressed: onPressed,
-            ),
-          );
-        },
-      );
-    }
-    // In desktop, the width of button is limited by [AuthFormContainer]
     return SizedBox(
       height: 48,
       width: AuthFormContainer.width,
@@ -165,19 +131,16 @@ class _ThirdPartySignInButton extends StatelessWidget {
 }
 
 void _signInWithGoogle(BuildContext context) {
-  getIt<KeyValueStorage>().set(KVKeys.loginType, 'supabase');
   context.read<SignInBloc>().add(
         const SignInEvent.signedInWithOAuth('google'),
       );
 }
 
 void _signInWithGithub(BuildContext context) {
-  getIt<KeyValueStorage>().set(KVKeys.loginType, 'supabase');
   context.read<SignInBloc>().add(const SignInEvent.signedInWithOAuth('github'));
 }
 
 void _signInWithDiscord(BuildContext context) {
-  getIt<KeyValueStorage>().set(KVKeys.loginType, 'supabase');
   context
       .read<SignInBloc>()
       .add(const SignInEvent.signedInWithOAuth('discord'));

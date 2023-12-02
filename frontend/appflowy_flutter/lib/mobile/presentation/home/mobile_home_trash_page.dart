@@ -1,6 +1,6 @@
 import 'package:appflowy/generated/flowy_svgs.g.dart';
 import 'package:appflowy/generated/locale_keys.g.dart';
-import 'package:appflowy/mobile/presentation/bottom_sheet/bottom_sheet_action_widget.dart';
+import 'package:appflowy/mobile/presentation/bottom_sheet/bottom_sheet.dart';
 import 'package:appflowy/mobile/presentation/widgets/widgets.dart';
 import 'package:appflowy/plugins/trash/application/prelude.dart';
 import 'package:appflowy/startup/startup.dart';
@@ -13,7 +13,7 @@ import 'package:go_router/go_router.dart';
 class MobileHomeTrashPage extends StatelessWidget {
   const MobileHomeTrashPage({super.key});
 
-  static const routeName = "/MobileHomeTrashPage";
+  static const routeName = '/trash';
 
   @override
   Widget build(BuildContext context) {
@@ -32,8 +32,12 @@ class MobileHomeTrashPage extends StatelessWidget {
                         icon: const Icon(Icons.more_horiz),
                         onPressed: () {
                           final trashBloc = context.read<TrashBloc>();
-                          showFlowyMobileBottomSheet(
+                          showMobileBottomSheet(
                             context,
+                            showHeader: true,
+                            showCloseButton: true,
+                            showDragHandle: true,
+                            padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
                             title: LocaleKeys.trash_mobile_actions.tr(),
                             builder: (_) => Row(
                               children: [
@@ -162,7 +166,7 @@ class _DeletedFilesListView extends StatelessWidget {
             child: ListTile(
               // TODO(Yijing): implement file type after TrashPB has file type
               leading: FlowySvg(
-                FlowySvgs.documents_s,
+                FlowySvgs.document_s,
                 size: const Size.square(24),
                 color: theme.colorScheme.onSurface,
               ),

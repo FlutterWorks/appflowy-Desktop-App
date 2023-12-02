@@ -28,7 +28,7 @@ impl Builder {
     Builder {
       name: name.to_owned(),
       env_filter: "Info".to_owned(),
-      file_appender: tracing_appender::rolling::daily(directory, format!("{}", name)),
+      file_appender: tracing_appender::rolling::daily(directory, name),
     }
   }
 
@@ -47,7 +47,7 @@ impl Builder {
       .with_target(false)
       .with_max_level(tracing::Level::TRACE)
       .with_thread_ids(false)
-      .with_writer(std::io::stdout)
+      .with_writer(std::io::stderr)
       .pretty()
       .with_env_filter(env_filter)
       .finish()

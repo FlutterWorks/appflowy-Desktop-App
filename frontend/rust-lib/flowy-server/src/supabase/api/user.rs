@@ -64,7 +64,7 @@ impl<T> UserCloudService for SupabaseUserServiceImpl<T>
 where
   T: SupabaseServerService,
 {
-  fn sign_up(&self, params: BoxAny) -> FutureResult<AuthResponse, Error> {
+  fn sign_up(&self, params: BoxAny) -> FutureResult<AuthResponse, FlowyError> {
     let try_get_postgrest = self.server.try_get_postgrest();
     FutureResult::new(async move {
       let postgrest = try_get_postgrest?;
@@ -97,11 +97,7 @@ where
       }
 
       // Query the user profile and workspaces
-      tracing::debug!(
-        "user uuid: {}, device_id: {}",
-        params.uuid,
-        params.device_id
-      );
+      tracing::debug!("user uuid: {}", params.uuid,);
       let user_profile =
         get_user_profile(postgrest.clone(), GetUserProfileParams::Uuid(params.uuid))
           .await?
@@ -126,7 +122,6 @@ where
         is_new_user,
         email: Some(user_profile.email),
         token: None,
-        device_id: params.device_id,
         encryption_type: EncryptionType::from_sign(&user_profile.encryption_sign),
         updated_at: user_profile.updated_at.timestamp(),
         metadata: None,
@@ -134,7 +129,7 @@ where
     })
   }
 
-  fn sign_in(&self, params: BoxAny) -> FutureResult<AuthResponse, Error> {
+  fn sign_in(&self, params: BoxAny) -> FutureResult<AuthResponse, FlowyError> {
     let try_get_postgrest = self.server.try_get_postgrest();
     FutureResult::new(async move {
       let postgrest = try_get_postgrest?;
@@ -157,7 +152,6 @@ where
         is_new_user: false,
         email: None,
         token: None,
-        device_id: params.device_id,
         encryption_type: EncryptionType::from_sign(&response.encryption_sign),
         updated_at: response.updated_at.timestamp(),
         metadata: None,
@@ -165,23 +159,19 @@ where
     })
   }
 
-  fn sign_out(&self, _token: Option<String>) -> FutureResult<(), Error> {
+  fn sign_out(&self, _token: Option<String>) -> FutureResult<(), FlowyError> {
     FutureResult::new(async { Ok(()) })
   }
 
-  fn generate_sign_in_url_with_email(&self, _email: &str) -> FutureResult<String, Error> {
+  fn generate_sign_in_url_with_email(&self, _email: &str) -> FutureResult<String, FlowyError> {
     FutureResult::new(async {
-      Err(anyhow::anyhow!(
-        "Can't generate callback url when using supabase"
-      ))
+      Err(FlowyError::internal().with_context("Can't generate callback url when using supabase"))
     })
   }
 
-  fn generate_oauth_url_with_provider(&self, _provider: &str) -> FutureResult<String, Error> {
+  fn generate_oauth_url_with_provider(&self, _provider: &str) -> FutureResult<String, FlowyError> {
     FutureResult::new(async {
-      Err(anyhow::anyhow!(
-        "Can't generate oauth url when using supabase"
-      ))
+      Err(FlowyError::internal().with_context("Can't generate oauth url when using supabase"))
     })
   }
 
@@ -189,7 +179,7 @@ where
     &self,
     _credential: UserCredentials,
     params: UpdateUserProfileParams,
-  ) -> FutureResult<(), Error> {
+  ) -> FutureResult<(), FlowyError> {
     let try_get_postgrest = self.server.try_get_postgrest();
     FutureResult::new(async move {
       let postgrest = try_get_postgrest?;
@@ -232,7 +222,7 @@ where
     })
   }
 
-  fn get_all_workspace(&self, uid: i64) -> FutureResult<Vec<UserWorkspace>, Error> {
+  fn get_all_workspace(&self, uid: i64) -> FutureResult<Vec<UserWorkspace>, FlowyError> {
     let try_get_postgrest = self.server.try_get_postgrest();
     FutureResult::new(async move {
       let postgrest = try_get_postgrest?;
@@ -529,11 +519,16 @@ impl RealtimeEventHandler for RealtimeUserHandler {
 
   fn handler_event(&self, event: &RealtimeEvent) {
     if let Ok(user_event) = serde_json::from_value::<RealtimeUserEvent>(event.new.clone()) {
-      let _ = self.0.send(UserUpdate {
-        uid: user_event.uid,
-        name: Some(user_event.name),
-        email: Some(user_event.email),
-        encryption_sign: user_event.encryption_sign,
+      let sender = self.0.clone();
+      tokio::spawn(async move {
+        let _ = sender
+          .send(UserUpdate {
+            uid: user_event.uid,
+            name: Some(user_event.name),
+            email: Some(user_event.email),
+            encryption_sign: user_event.encryption_sign,
+          })
+          .await;
       });
     }
   }
@@ -541,14 +536,14 @@ impl RealtimeEventHandler for RealtimeUserHandler {
 
 pub struct RealtimeCollabUpdateHandler {
   sender_by_oid: Weak<CollabUpdateSenderByOid>,
-  device_id: Arc<RwLock<String>>,
+  device_id: String,
   encryption: Weak<dyn AppFlowyEncryption>,
 }
 
 impl RealtimeCollabUpdateHandler {
   pub fn new(
     sender_by_oid: Weak<CollabUpdateSenderByOid>,
-    device_id: Arc<RwLock<String>>,
+    device_id: String,
     encryption: Weak<dyn AppFlowyEncryption>,
   ) -> Self {
     Self {
@@ -571,10 +566,10 @@ impl RealtimeEventHandler for RealtimeCollabUpdateHandler {
         if let Some(sender) = sender_by_oid.read().get(collab_update.oid.as_str()) {
           tracing::trace!(
             "current device: {}, event device: {}",
-            self.device_id.read(),
+            self.device_id,
             collab_update.did.as_str()
           );
-          if *self.device_id.read() != collab_update.did.as_str() {
+          if self.device_id != collab_update.did {
             let encryption_secret = self
               .encryption
               .upgrade()
@@ -623,10 +618,5 @@ fn oauth_params_from_box_any(any: BoxAny) -> Result<SupabaseOAuthParams, Error> 
   let map: HashMap<String, String> = any.unbox_or_error()?;
   let uuid = uuid_from_map(&map)?;
   let email = map.get("email").cloned().unwrap_or_default();
-  let device_id = map.get("device_id").cloned().unwrap_or_default();
-  Ok(SupabaseOAuthParams {
-    uuid,
-    email,
-    device_id,
-  })
+  Ok(SupabaseOAuthParams { uuid, email })
 }

@@ -2,7 +2,7 @@ import 'dart:io';
 
 import 'package:appflowy/generated/flowy_svgs.g.dart';
 import 'package:appflowy/generated/locale_keys.g.dart';
-import 'package:appflowy/mobile/presentation/widgets/widgets.dart';
+import 'package:appflowy/mobile/presentation/bottom_sheet/bottom_sheet.dart';
 import 'package:appflowy/plugins/base/emoji/emoji_picker_screen.dart';
 import 'package:appflowy/plugins/base/icon/icon_picker.dart';
 import 'package:appflowy/plugins/document/presentation/editor_plugins/header/emoji_icon_widget.dart';
@@ -229,7 +229,11 @@ class _DocumentHeaderToolbarState extends State<DocumentHeaderToolbar> {
     Widget child = Container(
       alignment: Alignment.bottomLeft,
       width: double.infinity,
-      padding: EditorStyleCustomizer.documentPadding,
+      padding: PlatformExtension.isDesktopOrWeb
+          ? EditorStyleCustomizer.documentPadding
+          : EdgeInsets.symmetric(
+              horizontal: EditorStyleCustomizer.documentPadding.left - 6.0,
+            ),
       child: SizedBox(
         height: 28,
         child: Row(
@@ -418,48 +422,64 @@ class DocumentCoverState extends State<DocumentCover> {
           Positioned(
             bottom: 8,
             right: 12,
-            child: RoundedTextButton(
-              onPressed: () {
-                showFlowyMobileBottomSheet(
-                  context,
-                  title: LocaleKeys.document_plugins_cover_changeCover.tr(),
-                  builder: (context) {
-                    return ConstrainedBox(
-                      constraints: const BoxConstraints(
-                        maxHeight: 340,
-                        minHeight: 80,
-                      ),
-                      child: UploadImageMenu(
-                        supportTypes: const [
-                          UploadImageType.color,
-                          UploadImageType.local,
-                          UploadImageType.url,
-                          UploadImageType.unsplash,
-                        ],
-                        onSelectedLocalImage: (path) async {
-                          context.pop();
-                          widget.onCoverChanged(CoverType.file, path);
+            child: Row(
+              children: [
+                IntrinsicWidth(
+                  child: RoundedTextButton(
+                    onPressed: () {
+                      showMobileBottomSheet(
+                        context,
+                        showHeader: true,
+                        showDragHandle: true,
+                        showCloseButton: true,
+                        title:
+                            LocaleKeys.document_plugins_cover_changeCover.tr(),
+                        builder: (context) {
+                          return ConstrainedBox(
+                            constraints: const BoxConstraints(
+                              maxHeight: 340,
+                              minHeight: 80,
+                            ),
+                            child: UploadImageMenu(
+                              supportTypes: const [
+                                UploadImageType.color,
+                                UploadImageType.local,
+                                UploadImageType.url,
+                                UploadImageType.unsplash,
+                              ],
+                              onSelectedLocalImage: (path) async {
+                                context.pop();
+                                widget.onCoverChanged(CoverType.file, path);
+                              },
+                              onSelectedAIImage: (_) {
+                                throw UnimplementedError();
+                              },
+                              onSelectedNetworkImage: (url) async {
+                                context.pop();
+                                widget.onCoverChanged(CoverType.file, url);
+                              },
+                              onSelectedColor: (color) {
+                                context.pop();
+                                widget.onCoverChanged(CoverType.color, color);
+                              },
+                            ),
+                          );
                         },
-                        onSelectedAIImage: (_) {
-                          throw UnimplementedError();
-                        },
-                        onSelectedNetworkImage: (url) async {
-                          context.pop();
-                          widget.onCoverChanged(CoverType.file, url);
-                        },
-                        onSelectedColor: (color) {
-                          context.pop();
-                          widget.onCoverChanged(CoverType.color, color);
-                        },
-                      ),
-                    );
-                  },
-                );
-              },
-              fillColor: Theme.of(context).colorScheme.onSurfaceVariant,
-              width: 120,
-              height: 32,
-              title: LocaleKeys.document_plugins_cover_changeCover.tr(),
+                      );
+                    },
+                    fillColor: Theme.of(context).colorScheme.onSurfaceVariant,
+                    height: 32,
+                    title: LocaleKeys.document_plugins_cover_changeCover.tr(),
+                  ),
+                ),
+                const HSpace(8.0),
+                SizedBox.square(
+                  dimension: 32.0,
+                  child: DeleteCoverButton(
+                    onTap: () => widget.onCoverChanged(CoverType.none, null),
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -519,14 +539,16 @@ class DocumentCoverState extends State<DocumentCover> {
             constraints: BoxConstraints.loose(const Size(380, 450)),
             margin: EdgeInsets.zero,
             onClose: () => isPopoverOpen = false,
-            child: RoundedTextButton(
-              onPressed: () => popoverController.show(),
-              hoverColor: Theme.of(context).colorScheme.surface,
-              textColor: Theme.of(context).colorScheme.tertiary,
-              fillColor: Theme.of(context).colorScheme.surface.withOpacity(0.5),
-              width: 120,
-              height: 28,
-              title: LocaleKeys.document_plugins_cover_changeCover.tr(),
+            child: IntrinsicWidth(
+              child: RoundedTextButton(
+                height: 28.0,
+                onPressed: () => popoverController.show(),
+                hoverColor: Theme.of(context).colorScheme.surface,
+                textColor: Theme.of(context).colorScheme.tertiary,
+                fillColor:
+                    Theme.of(context).colorScheme.surface.withOpacity(0.5),
+                title: LocaleKeys.document_plugins_cover_changeCover.tr(),
+              ),
             ),
             popupBuilder: (BuildContext popoverContext) {
               isPopoverOpen = true;
@@ -562,14 +584,20 @@ class DeleteCoverButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final fillColor = PlatformExtension.isDesktopOrWeb
+        ? Theme.of(context).colorScheme.surface.withOpacity(0.5)
+        : Theme.of(context).colorScheme.onSurfaceVariant;
+    final svgColor = PlatformExtension.isDesktopOrWeb
+        ? Theme.of(context).colorScheme.tertiary
+        : Theme.of(context).colorScheme.onPrimary;
     return FlowyIconButton(
       hoverColor: Theme.of(context).colorScheme.surface,
-      fillColor: Theme.of(context).colorScheme.surface.withOpacity(0.5),
+      fillColor: fillColor,
       iconPadding: const EdgeInsets.all(5),
       width: 28,
       icon: FlowySvg(
         FlowySvgs.delete_s,
-        color: Theme.of(context).colorScheme.tertiary,
+        color: svgColor,
       ),
       onPressed: onTap,
     );

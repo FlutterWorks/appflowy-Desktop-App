@@ -27,6 +27,8 @@ class FlowyButton extends StatelessWidget {
   final bool expandText;
   final MainAxisAlignment mainAxisAlignment;
   final bool showDefaultBoxDecorationOnMobile;
+  final double iconPadding;
+  final bool expand;
 
   const FlowyButton({
     Key? key,
@@ -48,6 +50,8 @@ class FlowyButton extends StatelessWidget {
     this.expandText = true,
     this.mainAxisAlignment = MainAxisAlignment.center,
     this.showDefaultBoxDecorationOnMobile = false,
+    this.iconPadding = 6,
+    this.expand = false,
   }) : super(key: key);
 
   @override
@@ -55,6 +59,15 @@ class FlowyButton extends StatelessWidget {
     final color = hoverColor ?? Theme.of(context).colorScheme.secondary;
     final alpha = (255 * disableOpacity).toInt();
     color.withAlpha(alpha);
+
+    if (Platform.isIOS || Platform.isAndroid) {
+      return InkWell(
+        onTap: disable ? null : onTap,
+        onSecondaryTap: disable ? null : onSecondaryTap,
+        borderRadius: radius ?? Corners.s6Border,
+        child: _render(context),
+      );
+    }
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
@@ -84,7 +97,7 @@ class FlowyButton extends StatelessWidget {
           child: leftIcon!,
         ),
       );
-      children.add(const HSpace(6));
+      children.add(HSpace(iconPadding));
     }
 
     if (expandText) {
@@ -102,6 +115,7 @@ class FlowyButton extends StatelessWidget {
     Widget child = Row(
       mainAxisAlignment: mainAxisAlignment,
       crossAxisAlignment: CrossAxisAlignment.center,
+      mainAxisSize: expand ? MainAxisSize.max : MainAxisSize.min,
       children: children,
     );
 
@@ -177,7 +191,7 @@ class FlowyTextButton extends StatelessWidget {
     List<Widget> children = [];
     if (heading != null) {
       children.add(heading!);
-      children.add(const HSpace(6));
+      children.add(const HSpace(8));
     }
     children.add(
       FlowyText(

@@ -5,12 +5,13 @@ Future<T?> showFlowyMobileBottomSheet<T>(
   BuildContext context, {
   required String title,
   required Widget Function(BuildContext) builder,
+  bool isScrollControlled = false,
 }) async {
   return showModalBottomSheet(
     context: context,
-    isScrollControlled: true,
+    isScrollControlled: isScrollControlled,
     builder: (context) => Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+      padding: const EdgeInsets.all(16.0),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [

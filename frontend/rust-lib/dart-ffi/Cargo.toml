@@ -17,6 +17,7 @@ byteorder = { version = "1.4.3" }
 protobuf.workspace = true
 tokio = { workspace = true, features = ["full", "rt-multi-thread", "tracing"] }
 serde.workspace = true
+serde_repr.workspace = true
 serde_json.workspace = true
 bytes.workspace = true
 crossbeam-utils = "0.8.15"
@@ -33,6 +34,7 @@ flowy-server = { workspace = true }
 flowy-server-config = { workspace = true}
 collab-integrate = { workspace = true }
 flowy-derive = { path = "../../../shared-lib/flowy-derive" }
+serde_yaml = "0.9.27"
 
 [features]
 default = ["dart", "rev-sqlite"]
