@@ -121,11 +121,7 @@ class _RowCardState<T> extends State<RowCard<T>> {
         },
         builder: (context, state) {
           if (PlatformExtension.isMobile) {
-            return RowCardContainer(
-              buildAccessoryWhen: () => state.isEditing == false,
-              accessories: const [],
-              openAccessory: (p0) {},
-              openCard: (context) => widget.openCard(context),
+            return GestureDetector(
               child: MobileCardContent<T>(
                 cellBuilder: widget.cellBuilder,
                 styleConfiguration: widget.styleConfiguration,
@@ -133,6 +129,7 @@ class _RowCardState<T> extends State<RowCard<T>> {
                 renderHook: widget.renderHook,
                 cardData: widget.cardData,
               ),
+              onTap: () => widget.openCard(context),
             );
           }
 
@@ -141,8 +138,8 @@ class _RowCardState<T> extends State<RowCard<T>> {
             triggerActions: PopoverTriggerFlags.none,
             constraints: BoxConstraints.loose(const Size(140, 200)),
             direction: PopoverDirection.rightWithCenterAligned,
-            popupBuilder: (popoverContext) {
-              return RowActions(
+            popupBuilder: (_) {
+              return RowActionMenu.board(
                 viewId: _cardBloc.viewId,
                 rowId: _cardBloc.rowMeta.id,
                 groupId: widget.groupId,
@@ -203,12 +200,12 @@ class _CardContent<CustomCardData> extends StatefulWidget {
     this.renderHook,
   });
 
-  final CardCellBuilder<CustomCardData> cellBuilder;
   final EditableRowNotifier rowNotifier;
+  final CardCellBuilder<CustomCardData> cellBuilder;
   final List<DatabaseCellContext> cells;
-  final RowCardRenderHook<CustomCardData>? renderHook;
   final CustomCardData? cardData;
   final RowCardStyleConfiguration styleConfiguration;
+  final RowCardRenderHook<CustomCardData>? renderHook;
 
   @override
   State<_CardContent<CustomCardData>> createState() =>
@@ -312,8 +309,7 @@ class _CardEditOption extends StatelessWidget with CardAccessory {
   final EditableRowNotifier rowNotifier;
   const _CardEditOption({
     required this.rowNotifier,
-    Key? key,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
