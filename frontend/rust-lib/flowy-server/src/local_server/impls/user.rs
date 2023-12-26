@@ -4,6 +4,7 @@ use anyhow::Error;
 use collab_entity::CollabObject;
 use lazy_static::lazy_static;
 use parking_lot::Mutex;
+use uuid::Uuid;
 
 use flowy_error::FlowyError;
 use flowy_user_deps::cloud::UserCloudService;
@@ -39,6 +40,7 @@ impl UserCloudService for LocalServerUserAuthServiceImpl {
       };
       Ok(AuthResponse {
         user_id: uid,
+        user_uuid: Uuid::new_v4(),
         name: user_name,
         latest_workspace: user_workspace.clone(),
         user_workspaces: vec![user_workspace],
@@ -63,6 +65,7 @@ impl UserCloudService for LocalServerUserAuthServiceImpl {
         .unwrap_or_else(make_user_workspace);
       Ok(AuthResponse {
         user_id: uid,
+        user_uuid: Uuid::new_v4(),
         name: params.name,
         latest_workspace: user_workspace.clone(),
         user_workspaces: vec![user_workspace],
@@ -138,6 +141,7 @@ impl UserCloudService for LocalServerUserAuthServiceImpl {
     &self,
     _collab_object: &CollabObject,
     _data: Vec<u8>,
+    _override_if_exist: bool,
   ) -> FutureResult<(), Error> {
     FutureResult::new(async { Ok(()) })
   }
@@ -148,6 +152,6 @@ fn make_user_workspace() -> UserWorkspace {
     id: uuid::Uuid::new_v4().to_string(),
     name: "My Workspace".to_string(),
     created_at: Default::default(),
-    database_views_aggregate_id: uuid::Uuid::new_v4().to_string(),
+    database_storage_id: uuid::Uuid::new_v4().to_string(),
   }
 }

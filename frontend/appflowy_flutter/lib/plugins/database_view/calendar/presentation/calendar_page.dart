@@ -1,8 +1,8 @@
 import 'package:appflowy/generated/flowy_svgs.g.dart';
 import 'package:appflowy/generated/locale_keys.g.dart';
+import 'package:appflowy/mobile/presentation/bottom_sheet/bottom_sheet.dart';
 import 'package:appflowy/mobile/presentation/database/card/card.dart';
 import 'package:appflowy/mobile/presentation/presentation.dart';
-import 'package:appflowy/mobile/presentation/widgets/flowy_paginated_bottom_sheet.dart';
 import 'package:appflowy/mobile/presentation/widgets/show_flowy_mobile_bottom_sheet.dart';
 import 'package:appflowy/plugins/database_view/application/database_controller.dart';
 import 'package:appflowy/plugins/database_view/application/field/field_controller.dart';
@@ -10,9 +10,9 @@ import 'package:appflowy/plugins/database_view/calendar/application/calendar_blo
 import 'package:appflowy/plugins/database_view/calendar/application/unschedule_event_bloc.dart';
 import 'package:appflowy/plugins/database_view/grid/presentation/layout/sizes.dart';
 import 'package:appflowy/plugins/database_view/tab_bar/tab_bar_view.dart';
-import 'package:appflowy/util/platform_extension.dart';
 import 'package:appflowy_backend/protobuf/flowy-database2/calendar_entities.pb.dart';
 import 'package:appflowy_backend/protobuf/flowy-folder2/view.pb.dart';
+import 'package:appflowy_editor/appflowy_editor.dart';
 import 'package:appflowy_popover/appflowy_popover.dart';
 import 'package:calendar_view/calendar_view.dart';
 import 'package:easy_localization/easy_localization.dart';
@@ -189,7 +189,7 @@ class _CalendarPageState extends State<CalendarPage> {
     return LayoutBuilder(
       // must specify MonthView width for useAvailableVerticalSpace to work properly
       builder: (context, constraints) {
-        Widget calendar = Padding(
+        return Padding(
           padding: PlatformExtension.isMobile
               ? CalendarSize.contentInsetsMobile
               : CalendarSize.contentInsets,
@@ -210,20 +210,6 @@ class _CalendarPageState extends State<CalendarPage> {
             ),
           ),
         );
-        if (PlatformExtension.isMobile) {
-          calendar = Column(
-            children: [
-              Divider(
-                height: 1,
-                thickness: 1,
-                indent: GridSize.leadingHeaderPadding / 2,
-                endIndent: GridSize.leadingHeaderPadding / 2,
-              ),
-              Expanded(child: calendar),
-            ],
-          );
-        }
-        return calendar;
       },
     );
   }
@@ -460,15 +446,21 @@ class _UnscheduledEventsButtonState extends State<UnscheduledEventsButton> {
   }
 
   void _showUnscheduledEventsMobile(List<CalendarEventPB> events) =>
-      showPaginatedBottomSheet(
+      showMobileBottomSheet(
         context,
-        page: SheetPage(
-          title: LocaleKeys.calendar_settings_unscheduledEventsTitle.tr(),
-          body: UnscheduleEventsList(
-            databaseController: widget.databaseController,
-            unscheduleEvents: events,
-          ),
-        ),
+        builder: (_) {
+          return Column(
+            children: [
+              FlowyText.medium(
+                LocaleKeys.calendar_settings_unscheduledEventsTitle.tr(),
+              ),
+              UnscheduleEventsList(
+                databaseController: widget.databaseController,
+                unscheduleEvents: events,
+              ),
+            ],
+          );
+        },
       );
 }
 

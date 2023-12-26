@@ -28,12 +28,11 @@ packages:
   app_links:
     dependency: "direct main"
     description:
-      path: "."
-      ref: c64ce17
-      resolved-ref: c64ce174586267dbab1185ef9acb19b7c49fc7bd
-      url: "https://github.com/LucasXu0/app_links"
-    source: git
-    version: "3.4.3"
+      name: app_links
+      sha256: "4e392b5eba997df356ca6021f28431ce1cfeb16758699553a94b13add874a3bb"
+      url: "https://pub.dev"
+    source: hosted
+    version: "3.5.0"
   appflowy_backend:
     dependency: "direct main"
     description:
@@ -54,8 +53,8 @@ packages:
     dependency: "direct main"
     description:
       path: "."
-      ref: e6b1336
-      resolved-ref: e6b1336041734b2858b1704f32236b2435ff5a74
+      ref: "92e4260"
+      resolved-ref: "92e4260c062189cf4d5626272af62d0024d69455"
       url: "https://github.com/AppFlowy-IO/appflowy-editor.git"
     source: git
     version: "2.1.0"
@@ -1004,13 +1003,13 @@ packages:
     source: hosted
     version: "0.3.1"
   keyboard_height_plugin:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: keyboard_height_plugin
-      sha256: "9fd5cd9e3e80d8f530aaa26ad17b4d18d34a63956cf0d530920a54c228200510"
+      sha256: bbb32804bf93601249c17c33125cd2e654f5ef650fc6acf1b031d69b478b35ce
       url: "https://pub.dev"
     source: hosted
-    version: "0.0.4"
+    version: "0.0.5"
   leak_tracker:
     dependency: "direct main"
     description:
@@ -1068,13 +1067,13 @@ packages:
     source: hosted
     version: "0.1.5"
   logger:
-    dependency: transitive
+    dependency: "direct overridden"
     description:
       name: logger
-      sha256: "7ad7215c15420a102ec687bb320a7312afd449bac63bfb1c60d9787c27b9767f"
+      sha256: "6bbb9d6f7056729537a4309bda2e74e18e5d9f14302489cc1e93f33b3fe32cac"
       url: "https://pub.dev"
     source: hosted
-    version: "1.4.0"
+    version: "2.0.2+1"
   logging:
     dependency: transitive
     description:
@@ -1175,10 +1174,10 @@ packages:
     dependency: transitive
     description:
       name: numerus
-      sha256: ada1b55e4a505b8e4578218e57be1ce4b7968bb0e51d824082ac0c74ef18a10d
+      sha256: "49cd96fe774dd1f574fc9117ed67e8a2b06a612f723e87ef3119456a7729d837"
       url: "https://pub.dev"
     source: hosted
-    version: "2.1.2"
+    version: "2.2.0"
   octo_image:
     dependency: transitive
     description:
@@ -1507,6 +1506,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.1.9"
+  scrollable_positioned_list:
+    dependency: "direct main"
+    description:
+      name: scrollable_positioned_list
+      sha256: "1b54d5f1329a1e263269abc9e2543d90806131aa14fe7c6062a8054d57249287"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.3.8"
   shared_preferences:
     dependency: "direct main"
     description:

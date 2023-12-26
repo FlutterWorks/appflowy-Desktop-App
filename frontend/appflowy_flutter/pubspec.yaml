@@ -120,12 +120,14 @@ dependencies:
   # TODO: Consider implementing custom package
   # to gather notification handling for all platforms
   local_notifier: ^0.1.5
-  app_links: ^3.4.1
+  app_links: ^3.5.0
   flutter_slidable: ^3.0.0
   image_picker: ^1.0.4
   image_gallery_saver: ^2.0.3
   cached_network_image: ^3.3.0
   leak_tracker: ^9.0.6
+  keyboard_height_plugin: ^0.0.5
+  scrollable_positioned_list: ^0.3.8
 
 dev_dependencies:
   flutter_lints: ^3.0.1
@@ -153,11 +155,6 @@ dependency_overrides:
       ref: 4bd9139
       path: packages/supabase_flutter
 
-  app_links:
-    git:
-      url: https://github.com/LucasXu0/app_links
-      ref: c64ce17
-
   url_protocol:
     git:
       url: https://github.com/LucasXu0/flutter_url_protocol.git
@@ -166,7 +163,9 @@ dependency_overrides:
   appflowy_editor:
     git:
       url: https://github.com/AppFlowy-IO/appflowy-editor.git
-      ref: "e6b1336"
+      ref: "92e4260"
+
+  logger: ^2.0.0
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is

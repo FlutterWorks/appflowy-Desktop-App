@@ -37,12 +37,8 @@ class TabBarHeader extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              BlocBuilder<DatabaseTabBarBloc, DatabaseTabBarState>(
-                builder: (context, state) {
-                  return const Flexible(
-                    child: DatabaseTabBar(),
-                  );
-                },
+              const Flexible(
+                child: DatabaseTabBar(),
               ),
               BlocBuilder<DatabaseTabBarBloc, DatabaseTabBarState>(
                 builder: (context, state) {
@@ -127,7 +123,7 @@ class _DatabaseTabBarState extends State<DatabaseTabBar> {
             AddDatabaseViewButton(
               onTap: (layoutType) async {
                 context.read<DatabaseTabBarBloc>().add(
-                      DatabaseTabBarEvent.createView(layoutType),
+                      DatabaseTabBarEvent.createView(layoutType, null),
                     );
               },
             ),
