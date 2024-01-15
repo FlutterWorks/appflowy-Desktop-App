@@ -1,6 +1,7 @@
 import 'package:appflowy/generated/flowy_svgs.g.dart';
 import 'package:appflowy/plugins/document/presentation/editor_plugins/mobile_toolbar_v3/_menu_item.dart';
 import 'package:appflowy/plugins/document/presentation/editor_plugins/mobile_toolbar_v3/_popup_menu.dart';
+import 'package:appflowy/plugins/document/presentation/editor_plugins/mobile_toolbar_v3/_toolbar_theme.dart';
 import 'package:appflowy/plugins/document/presentation/editor_plugins/mobile_toolbar_v3/util.dart';
 import 'package:appflowy_editor/appflowy_editor.dart';
 import 'package:collection/collection.dart';
@@ -12,49 +13,66 @@ const _center = 'center';
 const _right = 'right';
 
 class AlignItems extends StatelessWidget {
-  const AlignItems({
+  AlignItems({
     super.key,
     required this.editorState,
   });
 
   final EditorState editorState;
+  final List<(String, FlowySvgData)> _alignMenuItems = [
+    (_left, FlowySvgs.m_aa_align_left_s),
+    (_center, FlowySvgs.m_aa_align_center_s),
+    (_right, FlowySvgs.m_aa_align_right_s),
+  ];
 
   @override
   Widget build(BuildContext context) {
     final currentAlignItem = _getCurrentAlignItem();
-    final alignMenuItems = _getAlignMenuItems();
+    final theme = ToolbarColorExtension.of(context);
     return PopupMenu(
-      itemLength: alignMenuItems.length,
+      itemLength: _alignMenuItems.length,
       onSelected: (index) {
-        editorState.alignBlock(alignMenuItems[index].$1);
+        editorState.alignBlock(
+          _alignMenuItems[index].$1,
+          selectionExtraInfo: {
+            selectionExtraInfoDoNotAttachTextService: true,
+            selectionExtraInfoDisableFloatingToolbar: true,
+          },
+        );
       },
       menuBuilder: (context, keys, currentIndex) {
-        final children = alignMenuItems
+        final children = _alignMenuItems
             .mapIndexed(
               (index, e) => [
-                MenuItem(
+                PopupMenuItemWrapper(
                   key: keys[index],
                   isSelected: currentIndex == index,
                   icon: e.$2,
                 ),
-                if (index != 0 || index != alignMenuItems.length - 1)
+                if (index != 0 && index != _alignMenuItems.length - 1)
                   const HSpace(12),
               ],
             )
             .flattened
             .toList();
-        return MenuWrapper(
+        return PopupMenuWrapper(
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: children,
           ),
         );
       },
-      builder: (context, key) => MobileToolbarItemWrapper(
+      builder: (context, key) => MobileToolbarMenuItemWrapper(
         key: key,
         size: const Size(82, 52),
         onTap: () async {
-          await editorState.alignBlock(currentAlignItem.$1);
+          await editorState.alignBlock(
+            currentAlignItem.$1,
+            selectionExtraInfo: {
+              selectionExtraInfoDoNotAttachTextService: true,
+              selectionExtraInfoDisableFloatingToolbar: true,
+            },
+          );
         },
         icon: currentAlignItem.$2,
         isSelected: false,
@@ -62,7 +80,7 @@ class AlignItems extends StatelessWidget {
           vertical: 14.0,
         ),
         showDownArrow: true,
-        backgroundColor: const Color(0xFFF2F2F7),
+        backgroundColor: theme.toolbarMenuItemBackgroundColor,
       ),
     );
   }
@@ -70,31 +88,12 @@ class AlignItems extends StatelessWidget {
   (String, FlowySvgData) _getCurrentAlignItem() {
     final align = _getCurrentBlockAlign();
     if (align == _center) {
-      return (_center, FlowySvgs.m_aa_align_center_s);
-    } else if (align == _right) {
       return (_right, FlowySvgs.m_aa_align_right_s);
-    }
-    return (_left, FlowySvgs.m_aa_align_left_s);
-  }
-
-  List<(String, FlowySvgData)> _getAlignMenuItems() {
-    final align = _getCurrentBlockAlign();
-
-    if (align == _center) {
-      return [
-        (_left, FlowySvgs.m_aa_align_left_s),
-        (_right, FlowySvgs.m_aa_align_right_s),
-      ];
     } else if (align == _right) {
-      return [
-        (_left, FlowySvgs.m_aa_align_left_s),
-        (_center, FlowySvgs.m_aa_align_center_s),
-      ];
+      return (_left, FlowySvgs.m_aa_align_left_s);
+    } else {
+      return (_center, FlowySvgs.m_aa_align_center_s);
     }
-    return [
-      (_center, FlowySvgs.m_aa_align_center_s),
-      (_right, FlowySvgs.m_aa_align_right_s),
-    ];
   }
 
   String _getCurrentBlockAlign() {

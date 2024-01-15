@@ -70,7 +70,7 @@ class _HeadingOrTextItem extends StatelessWidget {
         : const EdgeInsets.symmetric(
             vertical: 16.0,
           );
-    return MobileToolbarItemWrapper(
+    return MobileToolbarMenuItemWrapper(
       size: const Size(76, 52),
       onTap: () async => await _convert(isSelected),
       icon: icon,
@@ -80,7 +80,7 @@ class _HeadingOrTextItem extends StatelessWidget {
   }
 
   Future<void> _convert(bool isSelected) async {
-    editorState.convertBlockType(
+    await editorState.convertBlockType(
       blockType,
       isSelected: isSelected,
       extraAttributes: level != null
@@ -88,6 +88,17 @@ class _HeadingOrTextItem extends StatelessWidget {
               HeadingBlockKeys.level: level!,
             }
           : null,
+      selectionExtraInfo: {
+        selectionExtraInfoDoNotAttachTextService: true,
+        selectionExtraInfoDisableFloatingToolbar: true,
+      },
+    );
+    await editorState.updateSelectionWithReason(
+      editorState.selection,
+      extraInfo: {
+        selectionExtraInfoDisableFloatingToolbar: true,
+        selectionExtraInfoDoNotAttachTextService: true,
+      },
     );
   }
 }

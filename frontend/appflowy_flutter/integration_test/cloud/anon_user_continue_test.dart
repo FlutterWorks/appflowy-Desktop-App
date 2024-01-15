@@ -10,7 +10,7 @@ import 'package:appflowy/user/application/auth/auth_service.dart';
 import 'package:appflowy/workspace/application/settings/prelude.dart';
 import 'package:appflowy/workspace/presentation/settings/widgets/setting_appflowy_cloud.dart';
 import 'package:appflowy/workspace/presentation/settings/widgets/settings_user_view.dart';
-import 'package:appflowy_backend/protobuf/flowy-folder2/view.pb.dart';
+import 'package:appflowy_backend/protobuf/flowy-folder/view.pb.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flowy_infra/uuid.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -26,12 +26,12 @@ void main() {
   group('appflowy cloud', () {
     testWidgets('anon user and then sign in', (tester) async {
       await tester.initializeAppFlowy(
-        cloudType: AuthenticatorType.appflowyCloud,
+        cloudType: AuthenticatorType.appflowyCloudSelfHost,
       );
 
       tester.expectToSeeText(LocaleKeys.signIn_loginStartWithAnonymous.tr());
       await tester.tapGoButton();
-      await tester.expectToSeeHomePage();
+      await tester.expectToSeeHomePageWithGetStartedPage();
 
       // reanme the name of the anon user
       await tester.openSettings();
@@ -41,13 +41,14 @@ void main() {
         matching: find.byType(UserNameInput),
       );
       await tester.enterText(userNameFinder, 'local_user');
+      await tester.openSettingsPage(SettingsPage.user);
       await tester.pumpAndSettle();
 
       // sign up with Google
       await tester.tapGoogleLoginInButton();
-      await tester.pumpAndSettle();
 
       // sign out
+      await tester.expectToSeeHomePage();
       await tester.openSettings();
       await tester.openSettingsPage(SettingsPage.user);
       await tester.logout();
@@ -55,14 +56,14 @@ void main() {
 
       // tap the continue as anonymous button
       await tester
-          .tapButton(find.text(LocaleKeys.signIn_continueAnonymousUser.tr()));
+          .tapButton(find.text(LocaleKeys.signIn_loginStartWithAnonymous.tr()));
       await tester.expectToSeeHomePage();
 
-      // assert the name of the anon user is local_user
+      // New anon user name
       await tester.openSettings();
       await tester.openSettingsPage(SettingsPage.user);
       final userNameInput = tester.widget(userNameFinder) as UserNameInput;
-      expect(userNameInput.name, 'local_user');
+      expect(userNameInput.name, 'Me');
     });
   });
 }

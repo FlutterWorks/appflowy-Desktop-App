@@ -4,12 +4,14 @@ use std::sync::Arc;
 use anyhow::{anyhow, Error};
 use client_api::entity::workspace_dto::{CreateWorkspaceMember, WorkspaceMemberChangeset};
 use client_api::entity::{AFRole, AFWorkspace, AuthProvider, CollabParams, CreateCollabParams};
+use client_api::ClientConfiguration;
+use collab::core::collab::CollabDocState;
 use collab_entity::CollabObject;
 use parking_lot::RwLock;
 
 use flowy_error::{ErrorCode, FlowyError};
-use flowy_user_deps::cloud::{UserCloudService, UserUpdate, UserUpdateReceiver};
-use flowy_user_deps::entities::*;
+use flowy_user_pub::cloud::{UserCloudService, UserCollabParams, UserUpdate, UserUpdateReceiver};
+use flowy_user_pub::entities::*;
 use lib_infra::box_any::BoxAny;
 use lib_infra::future::FutureResult;
 
@@ -59,8 +61,9 @@ where
   }
 
   fn sign_out(&self, _token: Option<String>) -> FutureResult<(), FlowyError> {
-    let try_get_client = self.server.try_get_client();
-    FutureResult::new(async move { Ok(try_get_client?.sign_out().await?) })
+    // Calling the sign_out method that will revoke all connected devices' refresh tokens.
+    // So do nothing here.
+    FutureResult::new(async move { Ok(()) })
   }
 
   fn generate_sign_in_url_with_email(&self, email: &str) -> FutureResult<String, FlowyError> {
@@ -78,8 +81,12 @@ where
           "GOTRUE_ADMIN_PASSWORD is not set. Please set it to the admin password for the test server"
         )
       })?;
-      let admin_client =
-        client_api::Client::new(client.base_url(), client.ws_addr(), client.gotrue_url());
+      let admin_client = client_api::Client::new(
+        client.base_url(),
+        client.ws_addr(),
+        client.gotrue_url(),
+        ClientConfiguration::default(),
+      );
       admin_client
         .sign_in_password(&admin_email, &admin_password)
         .await?;
@@ -215,7 +222,7 @@ where
     })
   }
 
-  fn get_user_awareness_updates(&self, _uid: i64) -> FutureResult<Vec<Vec<u8>>, Error> {
+  fn get_user_awareness_doc_state(&self, _uid: i64) -> FutureResult<CollabDocState, Error> {
     FutureResult::new(async { Ok(vec![]) })
   }
 
@@ -232,21 +239,44 @@ where
     collab_object: &CollabObject,
     data: Vec<u8>,
     override_if_exist: bool,
-  ) -> FutureResult<(), Error> {
+  ) -> FutureResult<(), FlowyError> {
     let try_get_client = self.server.try_get_client();
     let collab_object = collab_object.clone();
     FutureResult::new(async move {
       let client = try_get_client?;
-      let params = CreateCollabParams::new(
-        collab_object.workspace_id.clone(),
-        CollabParams {
-          object_id: collab_object.object_id.clone(),
-          encoded_collab_v1: data,
-          collab_type: collab_object.collab_type.clone(),
-          override_if_exist,
-        },
-      );
+      let params = CreateCollabParams {
+        workspace_id: collab_object.workspace_id.clone(),
+        object_id: collab_object.object_id.clone(),
+        encoded_collab_v1: data,
+        collab_type: collab_object.collab_type.clone(),
+        override_if_exist,
+      };
       client.create_collab(params).await?;
+      Ok(())
+    })
+  }
+
+  fn batch_create_collab_object(
+    &self,
+    workspace_id: &str,
+    objects: Vec<UserCollabParams>,
+  ) -> FutureResult<(), Error> {
+    let workspace_id = workspace_id.to_string();
+    let try_get_client = self.server.try_get_client();
+    FutureResult::new(async move {
+      let params = objects
+        .into_iter()
+        .map(|object| CollabParams {
+          object_id: object.object_id,
+          encoded_collab_v1: object.encoded_collab,
+          collab_type: object.collab_type,
+          override_if_exist: false,
+        })
+        .collect::<Vec<_>>();
+      try_get_client?
+        .create_collab_list(&workspace_id, params)
+        .await
+        .map_err(FlowyError::from)?;
       Ok(())
     })
   }
@@ -292,7 +322,7 @@ fn to_user_workspace(af_workspace: AFWorkspace) -> UserWorkspace {
     id: af_workspace.workspace_id.to_string(),
     name: af_workspace.workspace_name,
     created_at: af_workspace.created_at,
-    database_storage_id: af_workspace.database_storage_id.to_string(),
+    database_view_tracker_id: af_workspace.database_storage_id.to_string(),
   }
 }
 

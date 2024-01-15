@@ -1,10 +1,10 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Mention, MentionPage } from '$app/application/document/document.types';
-import { PageController } from '$app/stores/effects/workspace/page/page_controller';
 import { ReactComponent as DocumentSvg } from '$app/assets/document.svg';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { pageTypeMap } from '$app_reducers/pages/slice';
+import { getPage } from '$app/application/folder/page.service';
 
 export function MentionLeaf({ children, mention }: { mention: Mention; children: React.ReactNode }) {
   const { t } = useTranslation();
@@ -12,7 +12,7 @@ export function MentionLeaf({ children, mention }: { mention: Mention; children:
   const navigate = useNavigate();
   const loadPage = useCallback(async () => {
     if (!mention.page) return;
-    const page = await new PageController(mention.page).getPage();
+    const page = await getPage(mention.page);
 
     setPage(page);
   }, [mention.page]);
@@ -29,15 +29,18 @@ export function MentionLeaf({ children, mention }: { mention: Mention; children:
   }, [navigate, page]);
 
   return (
-    <>
+    <span className={'relative'}>
       {page && (
-        <span className={'inline-flex cursor-pointer items-center'} onClick={openPage}>
-          <span className={'mr-1 inline-flex items-center'}>{page.icon?.value || <DocumentSvg />}</span>
-          <span className={'text-sx underline'}>{page.name || t('document.title.placeholder')}</span>
+        <span
+          className={'relative inline-flex cursor-pointer items-center hover:bg-content-blue-100'}
+          onClick={openPage}
+        >
+          <span className={'text-sx absolute left-0'}>{page.icon?.value || <DocumentSvg />}</span>
+          <span className={'ml-6 underline'}>{page.name || t('document.title.placeholder')}</span>
         </span>
       )}
-      <span className={'absolute left-0 right-0 h-0 w-0 opacity-0'}>{children}</span>
-    </>
+      <span className={'invisible'}>{children}</span>
+    </span>
   );
 }
 

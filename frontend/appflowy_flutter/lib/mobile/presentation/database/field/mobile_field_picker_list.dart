@@ -2,9 +2,9 @@ import 'package:appflowy/generated/flowy_svgs.g.dart';
 import 'package:appflowy/generated/locale_keys.g.dart';
 import 'package:appflowy/mobile/presentation/widgets/flowy_option_tile.dart';
 import 'package:appflowy/plugins/base/drag_handler.dart';
-import 'package:appflowy/plugins/database_view/application/field/field_controller.dart';
-import 'package:appflowy/plugins/database_view/application/field/field_info.dart';
-import 'package:appflowy/plugins/database_view/grid/presentation/widgets/header/field_type_extension.dart';
+import 'package:appflowy/plugins/database/application/field/field_controller.dart';
+import 'package:appflowy/plugins/database/application/field/field_info.dart';
+import 'package:appflowy/plugins/database/grid/presentation/widgets/header/field_type_extension.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flowy_infra_ui/flowy_infra_ui.dart';
 import 'package:flutter/material.dart';
@@ -101,7 +101,7 @@ class _Header extends StatelessWidget {
                 ),
                 onPressed: () => context.pop(newFieldId),
                 child: FlowyText.medium(
-                  LocaleKeys.button_save.tr(),
+                  LocaleKeys.button_done.tr(),
                   fontSize: 16,
                   color: Theme.of(context).colorScheme.onPrimary,
                   overflow: TextOverflow.ellipsis,

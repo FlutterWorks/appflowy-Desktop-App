@@ -1,13 +1,14 @@
-import React, { CSSProperties, useMemo } from 'react';
+import React, { CSSProperties, useEffect, useMemo, useState } from 'react';
 import { ReactEditor, useSelected, useSlateStatic } from 'slate-react';
-import { Editor, Element } from 'slate';
+import { Editor, Element, Range } from 'slate';
 import { EditorNodeType, HeadingNode } from '$app/application/document/document.types';
 import { useTranslation } from 'react-i18next';
 
 function PlaceholderContent({ node, ...attributes }: { node: Element; className?: string; style?: CSSProperties }) {
   const { t } = useTranslation();
   const editor = useSlateStatic();
-  const selected = useSelected();
+  const selected = useSelected() && !!editor.selection && Range.isCollapsed(editor.selection);
+  const [isComposing, setIsComposing] = useState(false);
   const block = useMemo(() => {
     const path = ReactEditor.findPath(editor, node);
     const match = Editor.above(editor, {
@@ -21,7 +22,7 @@ function PlaceholderContent({ node, ...attributes }: { node: Element; className?
   }, [editor, node]);
 
   const className = useMemo(() => {
-    return `pointer-events-none absolute left-0.5 top-0 whitespace-nowrap text-text-placeholder ${
+    return `pointer-events-none select-none mx-1 absolute left-0.5 min-h-[26px] top-0 whitespace-nowrap text-text-placeholder ${
       attributes.className ?? ''
     }`;
   }, [attributes.className]);
@@ -86,6 +87,31 @@ function PlaceholderContent({ node, ...attributes }: { node: Element; className?
         return t('editor.slashPlaceHolder');
     }
   }, [block?.type, t, unSelectedPlaceholder]);
+
+  useEffect(() => {
+    if (!selected) return;
+
+    const handleCompositionStart = () => {
+      setIsComposing(true);
+    };
+
+    const handleCompositionEnd = () => {
+      setIsComposing(false);
+    };
+
+    const editorDom = ReactEditor.toDOMNode(editor, editor);
+
+    editorDom.addEventListener('compositionstart', handleCompositionStart);
+    editorDom.addEventListener('compositionend', handleCompositionEnd);
+    return () => {
+      editorDom.removeEventListener('compositionstart', handleCompositionStart);
+      editorDom.removeEventListener('compositionend', handleCompositionEnd);
+    };
+  }, [editor, selected]);
+
+  if (isComposing) {
+    return null;
+  }
 
   return (
     <span contentEditable={false} {...attributes} className={className}>

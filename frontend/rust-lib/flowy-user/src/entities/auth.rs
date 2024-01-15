@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::convert::TryInto;
 
 use flowy_derive::{ProtoBuf, ProtoBuf_Enum};
-use flowy_user_deps::entities::*;
+use flowy_user_pub::entities::*;
 
 use crate::entities::parser::*;
 use crate::errors::ErrorCode;
@@ -88,7 +88,7 @@ pub struct OauthSignInPB {
   pub map: HashMap<String, String>,
 
   #[pb(index = 2)]
-  pub auth_type: AuthenticatorPB,
+  pub authenticator: AuthenticatorPB,
 }
 
 #[derive(ProtoBuf, Default)]
@@ -97,7 +97,7 @@ pub struct SignInUrlPayloadPB {
   pub email: String,
 
   #[pb(index = 2)]
-  pub auth_type: AuthenticatorPB,
+  pub authenticator: AuthenticatorPB,
 }
 
 #[derive(ProtoBuf, Default)]

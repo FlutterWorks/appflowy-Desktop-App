@@ -11,7 +11,7 @@ import 'package:appflowy/workspace/application/settings/prelude.dart';
 import 'package:appflowy/workspace/presentation/settings/widgets/setting_appflowy_cloud.dart';
 import 'package:appflowy/workspace/presentation/settings/widgets/settings_user_view.dart';
 import 'package:appflowy/workspace/presentation/widgets/user_avatar.dart';
-import 'package:appflowy_backend/protobuf/flowy-folder2/view.pb.dart';
+import 'package:appflowy_backend/protobuf/flowy-folder/view.pb.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flowy_infra/uuid.dart';
 import 'package:flutter/material.dart';
@@ -32,11 +32,11 @@ void main() {
   group('appflowy cloud setting', () {
     testWidgets('sync user name and icon to server', (tester) async {
       await tester.initializeAppFlowy(
-        cloudType: AuthenticatorType.appflowyCloud,
+        cloudType: AuthenticatorType.appflowyCloudSelfHost,
         email: email,
       );
       await tester.tapGoogleLoginInButton();
-      await tester.expectToSeeHomePage();
+      await tester.expectToSeeHomePageWithGetStartedPage();
 
       await tester.openSettings();
       await tester.openSettingsPage(SettingsPage.user);
@@ -70,11 +70,11 @@ void main() {
 
   testWidgets('get user icon and name from server', (tester) async {
     await tester.initializeAppFlowy(
-      cloudType: AuthenticatorType.appflowyCloud,
+      cloudType: AuthenticatorType.appflowyCloudSelfHost,
       email: email,
     );
     await tester.tapGoogleLoginInButton();
-    await tester.expectToSeeHomePage();
+    await tester.expectToSeeHomePageWithGetStartedPage();
     await tester.pumpAndSettle();
 
     await tester.openSettings();
