@@ -544,8 +544,8 @@
       "textFieldName": "Text",
       "checkboxFieldName": "Checkbox",
       "dateFieldName": "Date",
-      "updatedAtFieldName": "Last modified time",
-      "createdAtFieldName": "Created time",
+      "updatedAtFieldName": "Last modified",
+      "createdAtFieldName": "Created at",
       "numberFieldName": "Numbers",
       "singleSelectFieldName": "Select",
       "multiSelectFieldName": "Multiselect",
@@ -581,7 +581,8 @@
       "newProperty": "New property",
       "deleteFieldPromptMessage": "Are you sure? This property will be deleted",
       "newColumn": "New Column",
-      "format": "Format"
+      "format": "Format",
+      "reminderOnDateTooltip": "This cell has a scheduled reminder"
     },
     "rowPage": {
       "newField": "Add a new field",
@@ -917,6 +918,10 @@
       "previousMonth": "Previous Month",
       "nextMonth": "Next Month"
     },
+    "mobileEventScreen": {
+      "emptyTitle": "No events yet",
+      "emptyBody": "Press the plus button to create an event on this day."
+    },
     "settings": {
       "showWeekNumbers": "Show week numbers",
       "showWeekends": "Show weekends",
@@ -1021,7 +1026,21 @@
     "includeTime": "Include time",
     "isRange": "End date",
     "timeFormat": "Time format",
-    "clearDate": "Clear date"
+    "clearDate": "Clear date",
+    "reminderLabel": "Reminder",
+    "reminderOptions": {
+      "none": "None",
+      "atTimeOfEvent": "Time of event",
+      "fiveMinsBefore": "5 mins before",
+      "tenMinsBefore": "10 mins before",
+      "fifteenMinsBefore": "15 mins before",
+      "thirtyMinsBefore": "30 mins before",
+      "oneHourBefore": "1 hour before",
+      "twoHoursBefore": "2 hours before",
+      "oneDayBefore": "1 day before",
+      "twoDaysBefore": "2 days before",
+      "custom": "Custom"
+    }
   },
   "relativeDates": {
     "yesterday": "Yesterday",
@@ -1077,6 +1096,7 @@
   "editor": {
     "bold": "Bold",
     "bulletedList": "Bulleted List",
+    "bulletedListShortForm": "Bulleted",
     "checkbox": "Checkbox",
     "embedCode": "Embed Code",
     "heading1": "H1",
@@ -1085,9 +1105,11 @@
     "highlight": "Highlight",
     "color": "Color",
     "image": "Image",
+    "date": "Date",
     "italic": "Italic",
     "link": "Link",
     "numberedList": "Numbered List",
+    "numberedListShortForm": "Numbered",
     "quote": "Quote",
     "strikethrough": "Strikethrough",
     "text": "Text",
@@ -1186,7 +1208,11 @@
     "colClear": "Clear Content",
     "rowClear": "Clear Content",
     "slashPlaceHolder": "Type '/' to insert a block, or start typing",
-    "typeSomething": "Type something..."
+    "typeSomething": "Type something...",
+    "toggleListShortForm": "Toggle",
+    "quoteListShortForm": "Quote",
+    "mathEquationShortForm": "Formula",
+    "codeBlockShortForm": "Code"
   },
   "favorite": {
     "noFavorite": "No favorite page",

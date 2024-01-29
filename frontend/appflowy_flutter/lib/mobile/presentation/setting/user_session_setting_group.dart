@@ -30,7 +30,7 @@ class UserSessionSettingGroup extends StatelessWidget {
                   () => null,
                   (result) => result.fold(
                     (l) {},
-                    (r) async => await runAppFlowy(),
+                    (r) async => runAppFlowy(),
                   ),
                 );
               },
@@ -45,7 +45,7 @@ class UserSessionSettingGroup extends StatelessWidget {
           labelText: LocaleKeys.settings_menu_logout.tr(),
           onPressed: () async {
             await getIt<AuthService>().signOut();
-            runAppFlowy();
+            await runAppFlowy();
           },
         ),
       ],

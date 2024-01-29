@@ -30,8 +30,6 @@ class MobileDatabaseViewList extends StatelessWidget {
       builder: (context, state) {
         final views = [state.view, ...state.view.childViews];
         final children = [
-          const Center(child: DragHandler()),
-          const _Header(),
           ...views.mapIndexed(
             (index, view) => MobileDatabaseViewListButton(
               view: view,
@@ -46,41 +44,6 @@ class MobileDatabaseViewList extends StatelessWidget {
           children: children,
         );
       },
-    );
-  }
-}
-
-class _Header extends StatelessWidget {
-  const _Header();
-
-  @override
-  Widget build(BuildContext context) {
-    const iconWidth = 30.0;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(8, 4, 8, 12),
-      child: Stack(
-        children: [
-          Align(
-            alignment: Alignment.centerLeft,
-            child: FlowyIconButton(
-              icon: const FlowySvg(
-                FlowySvgs.close_s,
-                size: Size.square(iconWidth),
-              ),
-              width: iconWidth,
-              iconPadding: EdgeInsets.zero,
-              onPressed: () => context.pop(),
-            ),
-          ),
-          Align(
-            alignment: Alignment.center,
-            child: FlowyText.medium(
-              LocaleKeys.grid_settings_viewList.tr(),
-              fontSize: 16,
-            ),
-          ),
-        ],
-      ),
     );
   }
 }
@@ -143,7 +106,7 @@ class MobileDatabaseViewListButton extends StatelessWidget {
       onPressed: () {
         showMobileBottomSheet(
           context,
-          padding: EdgeInsets.zero,
+          showDragHandle: true,
           builder: (_) {
             return BlocProvider<ViewBloc>(
               create: (_) =>
@@ -162,7 +125,7 @@ class MobileDatabaseViewListButton extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           const FlowySvg(
-            FlowySvgs.blue_check_s,
+            FlowySvgs.m_blue_check_s,
             size: Size.square(20),
             blendMode: BlendMode.dst,
           ),
@@ -192,7 +155,6 @@ class MobileNewDatabaseViewButton extends StatelessWidget {
       onTap: () async {
         final result = await showMobileBottomSheet<(DatabaseLayoutPB, String)>(
           context,
-          padding: EdgeInsets.zero,
           builder: (_) {
             return const MobileCreateDatabaseView();
           },
@@ -242,6 +204,7 @@ class _MobileCreateDatabaseViewState extends State<MobileCreateDatabaseView> {
           textController: controller,
           selectedLayout: layoutType,
         ),
+        const VSpace(4.0),
         FlowyOptionTile.textField(
           autofocus: true,
           controller: controller,
@@ -284,7 +247,7 @@ class _CreateViewHeader extends StatelessWidget {
                 onPressed: () => context.pop(),
                 icon: const FlowySvg(
                   FlowySvgs.arrow_left_s,
-                  size: Size.square(20),
+                  size: Size.square(24),
                 ),
               ),
             ),

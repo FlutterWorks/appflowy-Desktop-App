@@ -127,13 +127,10 @@ class _EditDatabaseViewHeader extends StatelessWidget {
                 FlowySvgs.close_s,
                 size: Size.square(iconWidth),
               ),
-              width: iconWidth,
-              iconPadding: EdgeInsets.zero,
               onPressed: () => context.pop(),
             ),
           ),
           Align(
-            alignment: Alignment.center,
             child: FlowyText.medium(
               LocaleKeys.grid_settings_editView.tr(),
               fontSize: 16,
@@ -339,22 +336,19 @@ class DatabaseViewSettingTile extends StatelessWidget {
       final databaseLayout = databaseLayoutFromViewLayout(view.layout);
       final newLayout = await showMobileBottomSheet<DatabaseLayoutPB>(
         context,
-        padding: EdgeInsets.zero,
         resizeToAvoidBottomInset: false,
+        showDragHandle: true,
         builder: (context) {
-          return Padding(
-            padding: const EdgeInsets.only(top: 24, bottom: 46),
-            child: DatabaseViewLayoutPicker(
-              selectedLayout: databaseLayout,
-              onSelect: (layout) {
-                Navigator.of(context).pop(layout);
-              },
-            ),
+          return DatabaseViewLayoutPicker(
+            selectedLayout: databaseLayout,
+            onSelect: (layout) {
+              Navigator.of(context).pop(layout);
+            },
           );
         },
       );
       if (newLayout != null && newLayout != databaseLayout) {
-        DatabaseViewBackendService.updateLayout(
+        await DatabaseViewBackendService.updateLayout(
           viewId: databaseController.viewId,
           layout: newLayout,
         );
@@ -363,9 +357,8 @@ class DatabaseViewSettingTile extends StatelessWidget {
     }
 
     if (setting == DatabaseViewSettings.board) {
-      showMobileBottomSheet<DatabaseLayoutPB>(
+      await showMobileBottomSheet<DatabaseLayoutPB>(
         context,
-        padding: EdgeInsets.zero,
         resizeToAvoidBottomInset: false,
         builder: (context) {
           return Padding(
@@ -380,9 +373,8 @@ class DatabaseViewSettingTile extends StatelessWidget {
     }
 
     if (setting == DatabaseViewSettings.calendar) {
-      showMobileBottomSheet<DatabaseLayoutPB>(
+      await showMobileBottomSheet<DatabaseLayoutPB>(
         context,
-        padding: EdgeInsets.zero,
         resizeToAvoidBottomInset: false,
         builder: (context) {
           return Padding(
