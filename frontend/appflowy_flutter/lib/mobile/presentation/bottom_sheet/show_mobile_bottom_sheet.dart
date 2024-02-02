@@ -7,10 +7,12 @@ import 'package:flutter/material.dart';
 Future<T?> showMobileBottomSheet<T>(
   BuildContext context, {
   required WidgetBuilder builder,
+  bool useSafeArea = true,
   bool isDragEnabled = true,
   bool showDragHandle = false,
   bool showHeader = false,
   // this field is only used if showHeader is true
+  bool showBackButton = false,
   bool showCloseButton = false,
   // this field is only used if showHeader is true
   String title = '',
@@ -20,17 +22,23 @@ Future<T?> showMobileBottomSheet<T>(
   bool useRootNavigator = false,
   ShapeBorder? shape,
   // the padding of the content, the padding of the header area is fixed
-  EdgeInsets padding = const EdgeInsets.all(0.0),
+  EdgeInsets padding = EdgeInsets.zero,
   Color? backgroundColor,
   BoxConstraints? constraints,
   Color? barrierColor,
   double? elevation,
   bool showDoneButton = false,
+  bool enableDraggableScrollable = false,
+  // only used when enableDraggableScrollable is true
+  double minChildSize = 0.5,
+  double maxChildSize = 0.8,
+  double initialChildSize = 0.51,
 }) async {
-  assert(() {
-    if (showCloseButton || title.isNotEmpty) assert(showHeader);
-    return true;
-  }());
+  assert(
+    showHeader ||
+        title.isEmpty && !showCloseButton && !showBackButton && !showDoneButton,
+  );
+  assert(!(showCloseButton && showBackButton));
 
   shape ??= const RoundedRectangleBorder(
     borderRadius: BorderRadius.vertical(
@@ -57,7 +65,7 @@ Future<T?> showMobileBottomSheet<T>(
     builder: (context) {
       final List<Widget> children = [];
 
-      final child = builder(context);
+      final Widget child = builder(context);
 
       // if the children is only one, we don't need to wrap it with a column
       if (!showDragHandle &&
@@ -78,6 +86,7 @@ Future<T?> showMobileBottomSheet<T>(
         children.add(
           _Header(
             showCloseButton: showCloseButton,
+            showBackButton: showBackButton,
             showDoneButton: showDoneButton,
             title: title,
           ),
@@ -91,6 +100,29 @@ Future<T?> showMobileBottomSheet<T>(
       }
 
       // ----- header area -----
+
+      if (enableDraggableScrollable) {
+        return DraggableScrollableSheet(
+          expand: false,
+          snap: true,
+          initialChildSize: initialChildSize,
+          minChildSize: minChildSize,
+          maxChildSize: maxChildSize,
+          builder: (context, scrollController) {
+            return Column(
+              children: [
+                ...children,
+                Expanded(
+                  child: SingleChildScrollView(
+                    controller: scrollController,
+                    child: child,
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      }
 
       // ----- content area -----
       if (resizeToAvoidBottomInset) {
@@ -119,23 +151,30 @@ Future<T?> showMobileBottomSheet<T>(
         VSpace(MediaQuery.of(context).padding.bottom == 0 ? 28.0 : 16.0),
       );
 
-      return SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: children,
-        ),
-      );
+      return useSafeArea
+          ? SafeArea(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: children,
+              ),
+            )
+          : Column(
+              mainAxisSize: MainAxisSize.min,
+              children: children,
+            );
     },
   );
 }
 
 class _Header extends StatelessWidget {
   const _Header({
+    required this.showBackButton,
     required this.showCloseButton,
     required this.title,
     required this.showDoneButton,
   });
 
+  final bool showBackButton;
   final bool showCloseButton;
   final String title;
   final bool showDoneButton;
@@ -148,6 +187,11 @@ class _Header extends StatelessWidget {
         height: 44.0, // the height of the header area is fixed
         child: Stack(
           children: [
+            if (showBackButton)
+              const Align(
+                alignment: Alignment.centerLeft,
+                child: AppBarBackButton(),
+              ),
             if (showCloseButton)
               const Align(
                 alignment: Alignment.centerLeft,
