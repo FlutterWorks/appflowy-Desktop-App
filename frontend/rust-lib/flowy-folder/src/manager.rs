@@ -8,14 +8,14 @@ use collab_folder::{
   Folder, FolderData, Section, SectionItem, TrashInfo, View, ViewLayout, ViewUpdate, Workspace,
 };
 use parking_lot::{Mutex, RwLock};
-use tracing::{error, event, info, instrument, Level};
+use tracing::{error, info, instrument};
 
 use collab_integrate::collab_builder::{AppFlowyCollabBuilder, CollabBuilderConfig};
 use collab_integrate::{CollabKVDB, CollabPersistenceConfig};
 use flowy_error::{ErrorCode, FlowyError, FlowyResult};
 use flowy_folder_pub::cloud::{gen_view_id, FolderCloudService};
 use flowy_folder_pub::folder_builder::ParentChildViews;
-use lib_infra::async_trait::async_trait;
+use lib_infra::conditional_send_sync_trait;
 
 use crate::entities::icon::UpdateViewIconParams;
 use crate::entities::{
@@ -35,11 +35,12 @@ use crate::util::{
 };
 use crate::view_operation::{create_view, FolderOperationHandler, FolderOperationHandlers};
 
-/// [FolderUser] represents the user for folder.
-#[async_trait]
-pub trait FolderUser: Send + Sync {
-  fn user_id(&self) -> Result<i64, FlowyError>;
-  fn collab_db(&self, uid: i64) -> Result<Weak<CollabKVDB>, FlowyError>;
+conditional_send_sync_trait! {
+  "[crate::manager::FolderUser] represents the user for folder.";
+   FolderUser {
+     fn user_id(&self) -> Result<i64, FlowyError>;
+     fn collab_db(&self, uid: i64) -> Result<Weak<CollabKVDB>, FlowyError>;
+  }
 }
 
 pub struct FolderManager {
@@ -156,16 +157,8 @@ impl FolderManager {
   ) -> FlowyResult<()> {
     let folder_doc_state = self
       .cloud_service
-      .get_collab_doc_state_f(workspace_id, user_id, CollabType::Folder, workspace_id)
+      .get_folder_doc_state(workspace_id, user_id, CollabType::Folder, workspace_id)
       .await?;
-
-    event!(
-      Level::INFO,
-      "Get folder updates via {}, number of updates: {}",
-      self.cloud_service.service_name(),
-      folder_doc_state.len()
-    );
-
     if let Err(err) = self
       .initialize(
         user_id,
@@ -176,10 +169,7 @@ impl FolderManager {
     {
       // If failed to open folder with remote data, open from local disk. After open from the local
       // disk. the data will be synced to the remote server.
-      error!(
-        "Failed to initialize folder with error {}, fallback to use local data",
-        err
-      );
+      error!("initialize folder with error {:?}, fallback local", err);
       self
         .initialize(
           user_id,
@@ -213,7 +203,7 @@ impl FolderManager {
       // when the user signs up for the first time.
       let result = self
         .cloud_service
-        .get_collab_doc_state_f(workspace_id, user_id, CollabType::Folder, workspace_id)
+        .get_folder_doc_state(workspace_id, user_id, CollabType::Folder, workspace_id)
         .await
         .map_err(FlowyError::from);
 
@@ -249,8 +239,13 @@ impl FolderManager {
   pub async fn clear(&self, _user_id: i64) {}
 
   #[tracing::instrument(level = "info", skip_all, err)]
-  pub async fn create_workspace(&self, _params: CreateWorkspaceParams) -> FlowyResult<Workspace> {
-    Err(FlowyError::not_support())
+  pub async fn create_workspace(&self, params: CreateWorkspaceParams) -> FlowyResult<Workspace> {
+    let uid = self.user.user_id()?;
+    let new_workspace = self
+      .cloud_service
+      .create_workspace(uid, &params.name)
+      .await?;
+    Ok(new_workspace)
   }
 
   #[tracing::instrument(level = "info", skip_all, err)]

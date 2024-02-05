@@ -10,7 +10,7 @@ use flowy_document::manager::DocumentManager;
 use flowy_error::FlowyResult;
 use flowy_folder::manager::{FolderInitDataSource, FolderManager};
 use flowy_user::event_map::UserStatusCallback;
-use flowy_user_pub::cloud::{UserCloudConfig, UserCloudServiceProviderBase};
+use flowy_user_pub::cloud::{UserCloudConfig, UserCloudServiceProvider};
 use flowy_user_pub::entities::{Authenticator, UserProfile, UserWorkspace};
 use lib_infra::future::{to_fut, Fut};
 
@@ -154,7 +154,7 @@ impl UserStatusCallback for UserStatusCallbackImpl {
       // for initializing a default workspace differs depending on the sign-up method used.
       let data_source = match folder_manager
         .cloud_service
-        .get_collab_doc_state_f(
+        .get_folder_doc_state(
           &user_workspace.id,
           user_profile.uid,
           CollabType::Folder,
