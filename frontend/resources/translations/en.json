@@ -73,10 +73,7 @@
     "copyLink": "Copy Link"
   },
   "moreAction": {
-    "small": "small",
-    "medium": "medium",
-    "large": "large",
-    "fontSize": "Font Size",
+    "fontSize": "Font size",
     "import": "Import",
     "moreOptions": "More options"
   },
@@ -879,7 +876,9 @@
       "page": {
         "label": "Link to page",
         "tooltip": "Click to open page"
-      }
+      },
+      "deleted": "Deleted",
+      "deletedContent": "This content does not exist or has been deleted"
     },
     "toolbar": {
       "resetToDefaultFont": "Reset to default"

@@ -160,6 +160,9 @@ impl DatabaseViewEditor {
     send_notification(&self.view_id, DatabaseNotification::DidUpdateViewRows)
       .payload(changes)
       .send();
+    self
+      .gen_view_tasks(row_detail.row.id.clone(), "".to_string())
+      .await;
   }
 
   pub async fn v_did_duplicate_row(&self, row_detail: &RowDetail) {
@@ -253,30 +256,9 @@ impl DatabaseViewEditor {
 
     // Each row update will trigger a calculations, filter and sort operation. We don't want
     // to block the main thread, so we spawn a new task to do the work.
-    let row_id = row_detail.row.id.clone();
-    let weak_filter_controller = Arc::downgrade(&self.filter_controller);
-    let weak_sort_controller = Arc::downgrade(&self.sort_controller);
-    let weak_calculations_controller = Arc::downgrade(&self.calculations_controller);
-    af_spawn(async move {
-      if let Some(filter_controller) = weak_filter_controller.upgrade() {
-        filter_controller
-          .did_receive_row_changed(row_id.clone())
-          .await;
-      }
-      if let Some(sort_controller) = weak_sort_controller.upgrade() {
-        sort_controller
-          .read()
-          .await
-          .did_receive_row_changed(row_id.clone())
-          .await;
-      }
-
-      if let Some(calculations_controller) = weak_calculations_controller.upgrade() {
-        calculations_controller
-          .did_receive_cell_changed(field_id)
-          .await;
-      }
-    });
+    self
+      .gen_view_tasks(row_detail.row.id.clone(), field_id)
+      .await;
   }
 
   pub async fn v_filter_rows(&self, row_details: &mut Vec<Arc<RowDetail>>) {
@@ -787,6 +769,35 @@ impl DatabaseViewEditor {
     Ok(())
   }
 
+  pub async fn v_did_delete_field(&self, deleted_field_id: &str) {
+    let sorts = self.delegate.get_all_sorts(&self.view_id);
+
+    if let Some(sort) = sorts.iter().find(|sort| sort.field_id == deleted_field_id) {
+      self.delegate.remove_sort(&self.view_id, &sort.id);
+      let notification = self
+        .sort_controller
+        .write()
+        .await
+        .apply_changeset(SortChangeset::from_delete(sort.id.clone()))
+        .await;
+      if !notification.is_empty() {
+        notify_did_update_sort(notification).await;
+      }
+    }
+
+    self
+      .calculations_controller
+      .did_receive_field_deleted(deleted_field_id.to_string())
+      .await;
+  }
+
+  pub async fn v_did_update_field_type(&self, field_id: &str, new_field_type: &FieldType) {
+    self
+      .calculations_controller
+      .did_receive_field_type_changed(field_id.to_owned(), new_field_type.to_owned())
+      .await;
+  }
+
   /// Notifies the view's field type-option data is changed
   /// For the moment, only the groups will be generated after the type-option data changed. A
   /// [Field] has a property named type_options contains a list of type-option data.
@@ -1041,20 +1052,6 @@ impl DatabaseViewEditor {
     Ok(())
   }
 
-  pub async fn v_did_delete_field(&self, field_id: &str) {
-    self
-      .calculations_controller
-      .did_receive_field_deleted(field_id.to_owned())
-      .await;
-  }
-
-  pub async fn v_did_update_field_type(&self, field_id: &str, new_field_type: &FieldType) {
-    self
-      .calculations_controller
-      .did_receive_field_type_changed(field_id.to_owned(), new_field_type.to_owned())
-      .await;
-  }
-
   async fn mut_group_controller<F, T>(&self, f: F) -> Option<T>
   where
     F: FnOnce(&mut Box<dyn GroupController>, Field) -> FlowyResult<T>,
@@ -1072,5 +1069,30 @@ impl DatabaseViewEditor {
     } else {
       None
     }
+  }
+
+  async fn gen_view_tasks(&self, row_id: RowId, field_id: String) {
+    let weak_filter_controller = Arc::downgrade(&self.filter_controller);
+    let weak_sort_controller = Arc::downgrade(&self.sort_controller);
+    let weak_calculations_controller = Arc::downgrade(&self.calculations_controller);
+    af_spawn(async move {
+      if let Some(filter_controller) = weak_filter_controller.upgrade() {
+        filter_controller
+          .did_receive_row_changed(row_id.clone())
+          .await;
+      }
+      if let Some(sort_controller) = weak_sort_controller.upgrade() {
+        sort_controller
+          .read()
+          .await
+          .did_receive_row_changed(row_id)
+          .await;
+      }
+      if let Some(calculations_controller) = weak_calculations_controller.upgrade() {
+        calculations_controller
+          .did_receive_cell_changed(field_id)
+          .await;
+      }
+    });
   }
 }
