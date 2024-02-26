@@ -74,12 +74,12 @@
     "copyLink": "复制链接"
   },
   "moreAction": {
-    "small": "小",
-    "medium": "中",
-    "large": "大",
     "fontSize": "字体大小",
     "import": "导入",
-    "moreOptions": "更多选项"
+    "moreOptions": "更多选项",
+    "small": "小",
+    "medium": "中",
+    "large": "大"
   },
   "importPanel": {
     "textAndMarkdown": "文本和Markdown",
@@ -236,10 +236,7 @@
     "rename": "重命名",
     "helpCenter": "帮助中心",
     "add": "添加",
-    "yes": "是",
-    "Done": "完成",
-    "Cancel": "取消",
-    "OK": "确定"
+    "yes": "是"
   },
   "label": {
     "welcome": "欢迎！",

@@ -72,12 +72,12 @@
     "copyLink": "Salin tautan"
   },
   "moreAction": {
-    "small": "kecil",
-    "medium": "sedang",
-    "large": "besar",
     "fontSize": "Ukuran huruf",
     "import": "Impor",
-    "moreOptions": "Lebih banyak pilihan"
+    "moreOptions": "Lebih banyak pilihan",
+    "small": "kecil",
+    "medium": "sedang",
+    "large": "besar"
   },
   "importPanel": {
     "textAndMarkdown": "Teks & Markdown",
@@ -228,10 +228,7 @@
     "removeFromFavorites": "Hapus dari favorit",
     "addToFavorites": "Tambahkan ke Favorit",
     "rename": "Ganti nama",
-    "helpCenter": "Pusat Bantuan",
-    "Done": "Selesai",
-    "Cancel": "Batal",
-    "OK": "Ya"
+    "helpCenter": "Pusat Bantuan"
   },
   "label": {
     "welcome": "Selamat datang!",

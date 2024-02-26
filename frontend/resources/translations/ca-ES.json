@@ -69,12 +69,12 @@
     "copyLink": "Copiar l'enllaç"
   },
   "moreAction": {
-    "small": "petit",
-    "medium": "mitjà",
-    "large": "gran",
     "fontSize": "Mida de la font",
     "import": "Importar",
-    "moreOptions": "Més opcions"
+    "moreOptions": "Més opcions",
+    "small": "petit",
+    "medium": "mitjà",
+    "large": "gran"
   },
   "importPanel": {
     "textAndMarkdown": "Text i rebaixa",
@@ -230,10 +230,7 @@
     "rename": "Renombrar",
     "helpCenter": "Centre d'ajuda",
     "add": "Afegir",
-    "yes": "Sí",
-    "Done": "Fet",
-    "Cancel": "Cancel·lar",
-    "OK": "OK"
+    "yes": "Sí"
   },
   "label": {
     "welcome": "Benvingut!",
