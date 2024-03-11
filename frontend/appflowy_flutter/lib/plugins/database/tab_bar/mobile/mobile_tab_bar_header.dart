@@ -1,3 +1,4 @@
+import 'package:appflowy/plugins/database/grid/presentation/layout/sizes.dart';
 import 'package:flutter/material.dart';
 
 import 'package:appflowy/generated/flowy_svgs.g.dart';
@@ -26,8 +27,11 @@ class _MobileTabBarHeaderState extends State<MobileTabBarHeader> {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(top: 14.0) +
-          const EdgeInsets.symmetric(horizontal: 20),
+      padding: EdgeInsets.only(
+        left: GridSize.horizontalHeaderPadding,
+        top: 14.0,
+        right: GridSize.horizontalHeaderPadding - 5.0,
+      ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -83,7 +87,11 @@ class _DatabaseViewSelectorButton extends StatelessWidget {
                 borderRadius: BorderRadius.all(Radius.circular(12)),
               ),
             ),
-            backgroundColor: const MaterialStatePropertyAll(Color(0x0F212729)),
+            backgroundColor: MaterialStatePropertyAll(
+              Theme.of(context).brightness == Brightness.light
+                  ? const Color(0x0F212729)
+                  : const Color(0x0FFFFFFF),
+            ),
             overlayColor: MaterialStatePropertyAll(
               Theme.of(context).colorScheme.secondary,
             ),
