@@ -29,7 +29,7 @@ pub struct OpenDocumentData {
 
 impl DocumentEventTest {
   pub async fn new() -> Self {
-    let sdk = EventIntegrationTest::new_with_guest_user().await;
+    let sdk = EventIntegrationTest::new_anon().await;
     Self { event_test: sdk }
   }
 
@@ -46,7 +46,7 @@ impl DocumentEventTest {
       .await
       .unwrap();
     let guard = doc.lock();
-    guard.get_collab().encode_collab_v1()
+    guard.encode_collab().unwrap()
   }
 
   pub async fn create_document(&self) -> ViewPB {

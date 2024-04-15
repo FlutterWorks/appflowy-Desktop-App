@@ -31,6 +31,7 @@ class FlowyTextField extends StatefulWidget {
   final TextStyle? hintStyle;
   final InputDecoration? decoration;
   final TextAlignVertical? textAlignVertical;
+  final TextInputAction? textInputAction;
   final TextInputType? keyboardType;
   final List<TextInputFormatter>? inputFormatters;
 
@@ -62,6 +63,7 @@ class FlowyTextField extends StatefulWidget {
     this.hintStyle,
     this.decoration,
     this.textAlignVertical,
+    this.textInputAction,
     this.keyboardType = TextInputType.multiline,
     this.inputFormatters,
   });

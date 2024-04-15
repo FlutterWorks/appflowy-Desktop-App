@@ -2,7 +2,7 @@ use anyhow::Error;
 use client_api::entity::{
   workspace_dto::CreateWorkspaceParam, CollabParams, QueryCollab, QueryCollabParams,
 };
-use collab::core::collab::DocStateSource;
+use collab::core::collab::DataSource;
 use collab::core::origin::CollabOrigin;
 use collab_entity::CollabType;
 use collab_folder::RepeatedViewIdentifier;
@@ -99,7 +99,7 @@ where
       let folder = Folder::from_collab_doc_state(
         uid,
         CollabOrigin::Empty,
-        DocStateSource::FromDocState(doc_state),
+        DataSource::DocStateV1(doc_state),
         &workspace_id,
         vec![],
       )?;
@@ -157,7 +157,6 @@ where
           object_id: object.object_id,
           encoded_collab_v1: object.encoded_collab_v1,
           collab_type: object.collab_type,
-          override_if_exist: object.override_if_exist,
         })
         .collect::<Vec<_>>();
       try_get_client?

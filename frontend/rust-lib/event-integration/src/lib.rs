@@ -1,4 +1,4 @@
-use collab::core::collab::DocStateSource;
+use collab::core::collab::DataSource;
 use collab::core::origin::CollabOrigin;
 use collab_document::blocks::DocumentData;
 use collab_document::document::Document;
@@ -54,15 +54,22 @@ impl EventIntegrationTest {
     let path = path_buf.to_str().unwrap().to_string();
     let device_id = uuid::Uuid::new_v4().to_string();
 
-    let config = AppFlowyCoreConfig::new("".to_string(), path.clone(), path, device_id, name)
-      .log_filter(
-        "trace",
-        vec![
-          "flowy_test".to_string(),
-          "tokio".to_string(),
-          // "lib_dispatch".to_string(),
-        ],
-      );
+    let config = AppFlowyCoreConfig::new(
+      "".to_string(),
+      path.clone(),
+      path,
+      device_id,
+      "test".to_string(),
+      name,
+    )
+    .log_filter(
+      "trace",
+      vec![
+        "flowy_test".to_string(),
+        "tokio".to_string(),
+        // "lib_dispatch".to_string(),
+      ],
+    );
 
     let inner = init_core(config).await;
     let notification_sender = TestNotificationSender::new();
@@ -77,6 +84,14 @@ impl EventIntegrationTest {
       notification_sender,
       cleaner: Arc::new(Cleaner(path_buf)),
     }
+  }
+
+  pub fn instance_name(&self) -> String {
+    self.appflowy_core.config.name.clone()
+  }
+
+  pub fn user_data_path(&self) -> String {
+    self.appflowy_core.config.application_path.clone()
   }
 
   pub fn get_server(&self) -> Arc<dyn AppFlowyServer> {
@@ -131,7 +146,7 @@ pub fn document_data_from_document_doc_state(doc_id: &str, doc_state: Vec<u8>) -
 pub fn document_from_document_doc_state(doc_id: &str, doc_state: Vec<u8>) -> Document {
   Document::from_doc_state(
     CollabOrigin::Empty,
-    DocStateSource::FromDocState(doc_state),
+    DataSource::DocStateV1(doc_state),
     doc_id,
     vec![],
   )
@@ -142,7 +157,7 @@ async fn init_core(config: AppFlowyCoreConfig) -> AppFlowyCore {
   std::thread::spawn(|| {
     let runtime = Arc::new(AFPluginRuntime::new().unwrap());
     let cloned_runtime = runtime.clone();
-    runtime.block_on(async move { AppFlowyCore::new(config, cloned_runtime).await })
+    runtime.block_on(async move { AppFlowyCore::new(config, cloned_runtime, None).await })
   })
   .join()
   .unwrap()

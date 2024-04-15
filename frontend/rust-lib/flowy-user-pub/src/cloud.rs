@@ -14,7 +14,7 @@ use uuid::Uuid;
 
 use crate::entities::{
   AuthResponse, Authenticator, Role, UpdateUserProfileParams, UserCredentials, UserProfile,
-  UserTokenState, UserWorkspace, WorkspaceMember,
+  UserTokenState, UserWorkspace, WorkspaceInvitation, WorkspaceInvitationStatus, WorkspaceMember,
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -142,6 +142,9 @@ pub trait UserCloudService: Send + Sync + 'static {
     password: &str,
   ) -> FutureResult<UserProfile, FlowyError>;
 
+  fn sign_in_with_magic_link(&self, email: &str, redirect_to: &str)
+    -> FutureResult<(), FlowyError>;
+
   /// When the user opens the OAuth URL, it redirects to the corresponding provider's OAuth web page.
   /// After the user is authenticated, the browser will open a deep link to the AppFlowy app (iOS, macOS, etc.),
   /// which will call [Client::sign_in_with_url]generate_sign_in_url_with_email to sign in.
@@ -180,11 +183,32 @@ pub trait UserCloudService: Send + Sync + 'static {
   /// Deletes a workspace owned by the user.
   fn delete_workspace(&self, workspace_id: &str) -> FutureResult<(), FlowyError>;
 
+  // Deprecated, use invite instead
   fn add_workspace_member(
     &self,
     user_email: String,
     workspace_id: String,
   ) -> FutureResult<(), FlowyError> {
+    FutureResult::new(async { Ok(()) })
+  }
+
+  fn invite_workspace_member(
+    &self,
+    invitee_email: String,
+    workspace_id: String,
+    role: Role,
+  ) -> FutureResult<(), FlowyError> {
+    FutureResult::new(async { Ok(()) })
+  }
+
+  fn list_workspace_invitations(
+    &self,
+    filter: Option<WorkspaceInvitationStatus>,
+  ) -> FutureResult<Vec<WorkspaceInvitation>, FlowyError> {
+    FutureResult::new(async { Ok(vec![]) })
+  }
+
+  fn accept_workspace_invitations(&self, invite_id: String) -> FutureResult<(), FlowyError> {
     FutureResult::new(async { Ok(()) })
   }
 
@@ -212,7 +236,12 @@ pub trait UserCloudService: Send + Sync + 'static {
     FutureResult::new(async { Ok(vec![]) })
   }
 
-  fn get_user_awareness_doc_state(&self, uid: i64) -> FutureResult<Vec<u8>, FlowyError>;
+  fn get_user_awareness_doc_state(
+    &self,
+    uid: i64,
+    workspace_id: &str,
+    object_id: &str,
+  ) -> FutureResult<Vec<u8>, FlowyError>;
 
   fn receive_realtime_event(&self, _json: Value) {}
 
@@ -226,7 +255,6 @@ pub trait UserCloudService: Send + Sync + 'static {
     &self,
     collab_object: &CollabObject,
     data: Vec<u8>,
-    override_if_exist: bool,
   ) -> FutureResult<(), FlowyError>;
 
   fn batch_create_collab_object(
@@ -234,6 +262,10 @@ pub trait UserCloudService: Send + Sync + 'static {
     workspace_id: &str,
     objects: Vec<UserCollabParams>,
   ) -> FutureResult<(), FlowyError>;
+
+  fn leave_workspace(&self, workspace_id: &str) -> FutureResult<(), FlowyError> {
+    FutureResult::new(async { Ok(()) })
+  }
 }
 
 pub type UserUpdateReceiver = tokio::sync::mpsc::Receiver<UserUpdate>;
