@@ -9,11 +9,12 @@ import 'package:appflowy/user/application/auth/auth_service.dart';
 import 'package:appflowy/user/application/reminder/reminder_bloc.dart';
 import 'package:appflowy/workspace/application/favorite/favorite_bloc.dart';
 import 'package:appflowy/workspace/application/home/home_bloc.dart';
-import 'package:appflowy/workspace/application/home/home_service.dart';
 import 'package:appflowy/workspace/application/home/home_setting_bloc.dart';
 import 'package:appflowy/workspace/application/settings/appearance/appearance_cubit.dart';
 import 'package:appflowy/workspace/application/tabs/tabs_bloc.dart';
+import 'package:appflowy/workspace/application/user/user_workspace_bloc.dart';
 import 'package:appflowy/workspace/application/view/view_ext.dart';
+import 'package:appflowy/workspace/application/view/view_service.dart';
 import 'package:appflowy/workspace/presentation/home/errors/workspace_failed_screen.dart';
 import 'package:appflowy/workspace/presentation/home/hotkeys.dart';
 import 'package:appflowy/workspace/presentation/home/menu/sidebar/sidebar.dart';
@@ -87,37 +88,42 @@ class DesktopHomeScreen extends StatelessWidget {
                   FavoriteBloc()..add(const FavoriteEvent.initial()),
             ),
           ],
-          child: HomeHotKeys(
-            child: Scaffold(
-              floatingActionButton: enableMemoryLeakDetect
-                  ? const FloatingActionButton(
-                      onPressed: dumpMemoryLeak,
-                      child: Icon(Icons.memory),
-                    )
-                  : null,
-              body: BlocListener<HomeBloc, HomeState>(
-                listenWhen: (p, c) => p.latestView != c.latestView,
-                listener: (context, state) {
-                  final view = state.latestView;
-                  if (view != null) {
-                    // Only open the last opened view if the [TabsState.currentPageManager] current opened plugin is blank and the last opened view is not null.
-                    // All opened widgets that display on the home screen are in the form of plugins. There is a list of built-in plugins defined in the [PluginType] enum, including board, grid and trash.
-                    final currentPageManager =
-                        context.read<TabsBloc>().state.currentPageManager;
+          child: Scaffold(
+            floatingActionButton: enableMemoryLeakDetect
+                ? const FloatingActionButton(
+                    onPressed: dumpMemoryLeak,
+                    child: Icon(Icons.memory),
+                  )
+                : null,
+            body: BlocListener<HomeBloc, HomeState>(
+              listenWhen: (p, c) => p.latestView != c.latestView,
+              listener: (context, state) {
+                final view = state.latestView;
+                if (view != null) {
+                  // Only open the last opened view if the [TabsState.currentPageManager] current opened plugin is blank and the last opened view is not null.
+                  // All opened widgets that display on the home screen are in the form of plugins. There is a list of built-in plugins defined in the [PluginType] enum, including board, grid and trash.
+                  final currentPageManager =
+                      context.read<TabsBloc>().state.currentPageManager;
 
-                    if (currentPageManager.plugin.pluginType ==
-                        PluginType.blank) {
-                      getIt<TabsBloc>().add(
-                        TabsEvent.openPlugin(plugin: view.plugin()),
-                      );
-                    }
+                  if (currentPageManager.plugin.pluginType ==
+                      PluginType.blank) {
+                    getIt<TabsBloc>().add(
+                      TabsEvent.openPlugin(plugin: view.plugin()),
+                    );
                   }
-                },
-                child: BlocBuilder<HomeSettingBloc, HomeSettingState>(
-                  buildWhen: (previous, current) => previous != current,
-                  builder: (context, state) => FlowyContainer(
-                    Theme.of(context).colorScheme.surface,
-                    child: _buildBody(context, userProfile, workspaceSetting),
+                }
+              },
+              child: BlocBuilder<HomeSettingBloc, HomeSettingState>(
+                buildWhen: (previous, current) => previous != current,
+                builder: (context, state) => BlocProvider(
+                  create: (_) => UserWorkspaceBloc(userProfile: userProfile)
+                    ..add(const UserWorkspaceEvent.initial()),
+                  child: HomeHotKeys(
+                    userProfile: userProfile,
+                    child: FlowyContainer(
+                      Theme.of(context).colorScheme.surface,
+                      child: _buildBody(context, userProfile, workspaceSetting),
+                    ),
                   ),
                 ),
               ),
@@ -293,8 +299,8 @@ class DesktopHomeScreenStackAdaptor extends HomeStackDelegate {
 
   @override
   void didDeleteStackWidget(ViewPB view, int? index) {
-    HomeService.readApp(appId: view.parentViewId).then((result) {
-      result.fold(
+    ViewBackendService.getView(view.parentViewId).then(
+      (result) => result.fold(
         (parentView) {
           final List<ViewPB> views = parentView.childViews;
           if (views.isNotEmpty) {
@@ -311,7 +317,7 @@ class DesktopHomeScreenStackAdaptor extends HomeStackDelegate {
               .add(TabsEvent.openPlugin(plugin: BlankPagePlugin()));
         },
         (err) => Log.error(err),
-      );
-    });
+      ),
+    );
   }
 }

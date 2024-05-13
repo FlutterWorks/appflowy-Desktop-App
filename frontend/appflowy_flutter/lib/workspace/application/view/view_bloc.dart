@@ -4,10 +4,11 @@ import 'package:appflowy/core/config/kv.dart';
 import 'package:appflowy/core/config/kv_keys.dart';
 import 'package:appflowy/startup/startup.dart';
 import 'package:appflowy/workspace/application/favorite/favorite_listener.dart';
-import 'package:appflowy/workspace/application/recent/recent_service.dart';
+import 'package:appflowy/workspace/application/recent/cached_recent_service.dart';
 import 'package:appflowy/workspace/application/view/view_listener.dart';
 import 'package:appflowy/workspace/application/view/view_service.dart';
 import 'package:appflowy_backend/protobuf/flowy-error/errors.pb.dart';
+import 'package:appflowy_backend/protobuf/flowy-folder/protobuf.dart';
 import 'package:appflowy_backend/protobuf/flowy-folder/view.pb.dart';
 import 'package:appflowy_result/appflowy_result.dart';
 import 'package:collection/collection.dart';
@@ -88,9 +89,7 @@ class ViewBloc extends Bloc<ViewEvent, ViewState> {
             await _setViewIsExpanded(view, e.isExpanded);
           },
           viewDidUpdate: (e) async {
-            final result = await ViewBackendService.getView(
-              view.id,
-            );
+            final result = await ViewBackendService.getView(view.id);
             final view_ = result.fold((l) => l, (r) => null);
             e.result.fold(
               (view) async {
@@ -146,7 +145,10 @@ class ViewBloc extends Bloc<ViewEvent, ViewState> {
                 ),
               ),
             );
-            await RecentService().updateRecentViews([view.id], false);
+            await getIt<CachedRecentService>().updateRecentViews(
+              [view.id],
+              false,
+            );
           },
           duplicate: (e) async {
             final result = await ViewBackendService.duplicate(view: view);
@@ -212,6 +214,12 @@ class ViewBloc extends Bloc<ViewEvent, ViewState> {
             await ViewBackendService.updateViewsVisibility(
               [view],
               value.isPublic,
+            );
+          },
+          updateIcon: (value) async {
+            await ViewBackendService.updateViewIcon(
+              viewId: view.id,
+              viewIcon: value.icon ?? '',
             );
           },
         );
@@ -313,9 +321,7 @@ class ViewBloc extends Bloc<ViewEvent, ViewState> {
     }
 
     if (update.updateChildViews.isNotEmpty) {
-      final view = await ViewBackendService.getView(
-        update.parentViewId,
-      );
+      final view = await ViewBackendService.getView(update.parentViewId);
       final childViews = view.fold((l) => l.childViews, (r) => []);
       bool isSameOrder = true;
       if (childViews.length == update.updateChildViews.length) {
@@ -377,8 +383,11 @@ class ViewEvent with _$ViewEvent {
   ) = ViewDidUpdate;
   const factory ViewEvent.viewUpdateChildView(ViewPB result) =
       ViewUpdateChildView;
-  const factory ViewEvent.updateViewVisibility(ViewPB view, bool isPublic) =
-      UpdateViewVisibility;
+  const factory ViewEvent.updateViewVisibility(
+    ViewPB view,
+    bool isPublic,
+  ) = UpdateViewVisibility;
+  const factory ViewEvent.updateIcon(String? icon) = UpdateIcon;
 }
 
 @freezed

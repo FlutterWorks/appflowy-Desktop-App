@@ -68,5 +68,11 @@ class KVKeys {
   /// The key for saving the last opened workspace id
   ///
   /// The workspace id is a string.
+  @Deprecated('deprecated in version 0.5.5')
   static const String lastOpenedWorkspaceId = 'lastOpenedWorkspaceId';
+
+  /// The key for saving the scale factor
+  ///
+  /// The value is a double string.
+  static const String scaleFactor = 'scaleFactor';
 }
