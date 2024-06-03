@@ -1,5 +1,5 @@
-import { DEFAULT_ROW_HEIGHT } from '@/application/database-yjs/const';
 import { AFScroller } from '@/components/_shared/scroller';
+import { useMeasureHeight } from '@/components/database/components/cell/useMeasure';
 import { GridColumnType, RenderColumn } from '../grid-column';
 import { GridCalculateRowCell, GridRowCell, RenderRowType, useRenderRows } from '../grid-row';
 import React, { useCallback, useEffect, useRef } from 'react';
@@ -18,11 +18,14 @@ export interface GridTableProps {
 export const GridTable = ({ scrollLeft, columnWidth, columns, onScrollLeft }: GridTableProps) => {
   const ref = useRef<VariableSizeGrid | null>(null);
   const { rows } = useRenderRows();
-  const rowHeights = useRef<{ [key: string]: number }>({});
+  const forceUpdate = useCallback((index: number) => {
+    ref.current?.resetAfterRowIndex(index, true);
+  }, []);
+
+  const { rowHeight, onResize } = useMeasureHeight({ forceUpdate, rows });
 
   useEffect(() => {
     if (ref.current) {
-      console.log(ref.current, scrollLeft);
       ref.current.scrollTo({ scrollLeft });
     }
   }, [scrollLeft]);
@@ -32,40 +35,6 @@ export const GridTable = ({ scrollLeft, columnWidth, columns, onScrollLeft }: Gr
       ref.current.resetAfterIndices({ columnIndex: 0, rowIndex: 0 });
     }
   }, [columns]);
-
-  const rowHeight = useCallback(
-    (index: number) => {
-      const row = rows[index];
-
-      if (!row || !row.rowId) return DEFAULT_ROW_HEIGHT;
-
-      return rowHeights.current[row.rowId] || DEFAULT_ROW_HEIGHT;
-    },
-    [rows]
-  );
-
-  const setRowHeight = useCallback(
-    (index: number, height: number) => {
-      const row = rows[index];
-      const rowId = row.rowId;
-
-      if (!row || !rowId) return;
-      const oldHeight = rowHeights.current[rowId];
-
-      rowHeights.current[rowId] = Math.max(oldHeight || DEFAULT_ROW_HEIGHT, height);
-      if (oldHeight !== height) {
-        ref.current?.resetAfterRowIndex(index, true);
-      }
-    },
-    [rows]
-  );
-
-  const onResize = useCallback(
-    (rowIndex: number, columnIndex: number, size: { width: number; height: number }) => {
-      setRowHeight(rowIndex, size.height);
-    },
-    [setRowHeight]
-  );
 
   const getItemKey = useCallback(
     ({ columnIndex, rowIndex }: { columnIndex: number; rowIndex: number }) => {
@@ -94,10 +63,10 @@ export const GridTable = ({ scrollLeft, columnWidth, columns, onScrollLeft }: Gr
       const row = data.rows[rowIndex];
       const column = data.columns[columnIndex] as RenderColumn;
 
-      const classList = ['flex', 'items-center', 'overflow-hidden'];
+      const classList = ['flex', 'items-center', 'overflow-hidden', 'grid-row-cell'];
 
       if (column.wrap) {
-        classList.push('whitespace-pre-wrap', 'break-words');
+        classList.push('wrap-cell');
       } else {
         classList.push('whitespace-nowrap');
       }
@@ -113,6 +82,7 @@ export const GridTable = ({ scrollLeft, columnWidth, columns, onScrollLeft }: Gr
       if (row.type === RenderRowType.Row) {
         return (
           <div
+            data-row-id={row.rowId}
             className={classList.join(' ')}
             style={{ ...style, borderLeftWidth: columnIndex === 1 || column.type === GridColumnType.Action ? 0 : 1 }}
           >
@@ -153,6 +123,7 @@ export const GridTable = ({ scrollLeft, columnWidth, columns, onScrollLeft }: Gr
           columnCount={columns.length}
           columnWidth={(index) => columnWidth(index, width)}
           rowHeight={rowHeight}
+          className={'grid-table'}
           overscanRowCount={5}
           overscanColumnCount={5}
           style={{

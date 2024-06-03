@@ -1,7 +1,5 @@
 library document_plugin;
 
-import 'package:flutter/material.dart';
-
 import 'package:appflowy/generated/flowy_svgs.g.dart';
 import 'package:appflowy/generated/locale_keys.g.dart';
 import 'package:appflowy/plugins/document/application/document_appearance_cubit.dart';
@@ -22,6 +20,7 @@ import 'package:appflowy_backend/protobuf/flowy-folder/view.pb.dart';
 import 'package:appflowy_editor/appflowy_editor.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flowy_infra_ui/flowy_infra_ui.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 class DocumentPluginBuilder extends PluginBuilder {
@@ -44,7 +43,7 @@ class DocumentPluginBuilder extends PluginBuilder {
   PluginType get pluginType => PluginType.document;
 
   @override
-  ViewLayoutPB? get layoutType => ViewLayoutPB.Document;
+  ViewLayoutPB get layoutType => ViewLayoutPB.Document;
 }
 
 class DocumentPlugin extends Plugin {
@@ -108,7 +107,10 @@ class DocumentPluginWidgetBuilder extends PluginWidgetBuilder
   EdgeInsets get contentPadding => EdgeInsets.zero;
 
   @override
-  Widget buildWidget({PluginContext? context, required bool shrinkWrap}) {
+  Widget buildWidget({
+    required PluginContext context,
+    required bool shrinkWrap,
+  }) {
     notifier.isDeleted.addListener(() {
       final deletedView = notifier.isDeleted.value;
       if (deletedView != null && deletedView.hasIndex()) {
@@ -122,7 +124,7 @@ class DocumentPluginWidgetBuilder extends PluginWidgetBuilder
         builder: (_, state) => DocumentPage(
           key: ValueKey(view.id),
           view: view,
-          onDeleted: () => context?.onDeleted(view, deletedViewIndex),
+          onDeleted: () => context.onDeleted?.call(view, deletedViewIndex),
           initialSelection: initialSelection,
         ),
       ),
@@ -130,7 +132,7 @@ class DocumentPluginWidgetBuilder extends PluginWidgetBuilder
   }
 
   @override
-  Widget get leftBarItem => ViewTitleBar(view: view);
+  Widget get leftBarItem => ViewTitleBar(key: ValueKey(view.id), view: view);
 
   @override
   Widget tabBarItem(String pluginId) => ViewTabBarItem(view: notifier.view);
@@ -162,7 +164,7 @@ class DocumentPluginWidgetBuilder extends PluginWidgetBuilder
             key: ValueKey('share_button_${view.id}'),
             view: view,
           ),
-          const HSpace(4),
+          const HSpace(10),
           ViewFavoriteButton(
             key: ValueKey('favorite_button_${view.id}'),
             view: view,
