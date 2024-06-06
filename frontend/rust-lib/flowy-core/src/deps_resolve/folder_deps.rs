@@ -18,6 +18,7 @@ use flowy_folder::view_operation::{
 use flowy_folder::ViewLayout;
 use flowy_folder_pub::folder_builder::NestedViewBuilder;
 use flowy_search::folder::indexer::FolderIndexManagerImpl;
+use flowy_sqlite::kv::StorePreferences;
 use flowy_user::services::authenticate_user::AuthenticateUser;
 use lib_dispatch::prelude::ToBytes;
 use lib_infra::future::FutureResult;
@@ -32,37 +33,31 @@ pub struct FolderDepsResolver();
 impl FolderDepsResolver {
   pub async fn resolve(
     authenticate_user: Weak<AuthenticateUser>,
-    document_manager: &Arc<DocumentManager>,
-    database_manager: &Arc<DatabaseManager>,
     collab_builder: Arc<AppFlowyCollabBuilder>,
     server_provider: Arc<ServerProvider>,
     folder_indexer: Arc<FolderIndexManagerImpl>,
-    chat_manager: &Arc<ChatManager>,
+    store_preferences: Arc<StorePreferences>,
+    operation_handlers: FolderOperationHandlers,
   ) -> Arc<FolderManager> {
     let user: Arc<dyn FolderUser> = Arc::new(FolderUserImpl {
       authenticate_user: authenticate_user.clone(),
     });
 
-    let handlers = folder_operation_handlers(
-      document_manager.clone(),
-      database_manager.clone(),
-      chat_manager.clone(),
-    );
     Arc::new(
       FolderManager::new(
         user.clone(),
         collab_builder,
-        handlers,
+        operation_handlers,
         server_provider.clone(),
         folder_indexer,
+        store_preferences,
       )
-      .await
       .unwrap(),
     )
   }
 }
 
-fn folder_operation_handlers(
+pub fn folder_operation_handlers(
   document_manager: Arc<DocumentManager>,
   database_manager: Arc<DatabaseManager>,
   chat_manager: Arc<ChatManager>,
