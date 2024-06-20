@@ -35,17 +35,17 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 final codeBlockLocalization = CodeBlockLocalizations(
   codeBlockNewParagraph:
-      LocaleKeys.settings_shortcuts_commands_codeBlockNewParagraph.tr(),
+      LocaleKeys.settings_shortcutsPage_commands_codeBlockNewParagraph.tr(),
   codeBlockIndentLines:
-      LocaleKeys.settings_shortcuts_commands_codeBlockIndentLines.tr(),
+      LocaleKeys.settings_shortcutsPage_commands_codeBlockIndentLines.tr(),
   codeBlockOutdentLines:
-      LocaleKeys.settings_shortcuts_commands_codeBlockOutdentLines.tr(),
+      LocaleKeys.settings_shortcutsPage_commands_codeBlockOutdentLines.tr(),
   codeBlockSelectAll:
-      LocaleKeys.settings_shortcuts_commands_codeBlockSelectAll.tr(),
+      LocaleKeys.settings_shortcutsPage_commands_codeBlockSelectAll.tr(),
   codeBlockPasteText:
-      LocaleKeys.settings_shortcuts_commands_codeBlockPasteText.tr(),
+      LocaleKeys.settings_shortcutsPage_commands_codeBlockPasteText.tr(),
   codeBlockAddTwoSpaces:
-      LocaleKeys.settings_shortcuts_commands_codeBlockAddTwoSpaces.tr(),
+      LocaleKeys.settings_shortcutsPage_commands_codeBlockAddTwoSpaces.tr(),
 );
 
 final localizedCodeBlockCommands =
@@ -412,7 +412,6 @@ class _AppFlowyEditorPageState extends State<AppFlowyEditorPage> {
       emojiMenuItem,
       autoGeneratorMenuItem,
       dateMenuItem,
-      videoBlockItem(LocaleKeys.document_plugins_video_label.tr()),
     ];
   }
 

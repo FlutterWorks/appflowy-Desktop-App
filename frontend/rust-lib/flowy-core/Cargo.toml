@@ -24,12 +24,14 @@ flowy-config = { workspace = true }
 flowy-date = { workspace = true }
 collab-integrate = { workspace = true }
 flowy-search = { workspace = true }
+flowy-search-pub = { workspace = true }
 collab-entity = { workspace = true }
 collab-plugins = { workspace = true }
 collab = { workspace = true }
 diesel.workspace = true
 uuid.workspace = true
 flowy-storage = { workspace = true }
+flowy-storage-pub = { workspace = true }
 client-api.workspace = true
 flowy-chat = { workspace = true }
 flowy-chat-pub = { workspace = true }

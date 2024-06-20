@@ -58,7 +58,7 @@ class EditorStyleCustomizer {
           DefaultAppearanceSettings.getDefaultSelectionColor(context),
       defaultTextDirection: appearance.defaultTextDirection,
       textStyleConfiguration: TextStyleConfiguration(
-        lineHeight: 1.2,
+        lineHeight: 1.4,
         applyHeightToFirstAscent: true,
         applyHeightToLastDescent: true,
         text: baseTextStyle(fontFamily).copyWith(
@@ -106,6 +106,7 @@ class EditorStyleCustomizer {
     final textScaleFactor =
         context.read<AppearanceSettingsCubit>().state.textScaleFactor;
     final baseTextStyle = this.baseTextStyle(fontFamily);
+
     return EditorStyle.mobile(
       padding: padding,
       defaultTextDirection: defaultTextDirection,
@@ -210,7 +211,7 @@ class EditorStyleCustomizer {
       selectionMenuItemIconColor: afThemeExtension.onBackground,
       selectionMenuItemSelectedIconColor: theme.colorScheme.onSurface,
       selectionMenuItemSelectedTextColor: theme.colorScheme.onSurface,
-      selectionMenuItemSelectedColor: theme.hoverColor,
+      selectionMenuItemSelectedColor: afThemeExtension.greyHover,
     );
   }
 

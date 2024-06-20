@@ -1,9 +1,8 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
-
 import 'package:appflowy/generated/flowy_svgs.g.dart';
 import 'package:appflowy/generated/locale_keys.g.dart';
+import 'package:appflowy/plugins/blank/blank.dart';
 import 'package:appflowy/shared/feature_flags.dart';
 import 'package:appflowy/startup/startup.dart';
 import 'package:appflowy/workspace/application/action_navigation/action_navigation_bloc.dart';
@@ -13,6 +12,7 @@ import 'package:appflowy/workspace/application/favorite/favorite_bloc.dart';
 import 'package:appflowy/workspace/application/favorite/prelude.dart';
 import 'package:appflowy/workspace/application/menu/sidebar_sections_bloc.dart';
 import 'package:appflowy/workspace/application/recent/cached_recent_service.dart';
+import 'package:appflowy/workspace/application/sidebar/space/space_bloc.dart';
 import 'package:appflowy/workspace/application/tabs/tabs_bloc.dart';
 import 'package:appflowy/workspace/application/user/user_workspace_bloc.dart';
 import 'package:appflowy/workspace/application/view/view_ext.dart';
@@ -23,6 +23,8 @@ import 'package:appflowy/workspace/presentation/home/menu/sidebar/header/sidebar
 import 'package:appflowy/workspace/presentation/home/menu/sidebar/header/sidebar_user.dart';
 import 'package:appflowy/workspace/presentation/home/menu/sidebar/shared/sidebar_folder.dart';
 import 'package:appflowy/workspace/presentation/home/menu/sidebar/shared/sidebar_new_page_button.dart';
+import 'package:appflowy/workspace/presentation/home/menu/sidebar/space/sidebar_space.dart';
+import 'package:appflowy/workspace/presentation/home/menu/sidebar/space/space_migration.dart';
 import 'package:appflowy/workspace/presentation/home/menu/sidebar/workspace/sidebar_workspace.dart';
 import 'package:appflowy_backend/protobuf/flowy-folder/workspace.pb.dart';
 import 'package:appflowy_backend/protobuf/flowy-user/protobuf.dart'
@@ -32,6 +34,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flowy_infra_ui/style_widget/button.dart';
 import 'package:flowy_infra_ui/style_widget/text.dart';
 import 'package:flowy_infra_ui/widget/spacing.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 /// Home Sidebar is the left side bar of the home page.
@@ -107,6 +110,17 @@ class HomeSideBar extends StatelessWidget {
                   ),
                 ),
             ),
+            BlocProvider(
+              create: (_) => SpaceBloc()
+                ..add(
+                  SpaceEvent.initial(
+                    userProfile,
+                    state.currentWorkspace?.workspaceId ??
+                        workspaceSetting.workspaceId,
+                    openFirstPage: false,
+                  ),
+                ),
+            ),
           ],
           child: MultiBlocListener(
             listeners: [
@@ -119,6 +133,27 @@ class HomeSideBar extends StatelessWidget {
                       ),
                     ),
               ),
+              BlocListener<SpaceBloc, SpaceState>(
+                listenWhen: (p, c) =>
+                    p.lastCreatedPage?.id != c.lastCreatedPage?.id,
+                listener: (context, state) {
+                  final page = state.lastCreatedPage;
+                  if (page == null || page.id.isEmpty) {
+                    // open the blank page
+                    context.read<TabsBloc>().add(
+                          TabsEvent.openPlugin(
+                            plugin: BlankPagePlugin(),
+                          ),
+                        );
+                  } else {
+                    context.read<TabsBloc>().add(
+                          TabsEvent.openPlugin(
+                            plugin: state.lastCreatedPage!.plugin(),
+                          ),
+                        );
+                  }
+                },
+              ),
               BlocListener<ActionNavigationBloc, ActionNavigationState>(
                 listenWhen: (_, curr) => curr.action != null,
                 listener: _onNotificationAction,
@@ -130,13 +165,24 @@ class HomeSideBar extends StatelessWidget {
                   if (actionType == UserWorkspaceActionType.create ||
                       actionType == UserWorkspaceActionType.delete ||
                       actionType == UserWorkspaceActionType.open) {
-                    context.read<SidebarSectionsBloc>().add(
-                          SidebarSectionsEvent.reload(
-                            userProfile,
-                            state.currentWorkspace?.workspaceId ??
-                                workspaceSetting.workspaceId,
-                          ),
-                        );
+                    if (context.read<SpaceBloc>().state.spaces.isEmpty) {
+                      context.read<SidebarSectionsBloc>().add(
+                            SidebarSectionsEvent.reload(
+                              userProfile,
+                              state.currentWorkspace?.workspaceId ??
+                                  workspaceSetting.workspaceId,
+                            ),
+                          );
+                    } else {
+                      context.read<SpaceBloc>().add(
+                            SpaceEvent.reset(
+                              userProfile,
+                              state.currentWorkspace?.workspaceId ??
+                                  workspaceSetting.workspaceId,
+                            ),
+                          );
+                    }
+
                     context
                         .read<FavoriteBloc>()
                         .add(const FavoriteEvent.fetchFavorites());
@@ -274,20 +320,8 @@ class _SidebarState extends State<_Sidebar> {
                 ),
               ),
             ),
-            Expanded(
-              child: Padding(
-                padding: menuHorizontalInset - const EdgeInsets.only(right: 6),
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.only(right: 6),
-                  controller: _scrollController,
-                  physics: const ClampingScrollPhysics(),
-                  child: SidebarFolder(
-                    userProfile: widget.userProfile,
-                    isHoverEnabled: !_isScrolling,
-                  ),
-                ),
-              ),
-            ),
+
+            _renderFolderOrSpace(menuHorizontalInset),
 
             // trash
             Padding(
@@ -295,6 +329,8 @@ class _SidebarState extends State<_Sidebar> {
                   const EdgeInsets.symmetric(horizontal: 4.0),
               child: const Divider(height: 0.5, color: Color(0x141F2329)),
             ),
+            const VSpace(8),
+            _renderUpgradeSpaceButton(menuHorizontalInset),
             const VSpace(8),
             Padding(
               padding: menuHorizontalInset +
@@ -306,6 +342,60 @@ class _SidebarState extends State<_Sidebar> {
         ),
       ),
     );
+  }
+
+  Widget _renderFolderOrSpace(EdgeInsets menuHorizontalInset) {
+    final spaceState = context.read<SpaceBloc>().state;
+    final workspaceState = context.read<UserWorkspaceBloc>().state;
+    // there's no space or the workspace is not collaborative,
+    // show the folder section (Workspace, Private, Personal)
+    // otherwise, show the space
+    return spaceState.spaces.isEmpty || !workspaceState.isCollabWorkspaceOn
+        ? Expanded(
+            child: Padding(
+              padding: menuHorizontalInset - const EdgeInsets.only(right: 6),
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.only(right: 6),
+                controller: _scrollController,
+                physics: const ClampingScrollPhysics(),
+                child: SidebarFolder(
+                  userProfile: widget.userProfile,
+                  isHoverEnabled: !_isScrolling,
+                ),
+              ),
+            ),
+          )
+        : Expanded(
+            child: Padding(
+              padding: menuHorizontalInset - const EdgeInsets.only(right: 6),
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.only(right: 6),
+                controller: _scrollController,
+                physics: const ClampingScrollPhysics(),
+                child: SidebarSpace(
+                  userProfile: widget.userProfile,
+                  isHoverEnabled: !_isScrolling,
+                ),
+              ),
+            ),
+          );
+  }
+
+  Widget _renderUpgradeSpaceButton(EdgeInsets menuHorizontalInset) {
+    final spaceState = context.watch<SpaceBloc>().state;
+    final workspaceState = context.read<UserWorkspaceBloc>().state;
+    return !spaceState.shouldShowUpgradeDialog ||
+            !workspaceState.isCollabWorkspaceOn
+        ? const SizedBox.shrink()
+        : Padding(
+            padding: menuHorizontalInset +
+                const EdgeInsets.only(
+                  left: 4.0,
+                  right: 4.0,
+                  top: 8.0,
+                ),
+            child: const SpaceMigration(),
+          );
   }
 
   void _onScrollChanged() {

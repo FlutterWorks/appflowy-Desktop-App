@@ -1,7 +1,7 @@
 use client_api::ws::ConnectState;
 use client_api::ws::WSConnectStateReceiver;
 use client_api::ws::WebSocketChannel;
-use flowy_storage::ObjectStorageService;
+use flowy_search_pub::cloud::SearchCloudService;
 use std::sync::Arc;
 
 use anyhow::Error;
@@ -16,6 +16,7 @@ use crate::default_impl::DefaultChatCloudServiceImpl;
 use flowy_database_pub::cloud::DatabaseCloudService;
 use flowy_document_pub::cloud::DocumentCloudService;
 use flowy_folder_pub::cloud::FolderCloudService;
+use flowy_storage_pub::cloud::StorageCloudService;
 use flowy_user_pub::cloud::UserCloudService;
 use flowy_user_pub::entities::UserTokenState;
 
@@ -100,6 +101,10 @@ pub trait AppFlowyServer: Send + Sync + 'static {
     Arc::new(DefaultChatCloudServiceImpl)
   }
 
+  /// Bridge for the Cloud AI Search features
+  ///
+  fn search_service(&self) -> Option<Arc<dyn SearchCloudService>>;
+
   /// Manages collaborative objects within a remote storage system. This includes operations such as
   /// checking storage status, retrieving updates and snapshots, and dispatching updates. The service
   /// also provides subscription capabilities for real-time updates.
@@ -139,7 +144,7 @@ pub trait AppFlowyServer: Send + Sync + 'static {
     Ok(None)
   }
 
-  fn file_storage(&self) -> Option<Arc<dyn ObjectStorageService>>;
+  fn file_storage(&self) -> Option<Arc<dyn StorageCloudService>>;
 }
 
 pub struct EncryptionImpl {

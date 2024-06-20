@@ -2,6 +2,7 @@ import 'package:appflowy/generated/flowy_svgs.g.dart';
 import 'package:appflowy/generated/locale_keys.g.dart';
 import 'package:appflowy/workspace/application/sidebar/folder/folder_bloc.dart';
 import 'package:appflowy/workspace/application/tabs/tabs_bloc.dart';
+import 'package:appflowy/workspace/application/view/view_ext.dart';
 import 'package:appflowy/workspace/presentation/home/menu/sidebar/favorites/favorite_menu_bloc.dart';
 import 'package:appflowy/workspace/presentation/home/menu/sidebar/favorites/favorite_more_actions.dart';
 import 'package:appflowy/workspace/presentation/home/menu/sidebar/favorites/favorite_pin_action.dart';
@@ -36,9 +37,6 @@ class FavoriteMenu extends StatelessWidget {
             FavoriteMenuBloc()..add(const FavoriteMenuEvent.initial()),
         child: BlocBuilder<FavoriteMenuBloc, FavoriteMenuState>(
           builder: (context, state) {
-            if (state.views.isEmpty) {
-              return const SizedBox.shrink();
-            }
             return Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -52,7 +50,10 @@ class FavoriteMenu extends StatelessWidget {
                   },
                 ),
                 const VSpace(12),
-                _buildViews(context, state),
+                _FavoriteGroups(
+                  minWidth: minWidth,
+                  state: state,
+                ),
               ],
             );
           },
@@ -60,64 +61,17 @@ class FavoriteMenu extends StatelessWidget {
       ),
     );
   }
+}
 
-  Widget _buildViews(BuildContext context, FavoriteMenuState state) {
-    return Container(
-      width: minWidth - 2 * _kHorizontalPadding,
-      constraints: const BoxConstraints(
-        maxHeight: 300,
-      ),
-      child: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            ..._buildGroups(
-              context,
-              state.todayViews,
-              LocaleKeys.sideBar_today.tr(),
-            ),
-            ..._buildGroups(
-              context,
-              state.thisWeekViews,
-              LocaleKeys.sideBar_thisWeek.tr(),
-            ),
-            ..._buildGroups(
-              context,
-              state.otherViews,
-              LocaleKeys.sideBar_others.tr(),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+class _FavoriteGroupedViews extends StatelessWidget {
+  const _FavoriteGroupedViews({
+    required this.views,
+  });
 
-  List<Widget> _buildGroups(
-    BuildContext context,
-    List<ViewPB> views,
-    String title,
-  ) {
-    return [
-      if (views.isNotEmpty) ...[
-        SizedBox(
-          height: 24,
-          child: FlowyText(
-            title,
-            fontSize: 12.0,
-            color: Theme.of(context).hintColor,
-          ),
-        ),
-        const VSpace(2),
-        _buildGroupedViews(context, views),
-        const VSpace(8),
-        const Divider(height: 1),
-        const VSpace(8),
-      ],
-    ];
-  }
+  final List<ViewPB> views;
 
-  Widget _buildGroupedViews(BuildContext context, List<ViewPB> views) {
+  @override
+  Widget build(BuildContext context) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: views
@@ -134,6 +88,15 @@ class FavoriteMenu extends StatelessWidget {
               isFeedback: false,
               isDraggable: false,
               shouldRenderChildren: false,
+              extendBuilder: (view) => view.isPinned
+                  ? [
+                      const HSpace(4.0),
+                      const FlowySvg(
+                        FlowySvgs.favorite_pin_s,
+                        blendMode: null,
+                      ),
+                    ]
+                  : [],
               leftIconBuilder: (_, __) => const HSpace(4.0),
               rightIconsBuilder: (_, view) => [
                 FavoriteMoreActions(view: view),
@@ -145,6 +108,93 @@ class FavoriteMenu extends StatelessWidget {
           )
           .toList(),
     );
+  }
+}
+
+class _FavoriteGroups extends StatelessWidget {
+  const _FavoriteGroups({
+    required this.minWidth,
+    required this.state,
+  });
+
+  final double minWidth;
+  final FavoriteMenuState state;
+
+  @override
+  Widget build(BuildContext context) {
+    final today = _buildGroups(
+      context,
+      state.todayViews,
+      LocaleKeys.sideBar_today.tr(),
+    );
+    final thisWeek = _buildGroups(
+      context,
+      state.thisWeekViews,
+      LocaleKeys.sideBar_thisWeek.tr(),
+    );
+    final others = _buildGroups(
+      context,
+      state.otherViews,
+      LocaleKeys.sideBar_others.tr(),
+    );
+    return Container(
+      width: minWidth - 2 * _kHorizontalPadding,
+      constraints: const BoxConstraints(
+        maxHeight: 300,
+      ),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (today.isNotEmpty) ...[
+              ...today,
+              const VSpace(8),
+              const Divider(height: 1),
+              const VSpace(8),
+            ],
+            if (thisWeek.isNotEmpty) ...[
+              ...thisWeek,
+              const VSpace(8),
+              const Divider(height: 1),
+              const VSpace(8),
+            ],
+            ...others.isNotEmpty && (today.isNotEmpty || thisWeek.isNotEmpty)
+                ? others
+                : _buildGroups(
+                    context,
+                    state.otherViews,
+                    LocaleKeys.sideBar_others.tr(),
+                    showHeader: false,
+                  ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  List<Widget> _buildGroups(
+    BuildContext context,
+    List<ViewPB> views,
+    String title, {
+    bool showHeader = true,
+  }) {
+    return [
+      if (views.isNotEmpty) ...[
+        if (showHeader)
+          SizedBox(
+            height: 24,
+            child: FlowyText(
+              title,
+              fontSize: 12.0,
+              color: Theme.of(context).hintColor,
+            ),
+          ),
+        const VSpace(2),
+        _FavoriteGroupedViews(views: views),
+        const VSpace(8),
+      ],
+    ];
   }
 }
 
