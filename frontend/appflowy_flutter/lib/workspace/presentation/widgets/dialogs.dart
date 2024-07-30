@@ -1,8 +1,8 @@
-import 'package:flutter/material.dart';
-
+import 'package:appflowy/generated/flowy_svgs.g.dart';
 import 'package:appflowy/generated/locale_keys.g.dart';
 import 'package:appflowy/startup/tasks/app_widget.dart';
 import 'package:appflowy/workspace/presentation/home/menu/sidebar/space/shared_widget.dart';
+import 'package:appflowy_editor/appflowy_editor.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flowy_infra/size.dart';
 import 'package:flowy_infra_ui/style_widget/text.dart';
@@ -11,6 +11,7 @@ import 'package:flowy_infra_ui/widget/buttons/primary_button.dart';
 import 'package:flowy_infra_ui/widget/buttons/secondary_button.dart';
 import 'package:flowy_infra_ui/widget/dialog/styled_dialogs.dart';
 import 'package:flowy_infra_ui/widget/spacing.dart';
+import 'package:flutter/material.dart';
 import 'package:toastification/toastification.dart';
 
 export 'package:flowy_infra_ui/widget/dialog/styled_dialogs.dart';
@@ -186,6 +187,7 @@ class NavigatorOkCancelDialog extends StatelessWidget {
     this.message,
     this.maxWidth,
     this.titleUpperCase = true,
+    this.autoDismiss = true,
   });
 
   final VoidCallback? onOkPressed;
@@ -196,9 +198,18 @@ class NavigatorOkCancelDialog extends StatelessWidget {
   final String? message;
   final double? maxWidth;
   final bool titleUpperCase;
+  final bool autoDismiss;
 
   @override
   Widget build(BuildContext context) {
+    final onCancel = onCancelPressed == null
+        ? null
+        : () {
+            onCancelPressed?.call();
+            if (autoDismiss) {
+              Navigator.of(context).pop();
+            }
+          };
     return StyledDialog(
       maxWidth: maxWidth ?? 500,
       padding: EdgeInsets.symmetric(horizontal: Insets.xl, vertical: Insets.l),
@@ -227,12 +238,11 @@ class NavigatorOkCancelDialog extends StatelessWidget {
           OkCancelButton(
             onOkPressed: () {
               onOkPressed?.call();
-              Navigator.of(context).pop();
+              if (autoDismiss) {
+                Navigator.of(context).pop();
+              }
             },
-            onCancelPressed: () {
-              onCancelPressed?.call();
-              Navigator.of(context).pop();
-            },
+            onCancelPressed: onCancel,
             okTitle: okTitle?.toUpperCase(),
             cancelTitle: cancelTitle?.toUpperCase(),
           ),
@@ -294,11 +304,26 @@ void showToastNotification(
   String? description,
   ToastificationType type = ToastificationType.success,
 }) {
+  if (PlatformExtension.isMobile) {
+    toastification.showCustom(
+      alignment: Alignment.bottomCenter,
+      autoCloseDuration: const Duration(milliseconds: 3000),
+      builder: (_, __) => _MToast(
+        message: message,
+        type: type,
+      ),
+    );
+    return;
+  }
+
   toastification.show(
     context: context,
     type: type,
     style: ToastificationStyle.flat,
-    title: FlowyText(message),
+    title: FlowyText(
+      message,
+      maxLines: 3,
+    ),
     description: description != null
         ? FlowyText.regular(
             description,
@@ -315,6 +340,50 @@ void showToastNotification(
       color: Colors.grey.withOpacity(0.4),
     ),
   );
+}
+
+class _MToast extends StatelessWidget {
+  const _MToast({
+    required this.message,
+    this.type = ToastificationType.success,
+  });
+
+  final String message;
+  final ToastificationType type;
+
+  @override
+  Widget build(BuildContext context) {
+    // only support success type
+    assert(type == ToastificationType.success);
+
+    return Container(
+      alignment: Alignment.bottomCenter,
+      padding: const EdgeInsets.only(bottom: 100),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 13.0),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12.0),
+          color: const Color(0xE5171717),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const FlowySvg(
+              FlowySvgs.success_s,
+              blendMode: null,
+            ),
+            const HSpace(8.0),
+            FlowyText.regular(
+              message,
+              fontSize: 16.0,
+              figmaLineHeight: 18.0,
+              color: Colors.white,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 Future<void> showConfirmDeletionDialog({
@@ -349,6 +418,7 @@ Future<void> showConfirmDialog({
   required String title,
   required String description,
   VoidCallback? onConfirm,
+  VoidCallback? onCancel,
   String? confirmLabel,
   ConfirmPopupStyle style = ConfirmPopupStyle.onlyOk,
 }) {
@@ -365,6 +435,7 @@ Future<void> showConfirmDialog({
             title: title,
             description: description,
             onConfirm: () => onConfirm?.call(),
+            onCancel: () => onCancel?.call(),
             confirmLabel: confirmLabel,
             style: style,
           ),

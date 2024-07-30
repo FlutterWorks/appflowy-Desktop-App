@@ -6,6 +6,7 @@ import 'package:appflowy/workspace/application/sidebar/space/space_bloc.dart';
 import 'package:appflowy/workspace/application/view/view_bloc.dart';
 import 'package:appflowy/workspace/application/view/view_ext.dart';
 import 'package:appflowy/workspace/presentation/home/home_sizes.dart';
+import 'package:appflowy/workspace/presentation/home/menu/sidebar/space/_extension.dart';
 import 'package:appflowy/workspace/presentation/home/menu/sidebar/space/sidebar_space_menu.dart';
 import 'package:appflowy/workspace/presentation/home/menu/sidebar/space/space_icon.dart';
 import 'package:appflowy/workspace/presentation/home/menu/view/view_item.dart';
@@ -15,7 +16,6 @@ import 'package:appflowy_editor/appflowy_editor.dart';
 import 'package:appflowy_popover/appflowy_popover.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flowy_infra_ui/flowy_infra_ui.dart';
-import 'package:flowy_infra_ui/style_widget/decoration.dart';
 import 'package:flowy_infra_ui/style_widget/hover.dart';
 import 'package:flowy_infra_ui/widget/flowy_tooltip.dart';
 import 'package:flutter/cupertino.dart';
@@ -54,6 +54,7 @@ class _SpacePermissionSwitchState extends State<SpacePermissionSwitch> {
           LocaleKeys.space_permission.tr(),
           fontSize: 14.0,
           color: Theme.of(context).hintColor,
+          figmaLineHeight: 18.0,
         ),
         const VSpace(6.0),
         AppFlowyPopover(
@@ -62,16 +63,11 @@ class _SpacePermissionSwitchState extends State<SpacePermissionSwitch> {
           constraints: const BoxConstraints(maxWidth: 500),
           offset: const Offset(0, 4),
           margin: EdgeInsets.zero,
-          decoration: FlowyDecoration.decoration(
-            Theme.of(context).cardColor,
-            Theme.of(context).colorScheme.shadow,
-            borderRadius: 10,
-          ),
           popupBuilder: (_) => _buildPermissionButtons(),
           child: DecoratedBox(
             decoration: ShapeDecoration(
               shape: RoundedRectangleBorder(
-                side: BorderSide(color: Theme.of(context).colorScheme.outline),
+                side: BorderSide(color: context.enableBorderColor),
                 borderRadius: BorderRadius.circular(10),
               ),
             ),
@@ -147,9 +143,13 @@ class SpacePermissionButton extends StatelessWidget {
       radius: BorderRadius.circular(10),
       iconPadding: 16.0,
       leftIcon: FlowySvg(icon),
+      leftIconSize: const Size.square(20),
       rightIcon: showArrow
           ? const FlowySvg(FlowySvgs.space_permission_dropdown_s)
           : null,
+      borderColor: Theme.of(context).isLightMode
+          ? const Color(0x1E171717)
+          : const Color(0xFF3A3F49),
       text: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -292,6 +292,7 @@ class ConfirmPopup extends StatefulWidget {
     required this.title,
     required this.description,
     required this.onConfirm,
+    this.onCancel,
     this.confirmLabel,
     this.confirmButtonColor,
   });
@@ -299,6 +300,7 @@ class ConfirmPopup extends StatefulWidget {
   final String title;
   final String description;
   final VoidCallback onConfirm;
+  final VoidCallback? onCancel;
   final Color? confirmButtonColor;
   final ConfirmPopupStyle style;
 
@@ -392,7 +394,10 @@ class _ConfirmPopupState extends State<ConfirmPopup> {
         );
       case ConfirmPopupStyle.cancelAndOk:
         return SpaceCancelOrConfirmButton(
-          onCancel: () => Navigator.of(context).pop(),
+          onCancel: () {
+            widget.onCancel?.call();
+            Navigator.of(context).pop();
+          },
           onConfirm: () {
             widget.onConfirm();
             Navigator.of(context).pop();
@@ -461,32 +466,29 @@ class CurrentSpace extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final child = FlowyTooltip(
-      message: LocaleKeys.space_switchSpace.tr(),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          SpaceIcon(
-            dimension: 20,
-            space: space,
-            cornerRadius: 6.0,
+    final child = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SpaceIcon(
+          dimension: 20,
+          space: space,
+          cornerRadius: 6.0,
+        ),
+        const HSpace(10),
+        Flexible(
+          child: FlowyText.medium(
+            space.name,
+            fontSize: 14.0,
+            overflow: TextOverflow.ellipsis,
           ),
-          const HSpace(10),
-          Flexible(
-            child: FlowyText.medium(
-              space.name,
-              fontSize: 14.0,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-          const HSpace(4.0),
-          FlowySvg(
-            context.read<SpaceBloc>().state.isExpanded
-                ? FlowySvgs.workspace_drop_down_menu_show_s
-                : FlowySvgs.workspace_drop_down_menu_hide_s,
-          ),
-        ],
-      ),
+        ),
+        const HSpace(4.0),
+        FlowySvg(
+          context.read<SpaceBloc>().state.isExpanded
+              ? FlowySvgs.workspace_drop_down_menu_show_s
+              : FlowySvgs.workspace_drop_down_menu_hide_s,
+        ),
+      ],
     );
 
     if (onTapBlankArea != null) {

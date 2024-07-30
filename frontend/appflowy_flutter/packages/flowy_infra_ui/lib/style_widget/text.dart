@@ -1,7 +1,7 @@
 import 'dart:io';
 
+import 'package:flowy_infra_ui/widget/flowy_tooltip.dart';
 import 'package:flutter/material.dart';
-
 import 'package:google_fonts/google_fonts.dart';
 
 class FlowyText extends StatelessWidget {
@@ -20,6 +20,7 @@ class FlowyText extends StatelessWidget {
   final bool withTooltip;
   final StrutStyle? strutStyle;
   final bool isEmoji;
+  final double? figmaLineHeight;
 
   const FlowyText(
     this.text, {
@@ -38,6 +39,7 @@ class FlowyText extends StatelessWidget {
     this.withTooltip = false,
     this.isEmoji = false,
     this.strutStyle,
+    this.figmaLineHeight,
   });
 
   FlowyText.small(
@@ -55,6 +57,7 @@ class FlowyText extends StatelessWidget {
     this.withTooltip = false,
     this.isEmoji = false,
     this.strutStyle,
+    this.figmaLineHeight,
   })  : fontWeight = FontWeight.w400,
         fontSize = (Platform.isIOS || Platform.isAndroid) ? 14 : 12;
 
@@ -74,6 +77,7 @@ class FlowyText extends StatelessWidget {
     this.withTooltip = false,
     this.isEmoji = false,
     this.strutStyle,
+    this.figmaLineHeight,
   }) : fontWeight = FontWeight.w400;
 
   const FlowyText.medium(
@@ -92,6 +96,7 @@ class FlowyText extends StatelessWidget {
     this.withTooltip = false,
     this.isEmoji = false,
     this.strutStyle,
+    this.figmaLineHeight,
   }) : fontWeight = FontWeight.w500;
 
   const FlowyText.semibold(
@@ -110,6 +115,7 @@ class FlowyText extends StatelessWidget {
     this.withTooltip = false,
     this.isEmoji = false,
     this.strutStyle,
+    this.figmaLineHeight,
   }) : fontWeight = FontWeight.w600;
 
   // Some emojis are not supported on Linux and Android, fallback to noto color emoji
@@ -128,6 +134,7 @@ class FlowyText extends StatelessWidget {
     this.strutStyle = const StrutStyle(forceStrutHeight: true),
     this.isEmoji = true,
     this.fontFamily,
+    this.figmaLineHeight,
   })  : fontWeight = FontWeight.w400,
         fallbackFontFamily = null;
 
@@ -148,6 +155,13 @@ class FlowyText extends StatelessWidget {
 
     if (isEmoji && (_useNotoColorEmoji || Platform.isWindows)) {
       fontSize = fontSize * 0.8;
+    }
+
+    double? lineHeight;
+    if (this.lineHeight != null) {
+      lineHeight = this.lineHeight!;
+    } else if (figmaLineHeight != null) {
+      lineHeight = figmaLineHeight! / fontSize;
     }
 
     final textStyle = Theme.of(context).textTheme.bodyMedium!.copyWith(
@@ -188,7 +202,7 @@ class FlowyText extends StatelessWidget {
     }
 
     if (withTooltip) {
-      child = Tooltip(
+      child = FlowyTooltip(
         message: text,
         child: child,
       );

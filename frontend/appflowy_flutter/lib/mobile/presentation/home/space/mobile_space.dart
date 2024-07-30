@@ -50,23 +50,17 @@ class _MobileSpaceState extends State<MobileSpace> {
             MobileSpaceHeader(
               isExpanded: state.isExpanded,
               space: currentSpace,
-              onAdded: () {
-                context.read<SpaceBloc>().add(
-                      SpaceEvent.createPage(
-                        name: LocaleKeys.menuAppHeader_defaultNewPageName.tr(),
-                        layout: ViewLayoutPB.Document,
-                        index: 0,
-                      ),
-                    );
-                context.read<SpaceBloc>().add(
-                      SpaceEvent.expand(currentSpace, true),
-                    );
-              },
+              onAdded: () => _showCreatePageMenu(currentSpace),
               onPressed: () => _showSpaceMenu(context),
             ),
-            _Pages(
-              key: ValueKey(currentSpace.id),
-              space: currentSpace,
+            Padding(
+              padding: const EdgeInsets.only(
+                left: HomeSpaceViewSizes.mHorizontalPadding,
+              ),
+              child: _Pages(
+                key: ValueKey(currentSpace.id),
+                space: currentSpace,
+              ),
             ),
           ],
         );
@@ -82,6 +76,7 @@ class _MobileSpaceState extends State<MobileSpace> {
       showDragHandle: true,
       showCloseButton: true,
       showDoneButton: true,
+      useRootNavigator: true,
       title: LocaleKeys.space_title.tr(),
       backgroundColor: Theme.of(context).colorScheme.surface,
       builder: (_) {
@@ -103,6 +98,38 @@ class _MobileSpaceState extends State<MobileSpace> {
             layout: ViewLayoutPB.Document,
           ),
         );
+  }
+
+  void _showCreatePageMenu(ViewPB space) {
+    final title = space.name;
+    showMobileBottomSheet(
+      context,
+      showHeader: true,
+      title: title,
+      showDragHandle: true,
+      showCloseButton: true,
+      useRootNavigator: true,
+      showDivider: false,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      builder: (sheetContext) {
+        return AddNewPageWidgetBottomSheet(
+          view: space,
+          onAction: (layout) {
+            Navigator.of(sheetContext).pop();
+            context.read<SpaceBloc>().add(
+                  SpaceEvent.createPage(
+                    name: LocaleKeys.menuAppHeader_defaultNewPageName.tr(),
+                    layout: layout,
+                    index: 0,
+                  ),
+                );
+            context.read<SpaceBloc>().add(
+                  SpaceEvent.expand(space, true),
+                );
+          },
+        );
+      },
+    );
   }
 }
 
@@ -140,15 +167,16 @@ class _Pages extends StatelessWidget {
                     onSelected: context.pushView,
                     endActionPane: (context) {
                       final view = context.read<ViewBloc>().state.view;
+                      final actions = [
+                        MobilePaneActionType.more,
+                        if (view.layout == ViewLayoutPB.Document)
+                          MobilePaneActionType.add,
+                      ];
                       return buildEndActionPane(
                         context,
-                        [
-                          MobilePaneActionType.more,
-                          if (view.layout == ViewLayoutPB.Document)
-                            MobilePaneActionType.add,
-                        ],
+                        actions,
                         spaceType: spaceType,
-                        needSpace: false,
+                        spaceRatio: actions.length == 1 ? 3 : 4,
                       );
                     },
                   ),
