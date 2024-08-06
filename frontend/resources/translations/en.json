@@ -158,8 +158,8 @@
   "newBoardText": "New board",
   "chat": {
     "newChat": "AI Chat",
-    "inputMessageHint": "Message @:appName AI",
-    "inputLocalAIMessageHint": "Message @:appName Local AI",
+    "inputMessageHint": "Ask @:appName AI",
+    "inputLocalAIMessageHint": "Ask @:appName Local AI",
     "unsupportedCloudPrompt": "This feature is only available when using @:appName Cloud",
     "relatedQuestion": "Related",
     "serverUnavailable": "Service Temporarily Unavailable. Please try again later.",
@@ -173,6 +173,10 @@
     "aiMistakePrompt": "AI can make mistakes. Check important info.",
     "chatWithFilePrompt": "Do you want to chat with the file?",
     "indexFileSuccess": "Indexing file successfully",
+    "inputActionNoPages": "No page results",
+    "referenceSource": "{} source found",
+    "referenceSources": "{} sources found",
+    "clickToMention": "Click to mention a page",
     "indexingFile": "Indexing {}"
   },
   "trash": {
@@ -657,7 +661,7 @@
         "downloadLLMPrompt": "Download {}",
         "downloadAppFlowyOfflineAI": "Downloading AI offline package will enable AI to run on your device. Do you want to continue?",
         "downloadLLMPromptDetail": "Downloading {} local model will take up to {} of storage. Do you want to continue?",
-        "downloadAIModelButton": "Download AI model",
+        "downloadAIModelButton": "Download",
         "downloadingModel": "Downloading",
         "localAILoaded": "Local AI Model successfully added and ready to use",
         "localAIStart": "Local AI Chat is starting...",
@@ -694,10 +698,10 @@
         "unlimitedAILabel": "Unlimited responses",
         "proBadge": "Pro",
         "aiMaxBadge": "AI Max",
-        "aiOnDeviceBadge": "AI On-device",
+        "aiOnDeviceBadge": "AI On-device for Mac",
         "memberProToggle": "More members & unlimited AI",
-        "aiMaxToggle": "Unlimited AI responses",
-        "aiOnDeviceToggle": "On-device AI for ultimate privacy",
+        "aiMaxToggle": "Unlimited AI and access to advanced models",
+        "aiOnDeviceToggle": "Local AI for ultimate privacy",
         "aiCredit": {
           "title": "Add @:appName AI Credit",
           "price": "{}",
@@ -712,7 +716,7 @@
           "freeTitle": "Free",
           "proTitle": "Pro",
           "teamTitle": "Team",
-          "freeInfo": "Perfect for individuals or small teams up to 3 members.",
+          "freeInfo": "Perfect for individuals up to 2 members to organize everything",
           "proInfo": "Perfect for small and medium teams up to 10 members.",
           "teamInfo": "Perfect for all productive and well-organized teams..",
           "upgrade": "Change plan",
@@ -724,14 +728,14 @@
           "activeLabel": "Added",
           "aiMax": {
             "title": "AI Max",
-            "description": "Unlock unlimited AI",
+            "description": "Unlimited AI responses powered by GPT-4o, Claude 3.5 Sonnet, and more",
             "price": "{}",
             "priceInfo": "per user per month",
             "billingInfo": "billed annually or {} billed monthly"
           },
           "aiOnDevice": {
-            "title": "AI On-device",
-            "description": "AI offline on your device",
+            "title": "AI On-device for Mac",
+            "description": "Run Mistral 7B, LLAMA 3, and more local models on your machine",
             "price": "{}",
             "priceInfo": "per user per month",
             "billingInfo": "billed annually or {} billed monthly"
@@ -773,10 +777,10 @@
           "canceledDescription": "AI Max will be available until {}"
         },
         "aiOnDevice": {
-          "label": "AI On-device",
+          "label": "AI On-device for Mac",
           "description": "Unlock unlimited AI offline on your device",
           "activeDescription": "Next invoice due on {}",
-          "canceledDescription": "AI On-device will be available until {}"
+          "canceledDescription": "AI On-device for Mac will be available until {}"
         },
         "removeDialog": {
           "title": "Remove {}",
@@ -802,7 +806,7 @@
       },
       "freePlan": {
         "title": "Free",
-        "description": "For individuals and small groups to organize everything",
+        "description": "For individuals up to 2 members to organize everything",
         "price": "{}",
         "priceInfo": "free forever"
       },
@@ -820,16 +824,18 @@
         "itemFive": "Mobile app",
         "itemSix": "AI Responses",
         "tooltipSix": "Lifetime means the number of responses never reset",
+        "intelligentSearch": "Intelligent search",
         "itemSeven": "Custom namespace",
         "tooltipSeven": "Allows you to customize part of the URL for your workspace"
       },
       "freeLabels": {
         "itemOne": "charged per workspace",
-        "itemTwo": "up to 3",
+        "itemTwo": "up to 2",
         "itemThree": "5 GB",
         "itemFour": "yes",
         "itemFive": "yes",
         "itemSix": "100 lifetime",
+        "intelligentSearch": "Intelligent search",
         "itemSeven": ""
       },
       "proLabels": {
@@ -839,6 +845,7 @@
         "itemFour": "yes",
         "itemFive": "yes",
         "itemSix": "unlimited",
+        "intelligentSearch": "Intelligent search",
         "itemSeven": ""
       },
       "paymentSuccess": {
@@ -953,6 +960,46 @@
       "showNotificationsIcon": {
         "label": "Show notifications icon",
         "hint": "Toggle off to hide the notification icon in the sidebar."
+      },
+      "archiveNotifications": {
+        "allSuccess": "Archived all notifications successfully",
+        "success": "Archived notification successfully"
+      },
+      "markAsReadNotifications": {
+        "allSuccess": "Marked all as read successfully",
+        "success": "Marked as read successfully"
+      },
+      "action": {
+        "markAsRead": "Mark as read",
+        "multipleChoice": "Select more",
+        "archive": "Archive"
+      },
+      "settings": {
+        "settings": "Settings",
+        "markAllAsRead": "Mark all as read",
+        "archiveAll": "Archive all"
+      },
+      "emptyInbox": {
+        "title": "No notifications yet",
+        "description": "You'll be notified here for @mentions"
+      },
+      "emptyUnread": {
+        "title": "No unread notifications",
+        "description": "You're all caught up!"
+      },
+      "emptyArchived": {
+        "title": "No archived notifications",
+        "description": "You haven't archived any notifications yet"
+      },
+      "tabs": {
+        "inbox": "Inbox",
+        "unread": "Unread",
+        "archived": "Archived"
+      },
+      "refreshSuccess": "Notifications refreshed successfully",
+      "titles": {
+        "notifications": "Notifications",
+        "reminder": "Reminder"
       }
     },
     "appearance": {
@@ -1049,6 +1096,8 @@
           "one": "{} member",
           "other": "{} members"
         },
+        "inviteFailedDialogTitle": "Failed to send invite",
+        "inviteFailedMemberLimit": "Member limit has been reached, please upgrade to invite more members.",
         "memberLimitExceeded": "Member limit reached, to invite more members, please ",
         "memberLimitExceededUpgrade": "upgrade",
         "memberLimitExceededPro": "Member limit reached, if you require more members contact ",
@@ -1563,6 +1612,26 @@
         "invalidVideoUrl": "The source URL is not supported yet.",
         "invalidVideoUrlYouTube": "YouTube is not supported yet.",
         "supportedFormats": "Supported formats: MP4, WebM, MOV, AVI, FLV, MPEG/M4V, H.264"
+      },
+      "file": {
+        "name": "File",
+        "uploadTab": "Upload",
+        "networkTab": "Integrate link",
+        "placeholderText": "Click or drag and drop to upload a file",
+        "placeholderDragging": "Drop the file to upload",
+        "dropFileToUpload": "Drop the file to upload",
+        "fileUploadHint": "Drag and drop a file here\nor click to select a file.",
+        "networkHint": "Enter a link to a file",
+        "networkUrlInvalid": "Invalid URL, please correct the URL and try again",
+        "networkAction": "Embed file link",
+        "fileTooBigError": "File size is too big, please upload a file with size less than 10MB",
+        "renameFile": {
+          "title": "Rename file",
+          "description": "Enter the new name for this file",
+          "nameEmptyError": "File name cannot be left empty."
+        },
+        "uploadedAt": "Uploaded on {}",
+        "linkedAt": "Link added on {}"
       }
     },
     "outlineBlock": {
@@ -1821,16 +1890,16 @@
     "remove": "Remove emoji",
     "categories": {
       "smileys": "Smileys & Emotion",
-      "people": "People & Body",
-      "animals": "Animals & Nature",
-      "food": "Food & Drink",
-      "activities": "Activities",
-      "places": "Travel & Places",
-      "objects": "Objects",
-      "symbols": "Symbols",
-      "flags": "Flags",
-      "nature": "Nature",
-      "frequentlyUsed": "Frequently Used"
+      "people": "people",
+      "animals": "nature",
+      "food": "foods",
+      "activities": "activities",
+      "places": "places",
+      "objects": "objects",
+      "symbols": "symbols",
+      "flags": "flags",
+      "nature": "nature",
+      "frequentlyUsed": "frequently Used"
     },
     "skinTone": {
       "default": "Default",
@@ -2227,7 +2296,22 @@
     },
     "mustSelectPrimaryDatabase": "The primary view must be selected",
     "noDatabaseSelected": "No database selected, please select at least one database.",
-    "unableToDeselectPrimaryDatabase": "Unable to deselect primary database"
+    "unableToDeselectPrimaryDatabase": "Unable to deselect primary database",
+    "saveThisPage": "Save this page",
+    "duplicateTitle": "Where would you like to add",
+    "selectWorkspace": "Select a workspace",
+    "addTo": "Add to",
+    "duplicateSuccessfully": "Duplicated success. Want to view documents?",
+    "duplicateSuccessfullyDescription": "Don't have the app? Your download will begin automatically after clicking the 'Download'.",
+    "downloadIt": "Download",
+    "openApp": "Open in app",
+    "duplicateFailed": "Duplicated failed",
+    "membersCount": {
+      "zero": "No members",
+      "one": "1 member",
+      "many": "{count} members",
+      "other": "{count} members"
+    }
   },
   "web": {
     "continue": "Continue",
@@ -2241,5 +2325,55 @@
     "privacyPolicy": "Privacy Policy",
     "signInError": "Sign in error",
     "login": "Sign up or log in"
+  },
+  "globalComment": {
+    "comments": "Comments",
+    "addComment": "Add a comment",
+    "reactedBy": "reacted by",
+    "addReaction": "Add reaction",
+    "reactedByMore": "and {count} others",
+    "showSeconds": {
+      "one": "1 second ago",
+      "other": "{count} seconds ago",
+      "zero": "Just now",
+      "many": "{count} seconds ago"
+    },
+    "showMinutes": {
+      "one": "1 minute ago",
+      "other": "{count} minutes ago",
+      "many": "{count} minutes ago"
+    },
+    "showHours": {
+      "one": "1 hour ago",
+      "other": "{count} hours ago",
+      "many": "{count} hours ago"
+    },
+    "showDays": {
+      "one": "1 day ago",
+      "other": "{count} days ago",
+      "many": "{count} days ago"
+    },
+    "showMonths": {
+      "one": "1 month ago",
+      "other": "{count} months ago",
+      "many": "{count} months ago"
+    },
+    "showYears": {
+      "one": "1 year ago",
+      "other": "{count} years ago",
+      "many": "{count} years ago"
+    },
+    "reply": "Reply",
+    "deleteComment": "Delete comment",
+    "youAreNotOwner": "You are not the owner of this comment",
+    "confirmDeleteDescription": "Are you sure you want to delete this comment?",
+    "hasBeenDeleted": "Deleted",
+    "replyingTo": "Replying to",
+    "noAccessDeleteComment": "You're not allowed to delete this comment",
+    "collapse": "Collapse",
+    "readMore": "Read more",
+    "failedToAddComment": "Failed to add comment",
+    "commentAddedSuccessfully": "Comment added successfully.",
+    "commentAddedSuccessTip": "You've just added or replied to a comment. Would you like to jump to the top to see the latest comments?"
   }
 }
