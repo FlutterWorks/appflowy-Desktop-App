@@ -1,24 +1,22 @@
 use crate::chat::Chat;
 use crate::entities::{
-  ChatMessageListPB, ChatMessagePB, CreateChatContextPB, RepeatedRelatedQuestionPB,
+  ChatInfoPB, ChatMessageListPB, ChatMessagePB, FilePB, RepeatedRelatedQuestionPB,
 };
 use crate::local_ai::local_llm_chat::LocalAIController;
 use crate::middleware::chat_service_mw::AICloudServiceMiddleware;
-use crate::persistence::{insert_chat, ChatTable};
+use crate::persistence::{insert_chat, read_chat_metadata, ChatTable};
 
 use appflowy_plugin::manager::PluginManager;
 use dashmap::DashMap;
-use flowy_ai_pub::cloud::{
-  ChatCloudService, ChatMessageMetadata, ChatMessageType, CreateTextChatContext,
-};
+use flowy_ai_pub::cloud::{ChatCloudService, ChatMessageMetadata, ChatMessageType};
 use flowy_error::{FlowyError, FlowyResult};
 use flowy_sqlite::kv::KVStorePreferences;
 use flowy_sqlite::DBConnection;
 
+use flowy_storage_pub::storage::StorageService;
 use lib_infra::util::timestamp;
-use serde_json::json;
 use std::path::PathBuf;
-use std::sync::Arc;
+use std::sync::{Arc, Weak};
 use tracing::{info, trace};
 
 pub trait AIUserService: Send + Sync + 'static {
@@ -26,7 +24,7 @@ pub trait AIUserService: Send + Sync + 'static {
   fn device_id(&self) -> Result<String, FlowyError>;
   fn workspace_id(&self) -> Result<String, FlowyError>;
   fn sqlite_connection(&self, uid: i64) -> Result<DBConnection, FlowyError>;
-  fn data_root_dir(&self) -> Result<PathBuf, FlowyError>;
+  fn application_root_dir(&self) -> Result<PathBuf, FlowyError>;
 }
 
 pub struct AIManager {
@@ -41,6 +39,7 @@ impl AIManager {
     chat_cloud_service: Arc<dyn ChatCloudService>,
     user_service: impl AIUserService,
     store_preferences: Arc<KVStorePreferences>,
+    storage_service: Weak<dyn StorageService>,
   ) -> AIManager {
     let user_service = Arc::new(user_service);
     let plugin_manager = Arc::new(PluginManager::new());
@@ -56,6 +55,7 @@ impl AIManager {
       user_service.clone(),
       chat_cloud_service,
       local_ai_controller.clone(),
+      storage_service,
     ));
 
     Self {
@@ -64,6 +64,12 @@ impl AIManager {
       chats: Arc::new(DashMap::new()),
       local_ai_controller,
     }
+  }
+
+  pub async fn initialize(&self, _workspace_id: &str) -> Result<(), FlowyError> {
+    // Ignore following error
+    let _ = self.local_ai_controller.refresh().await;
+    Ok(())
   }
 
   pub async fn open_chat(&self, chat_id: &str) -> Result<(), FlowyError> {
@@ -106,25 +112,22 @@ impl AIManager {
     Ok(())
   }
 
-  pub async fn create_chat_context(&self, context: CreateChatContextPB) -> FlowyResult<()> {
-    let workspace_id = self.user_service.workspace_id()?;
-    let context = CreateTextChatContext {
-      chat_id: context.chat_id,
-      content_type: context.content_type,
-      text: context.text,
-      chunk_size: 2000,
-      chunk_overlap: 20,
-      metadata: context
-        .metadata
-        .into_iter()
-        .map(|(k, v)| (k, json!(v)))
-        .collect(),
-    };
-    self
-      .cloud_service_wm
-      .create_chat_context(&workspace_id, context)
-      .await?;
-    Ok(())
+  pub async fn get_chat_info(&self, chat_id: &str) -> FlowyResult<ChatInfoPB> {
+    let mut conn = self.user_service.sqlite_connection(0)?;
+    let metadata = read_chat_metadata(&mut conn, chat_id)?;
+    let files = metadata
+      .files
+      .into_iter()
+      .map(|file| FilePB {
+        id: file.id,
+        name: file.name,
+      })
+      .collect();
+
+    Ok(ChatInfoPB {
+      chat_id: chat_id.to_string(),
+      files,
+    })
   }
 
   pub async fn create_chat(&self, uid: &i64, chat_id: &str) -> Result<Arc<Chat>, FlowyError> {
@@ -150,12 +153,19 @@ impl AIManager {
     chat_id: &str,
     message: &str,
     message_type: ChatMessageType,
-    text_stream_port: i64,
+    answer_stream_port: i64,
+    question_stream_port: i64,
     metadata: Vec<ChatMessageMetadata>,
   ) -> Result<ChatMessagePB, FlowyError> {
     let chat = self.get_or_create_chat_instance(chat_id).await?;
     let question = chat
-      .stream_chat_message(message, message_type, text_stream_port, metadata)
+      .stream_chat_message(
+        message,
+        message_type,
+        answer_stream_port,
+        question_stream_port,
+        metadata,
+      )
       .await?;
     Ok(question)
   }
@@ -250,9 +260,7 @@ impl AIManager {
     Ok(())
   }
 
-  pub fn local_ai_purchased(&self) {
-    // TODO(nathan): enable local ai
-  }
+  pub fn local_ai_purchased(&self) {}
 }
 
 fn save_chat(conn: DBConnection, chat_id: &str) -> FlowyResult<()> {
@@ -260,10 +268,10 @@ fn save_chat(conn: DBConnection, chat_id: &str) -> FlowyResult<()> {
     chat_id: chat_id.to_string(),
     created_at: timestamp(),
     name: "".to_string(),
-    local_model_path: "".to_string(),
-    local_model_name: "".to_string(),
+    local_files: "".to_string(),
+    metadata: "".to_string(),
     local_enabled: false,
-    sync_to_cloud: true,
+    sync_to_cloud: false,
   };
 
   insert_chat(conn, &row)?;

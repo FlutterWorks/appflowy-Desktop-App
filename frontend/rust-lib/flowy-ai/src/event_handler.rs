@@ -1,3 +1,4 @@
+use std::fs;
 use std::path::PathBuf;
 
 use crate::ai_manager::AIManager;
@@ -6,12 +7,14 @@ use crate::entities::*;
 use crate::local_ai::local_llm_chat::LLMModelInfo;
 use crate::notification::{make_notification, ChatNotification, APPFLOWY_AI_NOTIFICATION_KEY};
 use allo_isolate::Isolate;
-use flowy_ai_pub::cloud::{ChatMessageMetadata, ChatMessageType, ChatMetadataData};
+use flowy_ai_pub::cloud::{
+  ChatMessageMetadata, ChatMessageType, ChatMetadataContentType, ChatMetadataData,
+};
 use flowy_error::{ErrorCode, FlowyError, FlowyResult};
 use lib_dispatch::prelude::{data_result_ok, AFPluginData, AFPluginState, DataResult};
 use lib_infra::isolate_stream::IsolateSink;
 use std::sync::{Arc, Weak};
-use tokio::sync::oneshot;
+use tracing::trace;
 use validator::Validate;
 
 fn upgrade_ai_manager(ai_manager: AFPluginState<Weak<AIManager>>) -> FlowyResult<Arc<AIManager>> {
@@ -26,7 +29,6 @@ pub(crate) async fn stream_chat_message_handler(
   data: AFPluginData<StreamChatPayloadPB>,
   ai_manager: AFPluginState<Weak<AIManager>>,
 ) -> DataResult<ChatMessagePB, FlowyError> {
-  let ai_manager = upgrade_ai_manager(ai_manager)?;
   let data = data.into_inner();
   data.validate()?;
 
@@ -34,28 +36,44 @@ pub(crate) async fn stream_chat_message_handler(
     ChatMessageTypePB::System => ChatMessageType::System,
     ChatMessageTypePB::User => ChatMessageType::User,
   };
-
   let metadata = data
     .metadata
     .into_iter()
-    .map(|metadata| ChatMessageMetadata {
-      data: ChatMetadataData::new_text(metadata.text),
-      id: metadata.id,
-      name: metadata.name.clone(),
-      source: metadata.name,
+    .map(|metadata| {
+      let (content_type, content_len) = match metadata.data_type {
+        ChatMessageMetaTypePB::Txt => (ChatMetadataContentType::Text, metadata.data.len()),
+        ChatMessageMetaTypePB::Markdown => (ChatMetadataContentType::Markdown, metadata.data.len()),
+        ChatMessageMetaTypePB::PDF => (ChatMetadataContentType::PDF, 0),
+        ChatMessageMetaTypePB::UnknownMetaType => (ChatMetadataContentType::Unknown, 0),
+      };
+
+      ChatMessageMetadata {
+        data: ChatMetadataData {
+          content: metadata.data,
+          content_type,
+          size: content_len as i64,
+        },
+        id: metadata.id,
+        name: metadata.name.clone(),
+        source: metadata.source,
+        extract: None,
+      }
     })
     .collect::<Vec<_>>();
 
-  let question = ai_manager
+  trace!("Stream chat message with metadata: {:?}", metadata);
+  let ai_manager = upgrade_ai_manager(ai_manager)?;
+  let result = ai_manager
     .stream_chat_message(
       &data.chat_id,
       &data.message,
       message_type,
-      data.text_stream_port,
+      data.answer_stream_port,
+      data.question_stream_port,
       metadata,
     )
     .await?;
-  data_result_ok(question)
+  data_result_ok(result)
 }
 
 #[tracing::instrument(level = "debug", skip_all, err)]
@@ -95,15 +113,9 @@ pub(crate) async fn get_related_question_handler(
 ) -> DataResult<RepeatedRelatedQuestionPB, FlowyError> {
   let ai_manager = upgrade_ai_manager(ai_manager)?;
   let data = data.into_inner();
-  let (tx, rx) = tokio::sync::oneshot::channel();
-  tokio::spawn(async move {
-    let messages = ai_manager
-      .get_related_questions(&data.chat_id, data.message_id)
-      .await?;
-    let _ = tx.send(messages);
-    Ok::<_, FlowyError>(())
-  });
-  let messages = rx.await?;
+  let messages = ai_manager
+    .get_related_questions(&data.chat_id, data.message_id)
+    .await?;
   data_result_ok(messages)
 }
 
@@ -114,15 +126,9 @@ pub(crate) async fn get_answer_handler(
 ) -> DataResult<ChatMessagePB, FlowyError> {
   let ai_manager = upgrade_ai_manager(ai_manager)?;
   let data = data.into_inner();
-  let (tx, rx) = tokio::sync::oneshot::channel();
-  tokio::spawn(async move {
-    let message = ai_manager
-      .generate_answer(&data.chat_id, data.message_id)
-      .await?;
-    let _ = tx.send(message);
-    Ok::<_, FlowyError>(())
-  });
-  let message = rx.await?;
+  let message = ai_manager
+    .generate_answer(&data.chat_id, data.message_id)
+    .await?;
   data_result_ok(message)
 }
 
@@ -144,25 +150,17 @@ pub(crate) async fn refresh_local_ai_info_handler(
   ai_manager: AFPluginState<Weak<AIManager>>,
 ) -> DataResult<LLMModelInfoPB, FlowyError> {
   let ai_manager = upgrade_ai_manager(ai_manager)?;
-  let (tx, rx) = oneshot::channel::<Result<LLMModelInfo, FlowyError>>();
-  tokio::spawn(async move {
-    let model_info = ai_manager.local_ai_controller.refresh().await;
-    if model_info.is_err() {
-      if let Some(llm_model) = ai_manager.local_ai_controller.get_current_model() {
-        let model_info = LLMModelInfo {
-          selected_model: llm_model.clone(),
-          models: vec![llm_model],
-        };
-        let _ = tx.send(Ok(model_info));
-        return;
-      }
+  let model_info = ai_manager.local_ai_controller.refresh_model_info().await;
+  if model_info.is_err() {
+    if let Some(llm_model) = ai_manager.local_ai_controller.get_current_model() {
+      let model_info = LLMModelInfo {
+        selected_model: llm_model.clone(),
+        models: vec![llm_model],
+      };
+      return data_result_ok(model_info.into());
     }
-
-    let _ = tx.send(model_info);
-  });
-
-  let model_info = rx.await??;
-  data_result_ok(model_info.into())
+  }
+  data_result_ok(model_info?.into())
 }
 
 #[tracing::instrument(level = "debug", skip_all, err)]
@@ -231,16 +229,27 @@ pub(crate) async fn chat_file_handler(
       "Only support pdf,md and txt",
     ));
   }
+  let file_size = fs::metadata(&file_path)
+    .map_err(|_| {
+      FlowyError::new(
+        ErrorCode::UnsupportedFileFormat,
+        "Failed to get file metadata",
+      )
+    })?
+    .len();
 
-  let (tx, rx) = oneshot::channel::<Result<(), FlowyError>>();
-  tokio::spawn(async move {
-    let ai_manager = upgrade_ai_manager(ai_manager)?;
-    ai_manager.chat_with_file(&data.chat_id, file_path).await?;
-    let _ = tx.send(Ok(()));
-    Ok::<_, FlowyError>(())
-  });
+  const MAX_FILE_SIZE: u64 = 10 * 1024 * 1024;
+  if file_size > MAX_FILE_SIZE {
+    return Err(FlowyError::new(
+      ErrorCode::PayloadTooLarge,
+      "File size is too large. Max file size is 10MB",
+    ));
+  }
 
-  rx.await?
+  tracing::debug!("File size: {} bytes", file_size);
+  let ai_manager = upgrade_ai_manager(ai_manager)?;
+  ai_manager.chat_with_file(&data.chat_id, file_path).await?;
+  Ok(())
 }
 
 #[tracing::instrument(level = "debug", skip_all, err)]
@@ -383,17 +392,10 @@ pub(crate) async fn get_offline_app_handler(
   ai_manager: AFPluginState<Weak<AIManager>>,
 ) -> DataResult<OfflineAIPB, FlowyError> {
   let ai_manager = upgrade_ai_manager(ai_manager)?;
-  let (tx, rx) = oneshot::channel::<Result<String, FlowyError>>();
-  tokio::spawn(async move {
-    let link = ai_manager
-      .local_ai_controller
-      .get_offline_ai_app_download_link()
-      .await?;
-    let _ = tx.send(Ok(link));
-    Ok::<_, FlowyError>(())
-  });
-
-  let link = rx.await??;
+  let link = ai_manager
+    .local_ai_controller
+    .get_offline_ai_app_download_link()
+    .await?;
   data_result_ok(OfflineAIPB { link })
 }
 
@@ -405,4 +407,15 @@ pub(crate) async fn create_chat_context_handler(
   let _data = data.try_into_inner()?;
 
   Ok(())
+}
+
+#[tracing::instrument(level = "debug", skip_all, err)]
+pub(crate) async fn get_chat_info_handler(
+  data: AFPluginData<ChatId>,
+  ai_manager: AFPluginState<Weak<AIManager>>,
+) -> DataResult<ChatInfoPB, FlowyError> {
+  let chat_id = data.try_into_inner()?.value;
+  let ai_manager = upgrade_ai_manager(ai_manager)?;
+  let pb = ai_manager.get_chat_info(&chat_id).await?;
+  data_result_ok(pb)
 }
