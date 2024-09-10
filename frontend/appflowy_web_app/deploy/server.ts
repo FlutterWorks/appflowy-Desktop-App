@@ -68,7 +68,7 @@ const createServer = async (req: Request) => {
 
   logger.info(`Request URL: ${hostname}${reqUrl.pathname}`);
 
-  if (['/after-payment', '/login'].includes(reqUrl.pathname)) {
+  if (['/after-payment', '/login', '/as-template'].includes(reqUrl.pathname)) {
     timer();
     const htmlData = fs.readFileSync(indexPath, 'utf8');
     const $ = load(htmlData);
@@ -128,7 +128,7 @@ const createServer = async (req: Request) => {
     try {
       if (metaData && metaData.view) {
         const view = metaData.view;
-        const emoji = view.icon.value;
+        const emoji = view.icon?.ty === 0 && view.icon?.value;
         const titleList = [];
 
         if (emoji) {

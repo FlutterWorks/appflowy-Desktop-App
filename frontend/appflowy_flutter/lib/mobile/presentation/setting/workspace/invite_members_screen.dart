@@ -34,6 +34,7 @@ class InviteMembersScreen extends StatelessWidget {
         titleText: LocaleKeys.settings_appearance_members_label.tr(),
       ),
       body: const _InviteMemberPage(),
+      resizeToAvoidBottomInset: false,
     );
   }
 }
@@ -134,7 +135,8 @@ class _InviteMemberPageState extends State<_InviteMemberPage> {
         const VSpace(16),
         if (exceededLimit) ...[
           FlowyText.regular(
-            LocaleKeys.settings_appearance_members_inviteFailedMemberLimit.tr(),
+            LocaleKeys.settings_appearance_members_inviteFailedMemberLimitMobile
+                .tr(),
             fontSize: 14.0,
             maxLines: 3,
             color: Theme.of(context).colorScheme.error,
@@ -192,6 +194,9 @@ class _InviteMemberPageState extends State<_InviteMemberPage> {
     final actionType = actionResult.actionType;
     final result = actionResult.result;
 
+    // get keyboard height
+    final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
+
     // only show the result dialog when the action is WorkspaceMemberActionType.add
     if (actionType == WorkspaceMemberActionType.add) {
       result.fold(
@@ -200,12 +205,15 @@ class _InviteMemberPageState extends State<_InviteMemberPage> {
             context,
             message:
                 LocaleKeys.settings_appearance_members_addMemberSuccess.tr(),
+            bottomPadding: keyboardHeight,
           );
         },
         (f) {
           Log.error('add workspace member failed: $f');
           final message = f.code == ErrorCode.WorkspaceMemberLimitExceeded
-              ? LocaleKeys.settings_appearance_members_memberLimitExceeded.tr()
+              ? LocaleKeys
+                  .settings_appearance_members_inviteFailedMemberLimitMobile
+                  .tr()
               : LocaleKeys.settings_appearance_members_failedToAddMember.tr();
           setState(() {
             exceededLimit = f.code == ErrorCode.WorkspaceMemberLimitExceeded;
@@ -213,6 +221,7 @@ class _InviteMemberPageState extends State<_InviteMemberPage> {
           showToastNotification(
             context,
             type: ToastificationType.error,
+            bottomPadding: keyboardHeight,
             message: message,
           );
         },
@@ -224,12 +233,14 @@ class _InviteMemberPageState extends State<_InviteMemberPage> {
             context,
             message:
                 LocaleKeys.settings_appearance_members_inviteMemberSuccess.tr(),
+            bottomPadding: keyboardHeight,
           );
         },
         (f) {
           Log.error('invite workspace member failed: $f');
           final message = f.code == ErrorCode.WorkspaceMemberLimitExceeded
-              ? LocaleKeys.settings_appearance_members_inviteFailedMemberLimit
+              ? LocaleKeys
+                  .settings_appearance_members_inviteFailedMemberLimitMobile
                   .tr()
               : LocaleKeys.settings_appearance_members_failedToInviteMember
                   .tr();
@@ -240,6 +251,7 @@ class _InviteMemberPageState extends State<_InviteMemberPage> {
             context,
             type: ToastificationType.error,
             message: message,
+            bottomPadding: keyboardHeight,
           );
         },
       );
@@ -251,6 +263,7 @@ class _InviteMemberPageState extends State<_InviteMemberPage> {
             message: LocaleKeys
                 .settings_appearance_members_removeFromWorkspaceSuccess
                 .tr(),
+            bottomPadding: keyboardHeight,
           );
         },
         (f) {
@@ -260,6 +273,7 @@ class _InviteMemberPageState extends State<_InviteMemberPage> {
             message: LocaleKeys
                 .settings_appearance_members_removeFromWorkspaceFailed
                 .tr(),
+            bottomPadding: keyboardHeight,
           );
         },
       );

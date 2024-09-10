@@ -185,22 +185,9 @@ class SpaceCancelOrConfirmButton extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.end,
       children: [
-        DecoratedBox(
-          decoration: ShapeDecoration(
-            shape: RoundedRectangleBorder(
-              side: const BorderSide(color: Color(0x1E14171B)),
-              borderRadius: BorderRadius.circular(8),
-            ),
-          ),
-          child: FlowyButton(
-            useIntrinsicWidth: true,
-            margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 9.0),
-            text: FlowyText.regular(
-              LocaleKeys.button_cancel.tr(),
-              lineHeight: 1.0,
-            ),
-            onTap: onCancel,
-          ),
+        OutlinedRoundedButton(
+          text: LocaleKeys.button_cancel.tr(),
+          onTap: onCancel,
         ),
         const HSpace(12.0),
         DecoratedBox(
@@ -244,24 +231,11 @@ class SpaceOkButton extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.end,
       children: [
-        DecoratedBox(
-          decoration: ShapeDecoration(
-            color: confirmButtonColor ?? Theme.of(context).colorScheme.primary,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-          ),
-          child: FlowyButton(
-            useIntrinsicWidth: true,
-            margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 9.0),
-            radius: BorderRadius.circular(8),
-            text: FlowyText.regular(
-              confirmButtonName,
-              lineHeight: 1.0,
-              color: Colors.white,
-            ),
-            onTap: onConfirm,
-          ),
+        PrimaryRoundedButton(
+          text: confirmButtonName,
+          margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 9.0),
+          radius: 8.0,
+          onTap: onConfirm,
         ),
       ],
     );
@@ -347,18 +321,23 @@ class _ConfirmPopupState extends State<ConfirmPopup> {
           Navigator.of(context).pop();
         }
       },
-      child: Padding(
+      child: Container(
         padding: const EdgeInsets.symmetric(
           vertical: 20.0,
           horizontal: 20.0,
         ),
+        color: PlatformExtension.isDesktop
+            ? null
+            : Theme.of(context).colorScheme.surface,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildTitle(),
-            const VSpace(6),
-            _buildDescription(),
+            if (widget.description.isNotEmpty) ...[
+              const VSpace(6),
+              _buildDescription(),
+            ],
             if (widget.child != null) ...[
               const VSpace(12),
               widget.child!,
@@ -399,6 +378,10 @@ class _ConfirmPopupState extends State<ConfirmPopup> {
   }
 
   Widget _buildDescription() {
+    if (widget.description.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
     return FlowyText.regular(
       widget.description,
       fontSize: 16.0,
@@ -491,10 +474,12 @@ class CurrentSpace extends StatelessWidget {
     super.key,
     this.onTapBlankArea,
     required this.space,
+    this.isHovered = false,
   });
 
   final ViewPB space;
   final VoidCallback? onTapBlankArea;
+  final bool isHovered;
 
   @override
   Widget build(BuildContext context) {
@@ -514,6 +499,7 @@ class CurrentSpace extends StatelessWidget {
             fontSize: 14.0,
             figmaLineHeight: 18.0,
             overflow: TextOverflow.ellipsis,
+            color: isHovered ? Theme.of(context).colorScheme.onSurface : null,
           ),
         ),
         const HSpace(4.0),
@@ -521,6 +507,7 @@ class CurrentSpace extends StatelessWidget {
           context.read<SpaceBloc>().state.isExpanded
               ? FlowySvgs.workspace_drop_down_menu_show_s
               : FlowySvgs.workspace_drop_down_menu_hide_s,
+          color: isHovered ? Theme.of(context).colorScheme.onSurface : null,
         ),
       ],
     );
