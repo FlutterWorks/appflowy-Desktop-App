@@ -21,6 +21,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:universal_platform/universal_platform.dart';
 
 class SpacePermissionSwitch extends StatefulWidget {
   const SpacePermissionSwitch({
@@ -322,11 +323,8 @@ class _ConfirmPopupState extends State<ConfirmPopup> {
         }
       },
       child: Container(
-        padding: const EdgeInsets.symmetric(
-          vertical: 20.0,
-          horizontal: 20.0,
-        ),
-        color: PlatformExtension.isDesktop
+        padding: const EdgeInsets.all(20),
+        color: UniversalPlatform.isDesktop
             ? null
             : Theme.of(context).colorScheme.surface,
         child: Column(
@@ -560,7 +558,7 @@ class SpacePages extends StatelessWidget {
   final ViewItemRightIconsBuilder? rightIconsBuilder;
   final ViewItemOnSelected onSelected;
   final ViewItemOnSelected? onTertiarySelected;
-  final bool Function(ViewPB view)? shouldIgnoreView;
+  final IgnoreViewType Function(ViewPB view)? shouldIgnoreView;
 
   @override
   Widget build(BuildContext context) {
@@ -573,7 +571,10 @@ class SpacePages extends StatelessWidget {
           var childViews = state.view.childViews;
           if (shouldIgnoreView != null) {
             childViews = childViews
-                .where((childView) => !shouldIgnoreView!(childView))
+                .where(
+                  (childView) =>
+                      shouldIgnoreView!(childView) != IgnoreViewType.hide,
+                )
                 .toList();
           }
           return Column(

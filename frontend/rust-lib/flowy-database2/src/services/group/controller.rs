@@ -5,7 +5,6 @@ use std::sync::Arc;
 use collab_database::fields::{Field, TypeOptionData};
 use collab_database::rows::{Cells, Row, RowId};
 use flowy_error::{FlowyError, FlowyResult};
-use futures::executor::block_on;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 use tracing::trace;
@@ -63,8 +62,7 @@ where
       .get_type_option::<T>(&field_type)
       .unwrap_or_else(|| T::from(default_type_option_data_from_type(field_type)));
 
-    // TODO(nathan): remove block_on
-    let generated_groups = block_on(G::build(grouping_field, &configuration, &type_option));
+    let generated_groups = G::build(grouping_field, &configuration, &type_option).await;
     let _ = configuration.init_groups(generated_groups)?;
 
     Ok(Self {
@@ -426,31 +424,6 @@ where
 
     Ok((
       updated_groups,
-      updated_type_option.map(|type_option| type_option.into()),
-    ))
-  }
-
-  async fn apply_group_rename(
-    &mut self,
-    changeset: &GroupChangeset,
-  ) -> FlowyResult<(GroupPB, Option<TypeOptionData>)> {
-    let type_option = self.get_grouping_field_type_option().await.ok_or_else(|| {
-      FlowyError::internal().with_context("Failed to get grouping field type option")
-    })?;
-
-    let mut updated_type_option = None;
-
-    if let Some(type_option) = self.update_type_option_when_update_group(changeset, &type_option) {
-      updated_type_option = Some(type_option);
-    }
-
-    let updated_group = self
-      .get_group(&changeset.group_id)
-      .map(|(_, group)| GroupPB::from(group))
-      .ok_or_else(|| FlowyError::internal().with_context("Failed to get group"))?;
-
-    Ok((
-      updated_group,
       updated_type_option.map(|type_option| type_option.into()),
     ))
   }
