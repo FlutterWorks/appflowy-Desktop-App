@@ -2,10 +2,10 @@ import 'dart:async';
 
 import 'package:appflowy/plugins/database/application/defines.dart';
 import 'package:appflowy/plugins/database/application/field/field_info.dart';
+import 'package:appflowy/plugins/database/application/field/filter_entities.dart';
+import 'package:appflowy/plugins/database/application/field/sort_entities.dart';
 import 'package:appflowy/plugins/database/application/row/row_cache.dart';
 import 'package:appflowy/plugins/database/application/row/row_service.dart';
-import 'package:appflowy/plugins/database/grid/presentation/widgets/filter/filter_info.dart';
-import 'package:appflowy/plugins/database/grid/presentation/widgets/sort/sort_info.dart';
 import 'package:appflowy_backend/dispatch/dispatch.dart';
 import 'package:appflowy_backend/log.dart';
 import 'package:appflowy_backend/protobuf/flowy-database2/protobuf.dart';
@@ -94,12 +94,12 @@ class GridBloc extends Bloc<GridEvent, GridState> {
               ),
             );
           },
-          didReceveFilters: (List<FilterInfo> filters) {
+          didReceveFilters: (filters) {
             emit(
               state.copyWith(filters: filters),
             );
           },
-          didReceveSorts: (List<SortInfo> sorts) {
+          didReceveSorts: (sorts) {
             emit(
               state.copyWith(
                 reorderable: sorts.isEmpty,
@@ -192,9 +192,9 @@ class GridEvent with _$GridEvent {
     DatabasePB grid,
   ) = _DidReceiveGridUpdate;
 
-  const factory GridEvent.didReceveFilters(List<FilterInfo> filters) =
+  const factory GridEvent.didReceveFilters(List<DatabaseFilter> filters) =
       _DidReceiveFilters;
-  const factory GridEvent.didReceveSorts(List<SortInfo> sorts) =
+  const factory GridEvent.didReceveSorts(List<DatabaseSort> sorts) =
       _DidReceiveSorts;
 }
 
@@ -210,8 +210,8 @@ class GridState with _$GridState {
     required LoadingState loadingState,
     required bool reorderable,
     required ChangedReason reason,
-    required List<SortInfo> sorts,
-    required List<FilterInfo> filters,
+    required List<DatabaseSort> sorts,
+    required List<DatabaseFilter> filters,
     required bool openRowDetail,
   }) = _GridState;
 

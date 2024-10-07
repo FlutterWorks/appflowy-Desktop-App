@@ -20,7 +20,7 @@ use crate::entities::filter_entities::*;
 use crate::entities::{FieldType, InsertedRowPB, RowMetaPB};
 use crate::services::cell::CellCache;
 use crate::services::database_view::{DatabaseViewChanged, DatabaseViewChangedNotifier};
-use crate::services::field::TypeOptionCellExt;
+use crate::services::field::{TimestampCellData, TimestampCellDataWrapper, TypeOptionCellExt};
 use crate::services::filter::{Filter, FilterChangeset, FilterInner, FilterResultNotification};
 
 #[async_trait]
@@ -116,11 +116,12 @@ impl FilterController {
   }
 
   pub async fn close(&self) {
-    if let Ok(mut task_scheduler) = self.task_scheduler.try_write() {
-      task_scheduler.unregister_handler(&self.handler_id).await;
-    } else {
-      tracing::error!("Try to get the lock of task_scheduler failed");
-    }
+    self
+      .task_scheduler
+      .write()
+      .await
+      .unregister_handler(&self.handler_id)
+      .await;
   }
 
   #[tracing::instrument(name = "schedule_filter_task", level = "trace", skip(self))]
@@ -200,10 +201,7 @@ impl FilterController {
           }
         }
       },
-      FilterChangeset::Delete {
-        filter_id,
-        field_id: _,
-      } => Self::delete_filter(&mut filters, &filter_id),
+      FilterChangeset::Delete { filter_id } => Self::delete_filter(&mut filters, &filter_id),
       FilterChangeset::DeleteAllWithFieldId { field_id } => {
         let mut filter_ids = vec![];
         for filter in filters.iter() {
@@ -527,7 +525,20 @@ fn apply_filter(
         error!("field type of filter doesn't match field type of field");
         return Some(false);
       }
-      let cell = row.cells.get(field_id).cloned();
+      let timestamp_cell = match field_type {
+        FieldType::LastEditedTime | FieldType::CreatedTime => {
+          let timestamp = if field_type.is_created_time() {
+            row.created_at
+          } else {
+            row.modified_at
+          };
+          let cell =
+            TimestampCellDataWrapper::from((*field_type, TimestampCellData::new(timestamp)));
+          Some(cell.into())
+        },
+        _ => None,
+      };
+      let cell = timestamp_cell.or_else(|| row.cells.get(field_id).cloned());
       if let Some(handler) = TypeOptionCellExt::new(field, Some(cell_data_cache.clone()))
         .get_type_option_cell_data_handler()
       {

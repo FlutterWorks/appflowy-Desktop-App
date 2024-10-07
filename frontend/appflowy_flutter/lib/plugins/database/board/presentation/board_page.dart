@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:appflowy/util/field_type_extension.dart';
 import 'package:flutter/material.dart' hide Card;
 import 'package:flutter/services.dart';
 
@@ -11,7 +12,6 @@ import 'package:appflowy/plugins/database/application/row/row_controller.dart';
 import 'package:appflowy/plugins/database/board/application/board_actions_bloc.dart';
 import 'package:appflowy/plugins/database/board/presentation/widgets/board_column_header.dart';
 import 'package:appflowy/plugins/database/grid/presentation/grid_page.dart';
-import 'package:appflowy/plugins/database/grid/presentation/widgets/header/field_type_extension.dart';
 import 'package:appflowy/plugins/database/tab_bar/desktop/setting_menu.dart';
 import 'package:appflowy/plugins/database/tab_bar/tab_bar_view.dart';
 import 'package:appflowy/plugins/database/widgets/card/card_bloc.dart';
@@ -521,7 +521,7 @@ class _BoardColumnFooterState extends State<BoardColumnFooter> {
               FlowySvgs.add_s,
               color: Theme.of(context).hintColor,
             ),
-            text: FlowyText.medium(
+            text: FlowyText(
               LocaleKeys.board_column_createNewCard.tr(),
               color: Theme.of(context).hintColor,
             ),

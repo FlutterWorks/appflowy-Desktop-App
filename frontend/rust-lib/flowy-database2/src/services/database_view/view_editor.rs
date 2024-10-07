@@ -11,7 +11,9 @@ use crate::entities::{
   SortChangesetNotificationPB, SortPB, UpdateCalculationChangesetPB, UpdateSortPayloadPB,
 };
 use crate::notification::{send_notification, DatabaseNotification};
-use crate::services::calculations::{Calculation, CalculationChangeset, CalculationsController};
+use crate::services::calculations::{
+  Calculation, CalculationChangeset, CalculationEvent, CalculationsController,
+};
 use crate::services::cell::{CellBuilder, CellCache};
 use crate::services::database::{database_view_setting_pb_from_view, DatabaseRowEvent, UpdatedRow};
 use crate::services::database_view::view_calculations::make_calculations_controller;
@@ -36,10 +38,11 @@ use crate::services::sort::{Sort, SortChangeset, SortController};
 use collab_database::database::{gen_database_calculation_id, gen_database_sort_id, gen_row_id};
 use collab_database::entity::DatabaseView;
 use collab_database::fields::Field;
-use collab_database::rows::{Cells, Row, RowDetail, RowId};
+use collab_database::rows::{Cells, Row, RowCell, RowDetail, RowId};
 use collab_database::views::{DatabaseLayout, RowOrder};
 use dashmap::DashMap;
 use flowy_error::{FlowyError, FlowyResult};
+use lib_infra::priority_task::QualityOfService;
 use lib_infra::util::timestamp;
 use tokio::sync::{broadcast, RwLock};
 use tracing::{instrument, trace, warn};
@@ -307,33 +310,44 @@ impl DatabaseViewEditor {
         let rows = vec![Arc::new(row.clone())];
         let mut rows = self.v_filter_rows(rows).await;
 
-        if let Some(row) = rows.pop() {
-          let result = controller.did_update_group_row(old_row, &row, &field);
+        let mut group_changes = GroupChangesPB {
+          view_id: self.view_id.clone(),
+          ..Default::default()
+        };
 
-          if let Ok(result) = result {
-            let mut group_changes = GroupChangesPB {
-              view_id: self.view_id.clone(),
-              ..Default::default()
-            };
-            if let Some(inserted_group) = result.inserted_group {
-              tracing::trace!("Create group after editing the row: {:?}", inserted_group);
-              group_changes.inserted_groups.push(inserted_group);
-            }
-            if let Some(delete_group) = result.deleted_group {
-              tracing::trace!("Delete group after editing the row: {:?}", delete_group);
-              group_changes.deleted_groups.push(delete_group.group_id);
-            }
+        let (inserted_group, deleted_group, row_changesets) = if let Some(row) = rows.pop() {
+          if let Ok(result) = controller.did_update_group_row(old_row, &row, &field) {
+            (
+              result.inserted_group,
+              result.deleted_group,
+              result.row_changesets,
+            )
+          } else {
+            (None, None, vec![])
+          }
+        } else if let Ok(result) = controller.did_delete_row(row) {
+          (None, result.deleted_group, result.row_changesets)
+        } else {
+          (None, None, vec![])
+        };
 
-            if !group_changes.is_empty() {
-              notify_did_update_num_of_groups(&self.view_id, group_changes).await;
-            }
+        if let Some(inserted_group) = inserted_group {
+          tracing::trace!("Create group after editing the row: {:?}", inserted_group);
+          group_changes.inserted_groups.push(inserted_group);
+        }
+        if let Some(delete_group) = deleted_group {
+          tracing::trace!("Delete group after editing the row: {:?}", delete_group);
+          group_changes.deleted_groups.push(delete_group.group_id);
+        }
 
-            for changeset in result.row_changesets {
-              if !changeset.is_empty() {
-                tracing::trace!("Group change after editing the row: {:?}", changeset);
-                notify_did_update_group_rows(changeset).await;
-              }
-            }
+        if !group_changes.is_empty() {
+          notify_did_update_num_of_groups(&self.view_id, group_changes).await;
+        }
+
+        for changeset in row_changesets {
+          if !changeset.is_empty() {
+            tracing::trace!("Group change after editing the row: {:?}", changeset);
+            notify_did_update_group_rows(changeset).await;
           }
         }
       }
@@ -373,6 +387,27 @@ impl DatabaseViewEditor {
     let rows = self.delegate.get_all_rows(&self.view_id, row_orders).await;
     let mut rows = self.v_filter_rows(rows).await;
     self.v_sort_rows(&mut rows).await;
+    rows
+  }
+
+  pub async fn v_get_cells_for_field(&self, field_id: &str) -> Vec<RowCell> {
+    let row_orders = self.delegate.get_all_row_orders(&self.view_id).await;
+    let rows = self.delegate.get_all_rows(&self.view_id, row_orders).await;
+    let rows = self.v_filter_rows(rows).await;
+    let rows = rows
+      .into_iter()
+      .filter_map(|row| {
+        row
+          .cells
+          .get(field_id)
+          .map(|cell| RowCell::new(row.id.clone(), Some(cell.clone())))
+      })
+      .collect::<Vec<_>>();
+    trace!(
+      "[Database]: get cells for field: {}, total rows:{}",
+      field_id,
+      rows.len()
+    );
     rows
   }
 
@@ -639,6 +674,18 @@ impl DatabaseViewEditor {
     Ok(())
   }
 
+  pub async fn v_calculate_rows(&self, rows: Vec<Arc<Row>>) -> FlowyResult<()> {
+    self
+      .calculations_controller
+      .gen_task(
+        CalculationEvent::InitialRows(rows),
+        QualityOfService::UserInteractive,
+      )
+      .await;
+
+    Ok(())
+  }
+
   pub async fn v_delete_all_sorts(&self) -> FlowyResult<()> {
     let all_sorts = self.v_get_all_sorts().await;
     self.sort_controller.write().await.delete_all_sorts().await;
@@ -658,11 +705,9 @@ impl DatabaseViewEditor {
     &self,
     params: UpdateCalculationChangesetPB,
   ) -> FlowyResult<()> {
-    let calculation_id = match params.calculation_id {
-      None => gen_database_calculation_id(),
-      Some(calculation_id) => calculation_id,
-    };
-
+    let calculation_id = params
+      .calculation_id
+      .unwrap_or_else(gen_database_calculation_id);
     let calculation = Calculation::none(
       calculation_id,
       params.field_id,
@@ -737,6 +782,9 @@ impl DatabaseViewEditor {
       self.v_group_by_field(&field_id).await?;
     }
 
+    let row_orders = self.delegate.get_all_row_orders(&self.view_id).await;
+    let rows = self.delegate.get_all_rows(&self.view_id, row_orders).await;
+    self.v_calculate_rows(rows).await?;
     Ok(())
   }
 
@@ -876,6 +924,16 @@ impl DatabaseViewEditor {
       .calculations_controller
       .did_receive_field_type_changed(field_id.to_owned(), new_field_type)
       .await;
+    if self.filter_controller.has_filters().await {
+      let changeset = FilterChangeset::DeleteAllWithFieldId {
+        field_id: field_id.to_string(),
+      };
+      let notification = self.filter_controller.apply_changeset(changeset).await;
+      notify_did_update_filter(notification).await;
+    }
+    if self.is_grouping_field(field_id).await {
+      let _ = self.v_group_by_field(field_id).await;
+    }
   }
 
   /// Notifies the view's field type-option data is changed
@@ -893,22 +951,13 @@ impl DatabaseViewEditor {
         .did_update_field_type_option(&field)
         .await;
 
-      if old_field.field_type != field.field_type {
-        let changeset = FilterChangeset::DeleteAllWithFieldId {
-          field_id: field.id.clone(),
-        };
-        let notification = self.filter_controller.apply_changeset(changeset).await;
-        notify_did_update_filter(notification).await;
-      }
-
       // If the id of the grouping field is equal to the updated field's id
       // and something critical changed, then we need to update the group setting
       if self.is_grouping_field(field_id).await
-        && (old_field.field_type != field.field_type
-          || matches!(
-            FieldType::from(field.field_type),
-            FieldType::SingleSelect | FieldType::MultiSelect
-          ))
+        && matches!(
+          FieldType::from(field.field_type),
+          FieldType::SingleSelect | FieldType::MultiSelect
+        )
       {
         self.v_group_by_field(field_id).await?;
       }
@@ -1009,42 +1058,42 @@ impl DatabaseViewEditor {
 
     // Text
     let primary_field = self.delegate.get_primary_field().await?;
-    let text_cells =
+    let mut primary_cells =
       get_cells_for_field(self.delegate.clone(), &self.view_id, &primary_field.id).await;
 
     // Date
-    let timestamp_by_row_id = get_cells_for_field(
+    let timestamp_cells = get_cells_for_field(
       self.delegate.clone(),
       &self.view_id,
       &calendar_setting.field_id,
     )
-    .await
-    .into_iter()
-    .map(|date_cell| {
-      let row_id = date_cell.row_id.clone();
+    .await;
 
-      // timestamp
-      let timestamp = date_cell
+    let mut events: Vec<CalendarEventPB> = vec![];
+    for timestamp_cell in timestamp_cells {
+      let row_id = timestamp_cell.row_id.clone();
+      let index = primary_cells
+        .iter()
+        .position(|text_cell| text_cell.row_id == row_id);
+
+      let timestamp = timestamp_cell
         .into_date_field_cell_data()
         .map(|date_cell_data| date_cell_data.timestamp.unwrap_or_default())
         .unwrap_or_default();
 
-      (row_id, timestamp)
-    })
-    .collect::<HashMap<RowId, i64>>();
-
-    let mut events: Vec<CalendarEventPB> = vec![];
-    for text_cell in text_cells {
-      let row_id = text_cell.row_id.clone();
-      let timestamp = timestamp_by_row_id
-        .get(&row_id)
-        .cloned()
-        .unwrap_or_default();
-
-      let title = text_cell
-        .into_text_field_cell_data()
-        .unwrap_or_default()
-        .into();
+      // The cell for given primary field might be empty.
+      // If yes, return empty string
+      // If not, return the text for the cell
+      let title = match index {
+        None => "".to_string(),
+        Some(index) => {
+          let text_cell = primary_cells.remove(index);
+          text_cell
+            .into_text_field_cell_data()
+            .unwrap_or_default()
+            .into()
+        },
+      };
 
       let (_, row_detail) = self.delegate.get_row_detail(&self.view_id, &row_id).await?;
       let event = CalendarEventPB {
@@ -1056,6 +1105,7 @@ impl DatabaseViewEditor {
       };
       events.push(event);
     }
+
     Some(events)
   }
 

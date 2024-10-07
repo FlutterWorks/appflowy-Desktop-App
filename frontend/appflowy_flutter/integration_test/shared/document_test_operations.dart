@@ -1,13 +1,17 @@
 import 'dart:async';
 import 'dart:ui';
 
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+
 import 'package:appflowy/generated/locale_keys.g.dart';
 import 'package:appflowy/plugins/base/emoji/emoji_picker.dart';
 import 'package:appflowy/plugins/document/presentation/editor_plugins/actions/block_action_add_button.dart';
 import 'package:appflowy/plugins/document/presentation/editor_plugins/actions/block_action_option_button.dart';
 import 'package:appflowy/plugins/document/presentation/editor_plugins/actions/drag_to_reorder/draggable_option_button.dart';
 import 'package:appflowy/plugins/document/presentation/editor_plugins/header/cover_editor.dart';
-import 'package:appflowy/plugins/document/presentation/editor_plugins/header/document_header_node_widget.dart';
+import 'package:appflowy/plugins/document/presentation/editor_plugins/header/cover_title.dart';
+import 'package:appflowy/plugins/document/presentation/editor_plugins/header/document_cover_widget.dart';
 import 'package:appflowy/plugins/document/presentation/editor_plugins/header/emoji_icon_widget.dart';
 import 'package:appflowy/plugins/document/presentation/editor_plugins/image/upload_image_menu/widgets/embed_image_url_widget.dart';
 import 'package:appflowy/plugins/inline_actions/widgets/inline_actions_handler.dart';
@@ -15,8 +19,6 @@ import 'package:appflowy/shared/icon_emoji_picker/emoji_skin_tone.dart';
 import 'package:appflowy/shared/icon_emoji_picker/flowy_icon_emoji_picker.dart';
 import 'package:appflowy_editor/appflowy_editor.dart';
 import 'package:easy_localization/easy_localization.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_emoji_mart/flutter_emoji_mart.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -43,7 +45,10 @@ class EditorOperations {
   Future<void> tapLineOfEditorAt(int index) async {
     final textBlocks = find.byType(AppFlowyRichText);
     index = index.clamp(0, textBlocks.evaluate().length - 1);
-    await tester.tapAt(tester.getTopRight(textBlocks.at(index)));
+    final center = tester.getCenter(textBlocks.at(index));
+    final right = tester.getTopRight(textBlocks.at(index));
+    final centerRight = Offset(right.dx, center.dy);
+    await tester.tapAt(centerRight);
     await tester.pumpAndSettle();
   }
 
@@ -211,7 +216,7 @@ class EditorOperations {
   }
 
   /// Update the editor's selection
-  Future<void> updateSelection(Selection selection) async {
+  Future<void> updateSelection(Selection? selection) async {
     final editorState = getCurrentEditorState();
     unawaited(
       editorState.updateSelectionWithReason(
@@ -322,5 +327,28 @@ class EditorOperations {
       },
     );
     await tester.pumpAndSettle(Durations.short1);
+  }
+
+  Finder findDocumentTitle(String title) {
+    return find.descendant(
+      of: find.byType(CoverTitle),
+      matching: find.byWidgetPredicate(
+        (widget) {
+          if (widget is! TextField) {
+            return false;
+          }
+
+          if (widget.controller?.text == title) {
+            return true;
+          }
+
+          if (title.isEmpty) {
+            return widget.controller?.text.isEmpty ?? false;
+          }
+
+          return false;
+        },
+      ),
+    );
   }
 }

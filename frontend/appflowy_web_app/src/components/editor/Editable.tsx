@@ -1,16 +1,18 @@
 import { useDecorate } from '@/components/editor/components/blocks/code/useDecorate';
 import { Leaf } from '@/components/editor/components/leaf';
 import { useEditorContext } from '@/components/editor/EditorContext';
+import { useShortcuts } from '@/components/editor/shortcut.hooks';
 import React, { Suspense, useCallback } from 'react';
-import { NodeEntry } from 'slate';
-import { Editable, ReactEditor, RenderElementProps } from 'slate-react';
+import { NodeEntry, Range } from 'slate';
+import { Editable, RenderElementProps, useSlate } from 'slate-react';
 import { Element } from './components/element';
 import { Skeleton } from '@mui/material';
 
-const EditorEditable = ({ editor }: { editor: ReactEditor }) => {
+const EditorEditable = () => {
   const { readOnly } = useEditorContext();
-  const codeDecorate = useDecorate(editor);
+  const editor = useSlate();
 
+  const codeDecorate = useDecorate(editor);
   const renderElement = useCallback((props: RenderElementProps) => {
     return (
       <Suspense fallback={<Skeleton width={'100%'} height={24} />}>
@@ -18,6 +20,19 @@ const EditorEditable = ({ editor }: { editor: ReactEditor }) => {
       </Suspense>
     );
   }, []);
+
+  const {
+    onKeyDown,
+  } = useShortcuts(editor);
+
+  const onCompositionStart = useCallback(() => {
+    const { selection } = editor;
+
+    if (!selection) return;
+    if (Range.isExpanded(selection)) {
+      editor.delete();
+    }
+  }, [editor]);
 
   return (
     <>
@@ -35,6 +50,8 @@ const EditorEditable = ({ editor }: { editor: ReactEditor }) => {
         spellCheck={false}
         autoCorrect={'off'}
         autoComplete={'off'}
+        onCompositionStart={onCompositionStart}
+        onKeyDown={onKeyDown}
       />
     </>
   );

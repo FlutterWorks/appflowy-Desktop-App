@@ -1,3 +1,4 @@
+use collab_database::fields::media_type_option::MediaCellData;
 use collab_database::rows::{Cell, CoverType, RowCover, RowId};
 use lib_infra::box_any::BoxAny;
 use std::sync::{Arc, Weak};
@@ -10,8 +11,8 @@ use lib_dispatch::prelude::{af_spawn, data_result_ok, AFPluginData, AFPluginStat
 use crate::entities::*;
 use crate::manager::DatabaseManager;
 use crate::services::field::{
-  type_option_data_from_pb, ChecklistCellChangeset, DateCellChangeset, MediaCellData,
-  RelationCellChangeset, SelectOptionCellChangeset, TypeOptionCellExt,
+  type_option_data_from_pb, ChecklistCellChangeset, DateCellChangeset, RelationCellChangeset,
+  SelectOptionCellChangeset, TypeOptionCellExt,
 };
 use crate::services::group::GroupChangeset;
 use crate::services::share::csv::CSVFormat;
@@ -265,7 +266,7 @@ pub(crate) async fn update_field_handler(
   manager: AFPluginState<Weak<DatabaseManager>>,
 ) -> Result<(), FlowyError> {
   let manager = upgrade_manager(manager)?;
-  let params: FieldChangesetParams = data.into_inner().try_into()?;
+  let params = data.try_into_inner()?;
   let database_editor = manager
     .get_database_editor_with_view_id(&params.view_id)
     .await?;
@@ -333,7 +334,6 @@ pub(crate) async fn switch_to_field_handler(
   let database_editor = manager
     .get_database_editor_with_view_id(&params.view_id)
     .await?;
-  let old_field = database_editor.get_field(&params.field_id).await;
   database_editor
     .switch_to_field_type(
       &params.view_id,
@@ -343,22 +343,6 @@ pub(crate) async fn switch_to_field_handler(
     )
     .await?;
 
-  if let Some(new_type_option) = database_editor
-    .get_field(&params.field_id)
-    .await
-    .map(|field| field.get_any_type_option(field.field_type))
-  {
-    match (old_field, new_type_option) {
-      (Some(old_field), Some(new_type_option)) => {
-        database_editor
-          .update_field_type_option(&params.field_id, new_type_option, old_field)
-          .await?;
-      },
-      _ => {
-        tracing::warn!("Old field and the new type option should not be empty");
-      },
-    }
-  }
   Ok(())
 }
 
@@ -1352,6 +1336,7 @@ pub(crate) async fn update_media_cell_handler(
   let row_meta = database_editor
     .get_row_meta(&cell_id.view_id, &cell_id.row_id)
     .await;
+
   if let (Some(row_meta), Some(file)) = (row_meta, image_file) {
     let row_meta = row_meta.clone();
     if row_meta.cover.is_none() {
@@ -1445,7 +1430,7 @@ pub(crate) async fn rename_media_cell_file_handler(
       &cell_id.view_id,
       &cell_id.row_id,
       &cell_id.field_id,
-      Cell::from(&new_data),
+      Cell::from(new_data),
     )
     .await;
 
