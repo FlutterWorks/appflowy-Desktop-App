@@ -1,3 +1,4 @@
+import { DocumentTest, FromBlockJSON } from 'cypress/support/document';
 import React from 'react';
 
 import Editor, { EditorProps } from '@/components/editor/Editor';
@@ -31,7 +32,7 @@ export const moveToLineStart = (lineIndex: number) => {
 export const moveCursor = (lineIndex: number, charIndex: number) => {
   moveToLineStart(lineIndex);
   // Move the cursor with right arrow key and batch the movement
-  const batchSize = 5;
+  const batchSize = 1;
   const batches = Math.ceil(charIndex / batchSize);
 
   for (let i = 0; i < batches; i++) {
@@ -39,7 +40,7 @@ export const moveCursor = (lineIndex: number, charIndex: number) => {
 
     cy.get('@targetBlock')
       .type('{rightarrow}'.repeat(remainingMoves))
-      .wait(50);
+      .wait(20);
   }
 };
 
@@ -49,4 +50,29 @@ export const moveAndEnter = (lineIndex: number, moveCount: number) => {
   moveCursor(lineIndex, moveCount);
 
   cy.get('@targetBlock').type('{enter}');
+};
+
+export const initialEditorTest = () => {
+  let documentTest: DocumentTest;
+
+  const initializeEditor = (data: FromBlockJSON[]) => {
+    documentTest = new DocumentTest();
+    documentTest.fromJSON(data);
+    mountEditor({ readOnly: false, doc: documentTest.doc });
+    cy.get('[role="textbox"]').should('exist');
+  };
+
+  const assertJSON = (expectedJSON: FromBlockJSON[]) => {
+    cy.wrap(null).then(() => {
+      const finalJSON = documentTest.toJSON();
+
+      expect(finalJSON).to.deep.equal(expectedJSON);
+    });
+  };
+
+  return {
+    initializeEditor,
+    assertJSON,
+  };
+
 };

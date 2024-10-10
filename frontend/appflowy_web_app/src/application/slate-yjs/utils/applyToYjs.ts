@@ -1,4 +1,3 @@
-import { CustomEditor } from '@/application/slate-yjs/command';
 import { EditorMarkFormat } from '@/application/slate-yjs/types';
 import { calculateOffsetRelativeToParent } from '@/application/slate-yjs/utils/positions';
 import { getBlock, getNodeAtPath, getText } from '@/application/slate-yjs/utils/yjsOperations';
@@ -55,8 +54,10 @@ function getAttributesAtOffset (ytext: Y.Text, offset: number): object | null {
 
 function insertText (ydoc: Y.Doc, editor: Editor, { path, offset, text, attributes }: InsertTextOperation & {
   attributes?: object;
-}) {
-  const node = findSlateNode(editor, path);
+}, slateContent: Descendant[]) {
+  const node = getNodeAtPath(slateContent, path.slice(0, -1)) as Element;
+
+  console.log('insertText', node, slateContent);
   const textId = node.textId as string;
   const sharedRoot = ydoc.getMap(YjsEditorKey.data_section) as YSharedRoot;
   const yText = getText(textId, sharedRoot);
@@ -65,9 +66,11 @@ function insertText (ydoc: Y.Doc, editor: Editor, { path, offset, text, attribut
   const point = { path, offset };
 
   const relativeOffset = Math.min(calculateOffsetRelativeToParent(node, point), yText.toJSON().length);
+
+  console.log('insertText', point, node);
   const beforeAttributes = getAttributesAtOffset(yText, relativeOffset - 1);
 
-  console.log('beforeAttributes', beforeAttributes);
+  console.log('beforeAttributes', relativeOffset, beforeAttributes);
 
   if (beforeAttributes && ('formula' in beforeAttributes || 'mention' in beforeAttributes)) {
     const newAttributes = {
@@ -76,13 +79,13 @@ function insertText (ydoc: Y.Doc, editor: Editor, { path, offset, text, attribut
 
     if ('formula' in beforeAttributes) {
       Object.assign({
-        formula: undefined,
+        formula: null,
       });
     }
 
     if ('mention' in beforeAttributes) {
       Object.assign({
-        mention: undefined,
+        mention: null,
       });
     }
 
@@ -95,13 +98,13 @@ function insertText (ydoc: Y.Doc, editor: Editor, { path, offset, text, attribut
 
 }
 
-function applyInsertText (ydoc: Y.Doc, editor: Editor, op: InsertTextOperation, _slateContent: Descendant[]) {
+function applyInsertText (ydoc: Y.Doc, editor: Editor, op: InsertTextOperation, slateContent: Descendant[]) {
   const { path, offset, text } = op;
 
-  insertText(ydoc, editor, { path, offset, text, type: 'insert_text' });
+  insertText(ydoc, editor, { path, offset, text, type: 'insert_text' }, slateContent);
 }
 
-function applyInsertNode (ydoc: Y.Doc, editor: Editor, op: InsertNodeOperation, _slateContent: Descendant[]) {
+function applyInsertNode (ydoc: Y.Doc, editor: Editor, op: InsertNodeOperation, slateContent: Descendant[]) {
   const { path, node } = op;
 
   if (!Text.isText(node)) return;
@@ -109,8 +112,8 @@ function applyInsertNode (ydoc: Y.Doc, editor: Editor, op: InsertNodeOperation, 
   const offset = 0;
 
   insertText(ydoc, editor, {
-    path, offset, text, type: 'insert_text',
-  });
+    path, offset, text, type: 'insert_text', attributes: {},
+  }, slateContent);
 }
 
 function applyRemoveText (ydoc: Y.Doc, editor: Editor, op: RemoveTextOperation, slateContent: Descendant[]) {
@@ -134,19 +137,12 @@ function applyRemoveText (ydoc: Y.Doc, editor: Editor, op: RemoveTextOperation, 
   yText.delete(relativeOffset, text.length);
 }
 
-function findSlateNode (editor: Editor, path: number[]): Element {
-  const entry = CustomEditor.findTextNode(editor, path);
-
-  return entry[0];
-}
-
 function applySetNode (ydoc: Y.Doc, editor: Editor, op: SetNodeOperation, slateContent: Descendant[]) {
-  const { newProperties, path } = op;
+  const { newProperties, path, properties } = op;
   const leafKeys = Object.values(EditorMarkFormat) as string[];
-  const properties = Object.keys(newProperties);
 
-  const isLeaf = properties.some((prop: string) => leafKeys.includes(prop));
-  const isData = properties.some((prop: string) => prop === 'data');
+  const isLeaf = Object.keys(newProperties).some((prop: string) => leafKeys.includes(prop)) || (Object.keys(newProperties).length === 0 && Object.keys(properties).some((prop: string) => leafKeys.includes(prop)));
+  const isData = Object.keys(newProperties).some((prop: string) => prop === 'data');
   const sharedRoot = ydoc.getMap(YjsEditorKey.data_section) as YSharedRoot;
 
   console.log('applySetNode isLeaf', isLeaf, op);
@@ -157,14 +153,32 @@ function applySetNode (ydoc: Y.Doc, editor: Editor, op: SetNodeOperation, slateC
     if (!textId) return;
 
     const yText = getText(textId, sharedRoot);
-    const [start, end] = Editor.edges(editor, path);
+    const start = {
+      path,
+      offset: 0,
+    };
+    const end = {
+      path,
+      offset: (getNodeAtPath(slateContent, path) as Text).text.length,
+    };
 
     const startRelativeOffset = Math.min(calculateOffsetRelativeToParent(node, start), yText.toJSON().length);
     const endRelativeOffset = Math.min(calculateOffsetRelativeToParent(node, end), yText.toJSON().length);
 
     const length = endRelativeOffset - startRelativeOffset;
 
-    yText.format(startRelativeOffset, length, newProperties);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const formats: Record<string, any> = {
+      ...newProperties,
+    };
+
+    Object.entries(properties).forEach(([key, val]) => {
+      if (val && !(key in newProperties)) {
+        formats[key] = null;
+      }
+    });
+
+    yText.format(startRelativeOffset, length, formats);
     return;
   }
 
