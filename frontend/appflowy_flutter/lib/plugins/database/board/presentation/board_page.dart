@@ -292,6 +292,14 @@ class _BoardContentState extends State<_BoardContent> {
               ready: (value) {
                 widget.onEditStateChanged?.call();
               },
+              openRowDetail: (value) {
+                _openCard(
+                  context: context,
+                  databaseController:
+                      context.read<BoardBloc>().databaseController,
+                  rowMeta: value.rowMeta,
+                );
+              },
               orElse: () {},
             );
           },
@@ -526,7 +534,9 @@ class _BoardColumnFooterState extends State<BoardColumnFooter> {
               color: Theme.of(context).hintColor,
             ),
             onTap: () {
-              setState(() => _isCreating = true);
+              context
+                  .read<BoardActionsCubit>()
+                  .startCreateBottomRow(widget.columnData.id);
             },
           ),
         ),

@@ -75,11 +75,10 @@ class AutoCompletionBlockComponentBuilder extends BlockComponentBuilder {
   }
 
   @override
-  bool validate(Node node) {
-    return node.children.isEmpty &&
-        node.attributes[AutoCompletionBlockKeys.prompt] is String &&
-        node.attributes[AutoCompletionBlockKeys.startSelection] is Map;
-  }
+  BlockComponentValidate get validate => (node) =>
+      node.children.isEmpty &&
+      node.attributes[AutoCompletionBlockKeys.prompt] is String &&
+      node.attributes[AutoCompletionBlockKeys.startSelection] is Map;
 }
 
 class AutoCompletionBlockComponent extends BlockComponentStatefulWidget {
@@ -195,7 +194,7 @@ class _AutoCompletionBlockComponentState
     final transaction = editorState.transaction..deleteNode(widget.node);
     await editorState.apply(
       transaction,
-      options: const ApplyOptions(recordUndo: false),
+      options: const ApplyOptions(recordUndo: false, inMemoryUpdate: true),
       withUpdateSelection: false,
     );
   }
@@ -232,6 +231,8 @@ class _AutoCompletionBlockComponentState
       onProcess: (text) async {
         await textRobot.autoInsertText(
           text,
+          separator: r'\n\n',
+          inputType: TextRobotInputType.sentence,
           delay: Duration.zero,
         );
       },
@@ -268,7 +269,10 @@ class _AutoCompletionBlockComponentState
           start,
           end.last - start.last + 1,
         );
-        await editorState.apply(transaction);
+        await editorState.apply(
+          transaction,
+          options: const ApplyOptions(inMemoryUpdate: true),
+        );
         await _makeSurePreviousNodeIsEmptyParagraphNode();
       }
     }
@@ -319,6 +323,8 @@ class _AutoCompletionBlockComponentState
       onProcess: (text) async {
         await textRobot.autoInsertText(
           text,
+          inputType: TextRobotInputType.sentence,
+          separator: r'\n\n',
           delay: Duration.zero,
         );
       },
@@ -395,12 +401,13 @@ class _AutoCompletionBlockComponentState
 
   Future<void> _makeSurePreviousNodeIsEmptyParagraphNode() async {
     // make sure the previous node is a empty paragraph node without any styles.
-    final transaction = editorState.transaction;
+
     final previous = widget.node.previous;
     final Selection selection;
     if (previous == null ||
         previous.type != ParagraphBlockKeys.type ||
         (previous.delta?.toPlainText().isNotEmpty ?? false)) {
+      final transaction = editorState.transaction;
       selection = Selection.single(
         path: widget.node.path,
         startOffset: 0,
@@ -409,17 +416,22 @@ class _AutoCompletionBlockComponentState
         widget.node.path,
         paragraphNode(),
       );
+      await editorState.apply(transaction);
     } else {
       selection = Selection.single(
         path: previous.path,
         startOffset: 0,
       );
     }
+    final transaction = editorState.transaction;
     transaction.updateNode(widget.node, {
       AutoCompletionBlockKeys.startSelection: selection.toJson(),
     });
     transaction.afterSelection = selection;
-    await editorState.apply(transaction);
+    await editorState.apply(
+      transaction,
+      options: const ApplyOptions(inMemoryUpdate: true),
+    );
   }
 
   void _subscribeSelectionGesture() {

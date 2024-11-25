@@ -4,10 +4,13 @@ import 'package:appflowy/core/config/kv.dart';
 import 'package:appflowy/core/config/kv_keys.dart';
 import 'package:appflowy/generated/flowy_svgs.g.dart';
 import 'package:appflowy/generated/locale_keys.g.dart';
+import 'package:appflowy/mobile/presentation/base/type_option_menu_item.dart';
 import 'package:appflowy/mobile/presentation/presentation.dart';
 import 'package:appflowy/plugins/document/presentation/editor_plugins/base/emoji_picker_button.dart';
+import 'package:appflowy/plugins/document/presentation/editor_plugins/mobile_toolbar_v3/add_block_toolbar_item.dart';
 import 'package:appflowy/plugins/shared/share/share_button.dart';
 import 'package:appflowy/shared/feature_flags.dart';
+import 'package:appflowy/shared/text_field/text_filed_with_metric_lines.dart';
 import 'package:appflowy/startup/startup.dart';
 import 'package:appflowy/user/presentation/screens/screens.dart';
 import 'package:appflowy/user/presentation/screens/sign_in_screen/widgets/widgets.dart';
@@ -41,6 +44,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:universal_platform/universal_platform.dart';
 
 import 'emoji.dart';
 import 'util.dart';
@@ -185,6 +189,21 @@ extension CommonOperations on WidgetTester {
     }
   }
 
+  /// Right click on the page name.
+  Future<void> rightClickOnPageName(
+    String name, {
+    ViewLayoutPB layout = ViewLayoutPB.Document,
+  }) async {
+    final page = findPageName(name, layout: layout);
+    await hoverOnPageName(
+      name,
+      onHover: () async {
+        await tap(page, buttons: kSecondaryMouseButton);
+        await pumpAndSettle();
+      },
+    );
+  }
+
   /// open the page with given name.
   Future<void> openPage(
     String name, {
@@ -199,7 +218,10 @@ extension CommonOperations on WidgetTester {
   ///
   /// Must call [hoverOnPageName] first.
   Future<void> tapPageOptionButton() async {
-    final optionButton = find.byType(ViewMoreActionButton);
+    final optionButton = find.descendant(
+      of: find.byType(ViewMoreActionPopover),
+      matching: find.byFlowySvg(FlowySvgs.workspace_three_dots_s),
+    );
     await tapButton(optionButton);
   }
 
@@ -297,6 +319,15 @@ extension CommonOperations on WidgetTester {
     await tapButton(shareButton);
   }
 
+  // open the share menu and then click the publish tab
+  Future<void> openPublishMenu() async {
+    await tapShareButton();
+    final publishButton = find.textContaining(
+      LocaleKeys.shareAction_publishTab.tr(),
+    );
+    await tapButton(publishButton);
+  }
+
   /// Tap the export markdown button
   ///
   /// Must call [tapShareButton] first.
@@ -348,6 +379,32 @@ extension CommonOperations on WidgetTester {
       );
       await pumpAndSettle();
     }
+  }
+
+  Future<void> createOpenRenameDocumentUnderParent({
+    required String name,
+    String? parentName,
+  }) async {
+    // create a new page
+    await tapAddViewButton(name: parentName ?? gettingStarted);
+    await tapButtonWithName(ViewLayoutPB.Document.menuName);
+    final settingsOrFailure = await getIt<KeyValueStorage>().getWithFormat(
+      KVKeys.showRenameDialogWhenCreatingNewFile,
+      (value) => bool.parse(value),
+    );
+    final showRenameDialog = settingsOrFailure ?? false;
+    if (showRenameDialog) {
+      await tapOKButton();
+    }
+    await pumpAndSettle();
+
+    // open the page after created
+    await openPage(ViewLayoutPB.Document.defaultName);
+    await pumpAndSettle();
+
+    // Enter new name in the document title
+    await enterText(find.byType(TextFieldWithMetricLines), name);
+    await pumpAndSettle();
   }
 
   /// Create a new page in the space
@@ -721,6 +778,69 @@ extension CommonOperations on WidgetTester {
     await tap(button);
     await pump();
   }
+
+  Future<void> tapFileUploadHint() async {
+    final finder = find.byWidgetPredicate(
+      (w) =>
+          w is RichText &&
+          w.text.toPlainText().contains(
+                LocaleKeys.document_plugins_file_fileUploadHint.tr(),
+              ),
+    );
+    await tap(finder);
+    await pumpAndSettle(const Duration(seconds: 2));
+  }
+
+  /// Create a new document on mobile
+  Future<void> createNewDocumentOnMobile(String name) async {
+    final createPageButton = find.byKey(
+      BottomNavigationBarItemType.add.valueKey,
+    );
+    await tapButton(createPageButton);
+    expect(find.byType(MobileDocumentScreen), findsOneWidget);
+
+    final title = editor.findDocumentTitle('');
+    expect(title, findsOneWidget);
+    final textField = widget<TextField>(title);
+    expect(textField.focusNode!.hasFocus, isTrue);
+
+    // input new name and press done button
+    await enterText(title, name);
+    await testTextInput.receiveAction(TextInputAction.done);
+    await pumpAndSettle();
+    final newTitle = editor.findDocumentTitle(name);
+    expect(newTitle, findsOneWidget);
+    expect(textField.controller!.text, name);
+  }
+
+  /// Open the plus menu
+  Future<void> openPlusMenuAndClickButton(String buttonName) async {
+    assert(
+      UniversalPlatform.isMobile,
+      'This method is only supported on mobile platforms',
+    );
+
+    final plusMenuButton = find.byKey(addBlockToolbarItemKey);
+    final addMenuItem = find.byType(AddBlockMenu);
+    await tapButton(plusMenuButton);
+    await pumpUntilFound(addMenuItem);
+
+    final toggleHeading1 = find.byWidgetPredicate(
+      (widget) =>
+          widget is TypeOptionMenuItem && widget.value.text == buttonName,
+    );
+    final scrollable = find.ancestor(
+      of: find.byType(TypeOptionGridView),
+      matching: find.byType(Scrollable),
+    );
+    await scrollUntilVisible(
+      toggleHeading1,
+      100,
+      scrollable: scrollable,
+    );
+    await tapButton(toggleHeading1);
+    await pumpUntilNotFound(addMenuItem);
+  }
 }
 
 extension SettingsFinder on CommonFinders {
@@ -747,6 +867,25 @@ extension SettingsFinder on CommonFinders {
         matching: find.byType(Scrollable),
       )
       .first;
+}
+
+extension FlowySvgFinder on CommonFinders {
+  Finder byFlowySvg(FlowySvgData svg) => _FlowySvgFinder(svg);
+}
+
+class _FlowySvgFinder extends MatchFinder {
+  _FlowySvgFinder(this.svg);
+
+  final FlowySvgData svg;
+
+  @override
+  String get description => 'flowy_svg "$svg"';
+
+  @override
+  bool matches(Element candidate) {
+    final Widget widget = candidate.widget;
+    return widget is FlowySvg && widget.svg == svg;
+  }
 }
 
 extension ViewLayoutPBTest on ViewLayoutPB {

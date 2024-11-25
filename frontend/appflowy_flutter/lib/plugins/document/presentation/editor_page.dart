@@ -6,10 +6,12 @@ import 'package:appflowy/plugins/document/presentation/editor_plugins/background
 import 'package:appflowy/plugins/document/presentation/editor_plugins/i18n/editor_i18n.dart';
 import 'package:appflowy/plugins/document/presentation/editor_plugins/plugins.dart';
 import 'package:appflowy/plugins/document/presentation/editor_style.dart';
+import 'package:appflowy/plugins/inline_actions/handlers/child_page.dart';
 import 'package:appflowy/plugins/inline_actions/handlers/date_reference.dart';
 import 'package:appflowy/plugins/inline_actions/handlers/inline_page_reference.dart';
 import 'package:appflowy/plugins/inline_actions/handlers/reminder_reference.dart';
 import 'package:appflowy/plugins/inline_actions/inline_actions_service.dart';
+import 'package:appflowy/shared/feature_flags.dart';
 import 'package:appflowy/workspace/application/settings/appearance/appearance_cubit.dart';
 import 'package:appflowy/workspace/application/settings/shortcuts/settings_shortcuts_service.dart';
 import 'package:appflowy/workspace/application/view_info/view_info_bloc.dart';
@@ -17,7 +19,6 @@ import 'package:appflowy/workspace/presentation/home/af_focus_manager.dart';
 import 'package:appflowy_editor/appflowy_editor.dart';
 import 'package:collection/collection.dart';
 import 'package:flowy_infra/theme_extension.dart';
-import 'package:flowy_infra_ui/flowy_infra_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -64,6 +65,8 @@ class _AppFlowyEditorPageState extends State<AppFlowyEditorPage>
   late final InlineActionsService inlineActionsService = InlineActionsService(
     context: context,
     handlers: [
+      if (FeatureFlag.inlineSubPageMention.isOn)
+        InlineChildPageService(currentViewId: documentBloc.documentId),
       InlinePageReferenceService(currentViewId: documentBloc.documentId),
       DateReferenceService(context),
       ReminderReferenceService(context),
@@ -177,14 +180,54 @@ class _AppFlowyEditorPageState extends State<AppFlowyEditorPage>
       focusManager = AFFocusManager.maybeOf(context);
       focusManager?.loseFocusNotifier.addListener(_loseFocus);
 
-      if (widget.initialSelection != null) {
-        widget.editorState.updateSelectionWithReason(widget.initialSelection);
-      }
+      _scrollToSelectionIfNeeded();
 
       widget.editorState.service.keyboardService?.registerInterceptor(
         editorKeyboardInterceptor,
       );
     });
+  }
+
+  void _scrollToSelectionIfNeeded() {
+    final initialSelection = widget.initialSelection;
+    final path = initialSelection?.start.path;
+    if (path == null) {
+      return;
+    }
+
+    // on desktop, using jumpTo to scroll to the selection.
+    // on mobile, using scrollTo to scroll to the selection, because using jumpTo will break the scroll notification metrics.
+    if (UniversalPlatform.isDesktop) {
+      editorScrollController.itemScrollController.jumpTo(
+        index: path.first,
+        alignment: 0.5,
+      );
+      widget.editorState.updateSelectionWithReason(
+        initialSelection,
+      );
+    } else {
+      const delayDuration = Duration(milliseconds: 250);
+      const animationDuration = Duration(milliseconds: 400);
+      Future.delayed(delayDuration, () {
+        editorScrollController.itemScrollController.scrollTo(
+          index: path.first,
+          duration: animationDuration,
+          curve: Curves.easeInOut,
+        );
+        widget.editorState.updateSelectionWithReason(
+          initialSelection,
+          extraInfo: {
+            selectionExtraInfoDoNotAttachTextService: true,
+            selectionExtraInfoDisableMobileToolbarKey: true,
+          },
+        );
+      }).then((_) {
+        Future.delayed(animationDuration, () {
+          widget.editorState.selectionType = SelectionType.inline;
+          widget.editorState.selectionExtraInfo = null;
+        });
+      });
+    }
   }
 
   void onSelectionChanged() {
@@ -270,10 +313,12 @@ class _AppFlowyEditorPageState extends State<AppFlowyEditorPage>
       context.read<AppearanceSettingsCubit>().state.enableRtlToolbarItems,
     );
 
+    final isViewDeleted = context.read<DocumentBloc>().state.isDeleted;
     final editor = Directionality(
       textDirection: textDirection,
       child: AppFlowyEditor(
         editorState: widget.editorState,
+        editable: !isViewDeleted,
         editorScrollController: editorScrollController,
         // setup the auto focus parameters
         autoFocus: widget.autoFocus ?? autoFocus,
@@ -281,7 +326,7 @@ class _AppFlowyEditorPageState extends State<AppFlowyEditorPage>
         // setup the theme
         editorStyle: styleCustomizer.style(),
         // customize the block builders
-        blockComponentBuilders: getEditorBuilderMap(
+        blockComponentBuilders: buildBlockComponentBuilders(
           slashMenuItems: slashMenuItems,
           context: context,
           editorState: widget.editorState,
@@ -302,7 +347,10 @@ class _AppFlowyEditorPageState extends State<AppFlowyEditorPage>
             // if the last one isn't a empty node, insert a new empty node.
             await _focusOnLastEmptyParagraph();
           },
-          child: VSpace(UniversalPlatform.isDesktopOrWeb ? 200 : 400),
+          child: SizedBox(
+            width: double.infinity,
+            height: UniversalPlatform.isDesktopOrWeb ? 200 : 400,
+          ),
         ),
         dropTargetStyle: AppFlowyDropTargetStyle(
           color: Theme.of(context).colorScheme.primary.withOpacity(0.8),
@@ -310,6 +358,10 @@ class _AppFlowyEditorPageState extends State<AppFlowyEditorPage>
         ),
       ),
     );
+
+    if (isViewDeleted) {
+      return editor;
+    }
 
     final editorState = widget.editorState;
 
@@ -352,8 +404,9 @@ class _AppFlowyEditorPageState extends State<AppFlowyEditorPage>
   }
 
   List<SelectionMenuItem> _customSlashMenuItems() {
+    final isLocalMode = context.read<DocumentBloc>().isLocalMode;
     return [
-      aiWriterSlashMenuItem,
+      if (!isLocalMode) aiWriterSlashMenuItem,
       textSlashMenuItem,
       heading1SlashMenuItem,
       heading2SlashMenuItem,
@@ -377,12 +430,14 @@ class _AppFlowyEditorPageState extends State<AppFlowyEditorPage>
       mathEquationSlashMenuItem,
       codeBlockSlashMenuItem,
       toggleListSlashMenuItem,
+      toggleHeading1SlashMenuItem,
+      toggleHeading2SlashMenuItem,
+      toggleHeading3SlashMenuItem,
       emojiSlashMenuItem,
       dateOrReminderSlashMenuItem,
       photoGallerySlashMenuItem,
       fileSlashMenuItem,
-      // disable subPageSlashMenuItem temporarily, enable it in version 0.7.2
-      // subPageSlashMenuItem,
+      subPageSlashMenuItem,
     ];
   }
 
@@ -433,6 +488,7 @@ class _AppFlowyEditorPageState extends State<AppFlowyEditorPage>
               borderRadius: BorderRadius.circular(4),
             ),
             child: FindAndReplaceMenuWidget(
+              showReplaceMenu: showReplaceMenu,
               editorState: editorState,
               onDismiss: onDismiss,
             ),

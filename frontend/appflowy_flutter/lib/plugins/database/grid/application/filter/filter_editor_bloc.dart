@@ -80,12 +80,8 @@ class FilterEditorBloc extends Bloc<FilterEditorEvent, FilterEditorState> {
     };
 
     fieldController.addListener(
-      onFilters: (filters) {
-        _onFilterFn?.call(filters);
-      },
-      onReceiveFields: (fields) {
-        _onFieldFn?.call(fields);
-      },
+      onFilters: _onFilterFn,
+      onReceiveFields: _onFieldFn,
     );
   }
 
@@ -117,7 +113,10 @@ class FilterEditorBloc extends Bloc<FilterEditorEvent, FilterEditorState> {
       case FieldType.DateTime:
       case FieldType.LastEditedTime:
       case FieldType.CreatedTime:
-        final timestamp = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+        final now = DateTime.now();
+        final timestamp =
+            DateTime(now.year, now.month, now.day).millisecondsSinceEpoch ~/
+                1000;
         return _filterBackendSvc.insertDateFilter(
           filterId: filterId,
           fieldId: fieldId,

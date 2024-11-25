@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:appflowy/plugins/document/application/document_bloc.dart';
 import 'package:appflowy/plugins/document/application/document_data_pb_extension.dart';
 import 'package:appflowy/plugins/document/application/document_service.dart';
+import 'package:appflowy/plugins/document/presentation/editor_plugins/openai/widgets/smart_edit_node_widget.dart';
 import 'package:appflowy_backend/log.dart';
 import 'package:appflowy_backend/protobuf/flowy-document/protobuf.dart';
 import 'package:appflowy_editor/appflowy_editor.dart'
@@ -175,6 +176,10 @@ extension on InsertOperation {
     Path currentPath = path;
     final List<BlockActionWrapper> actions = [];
     for (final node in nodes) {
+      if (node.type == SmartEditBlockKeys.type) {
+        continue;
+      }
+
       final parentId = node.parent?.id ??
           editorState.getNodeAtPath(currentPath.parent)?.id ??
           '';
@@ -281,8 +286,8 @@ extension on UpdateOperation {
     assert(parentId.isNotEmpty);
 
     // create the external text if the node contains the delta in its data.
-    final prevDelta = oldAttributes['delta'];
-    final delta = attributes['delta'];
+    final prevDelta = oldAttributes[blockComponentDelta];
+    final delta = attributes[blockComponentDelta];
     final diff = prevDelta != null && delta != null
         ? Delta.fromJson(prevDelta).diff(
             Delta.fromJson(delta),
@@ -290,6 +295,7 @@ extension on UpdateOperation {
         : null;
 
     final composedAttributes = composeAttributes(oldAttributes, attributes);
+    final composedDelta = composedAttributes?[blockComponentDelta];
     composedAttributes?.remove(blockComponentDelta);
 
     final payload = BlockActionPayloadPB()
@@ -306,12 +312,13 @@ extension on UpdateOperation {
     if (textId == null || textId.isEmpty) {
       // to be compatible with the old version, we create a new text id if the text id is empty.
       final textId = nanoid(6);
-      final textDeltaPayloadPB = delta == null
+      final textDelta = composedDelta ?? delta ?? prevDelta;
+      final textDeltaPayloadPB = textDelta == null
           ? null
           : TextDeltaPayloadPB(
               documentId: documentId,
               textId: textId,
-              delta: jsonEncode(delta),
+              delta: jsonEncode(textDelta),
             );
 
       node.externalValues = ExternalValues(

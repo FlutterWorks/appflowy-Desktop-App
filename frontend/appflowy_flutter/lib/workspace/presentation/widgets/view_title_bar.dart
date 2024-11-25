@@ -12,7 +12,6 @@ import 'package:appflowy/workspace/presentation/home/menu/menu_shared_state.dart
 import 'package:appflowy/workspace/presentation/home/menu/sidebar/space/space_icon.dart';
 import 'package:appflowy/workspace/presentation/widgets/rename_view_popover.dart';
 import 'package:appflowy_backend/protobuf/flowy-folder/view.pb.dart';
-import 'package:appflowy_popover/appflowy_popover.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flowy_infra_ui/flowy_infra_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -138,9 +137,7 @@ class ViewTitleBar extends StatelessWidget {
 }
 
 class TrashBreadcrumb extends StatelessWidget {
-  const TrashBreadcrumb({
-    super.key,
-  });
+  const TrashBreadcrumb({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -148,6 +145,7 @@ class TrashBreadcrumb extends StatelessWidget {
       height: 32,
       child: FlowyButton(
         useIntrinsicWidth: true,
+        margin: const EdgeInsets.symmetric(horizontal: 6.0),
         onTap: () {
           getIt<MenuSharedState>().latestOpenView = null;
           getIt<TabsBloc>().add(
@@ -158,10 +156,14 @@ class TrashBreadcrumb extends StatelessWidget {
         },
         text: Row(
           children: [
-            const FlowySvg(FlowySvgs.trash_s),
+            const FlowySvg(FlowySvgs.trash_s, size: Size.square(14)),
             const HSpace(4.0),
-            FlowyText.regular(LocaleKeys.trash_text.tr()),
-            const HSpace(4.0),
+            FlowyText.regular(
+              LocaleKeys.trash_text.tr(),
+              fontSize: 14.0,
+              overflow: TextOverflow.ellipsis,
+              figmaLineHeight: 18.0,
+            ),
           ],
         ),
       ),

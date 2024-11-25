@@ -4,11 +4,11 @@ use std::sync::Arc;
 
 use super::notify_did_update_calculation;
 use crate::entities::{
-  CalendarEventPB, CreateRowParams, CreateRowPayloadPB, DatabaseLayoutMetaPB,
-  DatabaseLayoutSettingPB, DeleteSortPayloadPB, FieldSettingsChangesetPB, FieldType,
-  GroupChangesPB, GroupPB, InsertedRowPB, LayoutSettingChangeset, LayoutSettingParams,
-  RemoveCalculationChangesetPB, ReorderSortPayloadPB, RowMetaPB, RowsChangePB,
-  SortChangesetNotificationPB, SortPB, UpdateCalculationChangesetPB, UpdateSortPayloadPB,
+  CalendarEventPB, CreateRowPayloadPB, DatabaseLayoutMetaPB, DatabaseLayoutSettingPB,
+  DeleteSortPayloadPB, FieldSettingsChangesetPB, FieldType, GroupChangesPB, GroupPB, InsertedRowPB,
+  LayoutSettingChangeset, LayoutSettingParams, RemoveCalculationChangesetPB, ReorderSortPayloadPB,
+  RowMetaPB, RowsChangePB, SortChangesetNotificationPB, SortPB, UpdateCalculationChangesetPB,
+  UpdateSortPayloadPB,
 };
 use crate::notification::{send_notification, DatabaseNotification};
 use crate::services::calculations::{
@@ -36,7 +36,7 @@ use crate::services::sort::{Sort, SortChangeset, SortController};
 use collab_database::database::{gen_database_calculation_id, gen_database_sort_id, gen_row_id};
 use collab_database::entity::DatabaseView;
 use collab_database::fields::Field;
-use collab_database::rows::{Cells, Row, RowCell, RowDetail, RowId};
+use collab_database::rows::{Cells, CreateRowParams, Row, RowCell, RowDetail, RowId};
 use collab_database::views::{DatabaseLayout, RowOrder};
 use dashmap::DashMap;
 use flowy_error::{FlowyError, FlowyResult};
@@ -177,17 +177,14 @@ impl DatabaseViewEditor {
     let timestamp = timestamp();
     trace!("[Database]: will create row at: {:?}", params.row_position);
     let mut result = CreateRowParams {
-      collab_params: collab_database::rows::CreateRowParams {
-        id: gen_row_id(),
-        database_id: self.database_id.clone(),
-        cells: Cells::new(),
-        height: 60,
-        visibility: true,
-        row_position: params.row_position.try_into()?,
-        created_at: timestamp,
-        modified_at: timestamp,
-      },
-      open_after_create: false,
+      id: gen_row_id(),
+      database_id: self.database_id.clone(),
+      cells: Cells::new(),
+      height: 60,
+      visibility: true,
+      row_position: params.row_position.try_into()?,
+      created_at: timestamp,
+      modified_at: timestamp,
     };
 
     // fill in cells from the frontend
@@ -210,16 +207,20 @@ impl DatabaseViewEditor {
     let filter_controller = self.filter_controller.clone();
     filter_controller.fill_cells(&mut cells).await;
 
-    result.collab_params.cells = cells;
+    result.cells = cells;
     Ok(result)
   }
 
   pub async fn v_did_update_row_meta(&self, row_id: &RowId, row_detail: &RowDetail) {
-    let update_row = UpdatedRow::new(row_id.as_str()).with_row_meta(row_detail.clone());
-    let changeset = RowsChangePB::from_update(update_row.into());
-    send_notification(&self.view_id, DatabaseNotification::DidUpdateRow)
-      .payload(changeset)
-      .send();
+    let rows = vec![Arc::new(row_detail.row.clone())];
+    let mut rows = self.v_filter_rows(rows).await;
+    if rows.pop().is_some() {
+      let update_row = UpdatedRow::new(row_id.as_str()).with_row_meta(row_detail.clone());
+      let changeset = RowsChangePB::from_update(update_row.into());
+      send_notification(&self.view_id, DatabaseNotification::DidUpdateRow)
+        .payload(changeset)
+        .send();
+    }
   }
 
   pub async fn v_did_create_row(
@@ -227,7 +228,7 @@ impl DatabaseViewEditor {
     row_detail: &RowDetail,
     index: u32,
     is_move_row: bool,
-    _is_local_change: bool,
+    is_local_change: bool,
     row_changes: &DashMap<String, RowsChangePB>,
   ) {
     // Send the group notification if the current view has groups
@@ -242,23 +243,27 @@ impl DatabaseViewEditor {
       }
     }
 
-    if let Some(index) = self
+    let index = self
       .sort_controller
       .write()
       .await
       .did_create_row(&row_detail.row)
-      .await
-    {
-      row_changes
-        .entry(self.view_id.clone())
-        .or_insert_with(|| {
-          let mut change = RowsChangePB::new();
-          change.is_move_row = is_move_row;
-          change
-        })
-        .inserted_rows
-        .push(InsertedRowPB::new(RowMetaPB::from(row_detail)).with_index(index as i32));
-    };
+      .await;
+
+    row_changes
+      .entry(self.view_id.clone())
+      .or_insert_with(|| {
+        let mut change = RowsChangePB::new();
+        change.is_move_row = is_move_row;
+        change
+      })
+      .inserted_rows
+      .push(InsertedRowPB {
+        row_meta: RowMetaPB::from(row_detail),
+        index: index.map(|index| index as i32),
+        is_new: true,
+        is_hidden_in_view: is_local_change && index.is_none(),
+      });
 
     self
       .gen_did_create_row_view_tasks(row_detail.row.clone())

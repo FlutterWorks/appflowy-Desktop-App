@@ -72,7 +72,7 @@ function insertText (ydoc: Y.Doc, editor: Editor, { path, offset, text, attribut
 
   console.log('beforeAttributes', relativeOffset, beforeAttributes);
 
-  if (beforeAttributes && ('formula' in beforeAttributes || 'mention' in beforeAttributes)) {
+  if (beforeAttributes && ('formula' in beforeAttributes || 'mention' in beforeAttributes || 'href' in beforeAttributes)) {
     const newAttributes = {
       ...attributes,
     };
@@ -86,6 +86,12 @@ function insertText (ydoc: Y.Doc, editor: Editor, { path, offset, text, attribut
     if ('mention' in beforeAttributes) {
       Object.assign({
         mention: null,
+      });
+    }
+
+    if ('href' in beforeAttributes) {
+      Object.assign({
+        href: null,
       });
     }
 
@@ -123,18 +129,26 @@ function applyRemoveText (ydoc: Y.Doc, editor: Editor, op: RemoveTextOperation, 
 
   const textId = node.textId;
 
-  if (!textId) return;
+  if (!textId) {
+    console.error('textId not found', node);
+    return;
+  }
 
   const sharedRoot = ydoc.getMap(YjsEditorKey.data_section) as YSharedRoot;
   const yText = getText(textId, sharedRoot);
 
-  if (!yText) return;
+  if (!yText) {
+    console.error('yText not found', textId, sharedRoot.toJSON());
+    return;
+  }
 
   const point = { path, offset };
 
   const relativeOffset = Math.min(calculateOffsetRelativeToParent(node, point), yText.toJSON().length);
 
   yText.delete(relativeOffset, text.length);
+
+  console.log('applyRemoveText', op, yText.toDelta());
 }
 
 function applySetNode (ydoc: Y.Doc, editor: Editor, op: SetNodeOperation, slateContent: Descendant[]) {

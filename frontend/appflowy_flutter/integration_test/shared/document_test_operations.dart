@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:ui';
 
 import 'package:appflowy/generated/locale_keys.g.dart';
+import 'package:appflowy/mobile/presentation/base/view_page/app_bar_buttons.dart';
+import 'package:appflowy/mobile/presentation/widgets/flowy_mobile_quick_action_button.dart';
 import 'package:appflowy/plugins/base/emoji/emoji_picker.dart';
 import 'package:appflowy/plugins/document/presentation/editor_plugins/actions/block_action_add_button.dart';
 import 'package:appflowy/plugins/document/presentation/editor_plugins/actions/block_action_option_button.dart';
@@ -71,6 +73,20 @@ class EditorOperations {
       LocaleKeys.document_plugins_cover_addIcon.tr(),
     );
     expect(find.byType(FlowyEmojiPicker), findsOneWidget);
+  }
+
+  Future<void> paste() async {
+    if (UniversalPlatform.isMacOS) {
+      await tester.simulateKeyEvent(
+        LogicalKeyboardKey.keyV,
+        isMetaPressed: true,
+      );
+    } else {
+      await tester.simulateKeyEvent(
+        LogicalKeyboardKey.keyV,
+        isControlPressed: true,
+      );
+    }
   }
 
   Future<void> tapGettingStartedIcon() async {
@@ -179,6 +195,11 @@ class EditorOperations {
   /// trigger the mention (@) command
   Future<void> showAtMenu() async {
     await tester.ime.insertCharacter('@');
+  }
+
+  /// trigger the plus action menu (+) command
+  Future<void> showPlusMenu() async {
+    await tester.ime.insertCharacter('+');
   }
 
   /// Tap the slash menu item with [name]
@@ -293,6 +314,16 @@ class EditorOperations {
     await tester.pumpUntilFound(find.byType(TurnIntoOptionMenu));
   }
 
+  /// copy link to block
+  Future<void> copyLinkToBlock(Path path) async {
+    await hoverAndClickOptionMenuButton(path);
+    await tester.tapButton(
+      find.findTextInFlowyText(
+        LocaleKeys.document_plugins_optionAction_copyLinkToBlock.tr(),
+      ),
+    );
+  }
+
   Future<void> openDepthMenu(Path path) async {
     await hoverAndClickOptionMenuButton(path);
     await tester.tapButton(
@@ -383,5 +414,24 @@ class EditorOperations {
         },
       ),
     );
+  }
+
+  /// open the more action menu on mobile
+  Future<void> openMoreActionMenuOnMobile() async {
+    final moreActionButton = find.byType(MobileViewPageMoreButton);
+    await tester.tapButton(moreActionButton);
+    await tester.pumpAndSettle();
+  }
+
+  /// click the more action item on mobile
+  ///
+  /// rename, add collaborator, publish, delete, etc.
+  Future<void> clickMoreActionItemOnMobile(String name) async {
+    final moreActionItem = find.descendant(
+      of: find.byType(MobileQuickActionButton),
+      matching: find.findTextInFlowyText(name),
+    );
+    await tester.tapButton(moreActionItem);
+    await tester.pumpAndSettle();
   }
 }

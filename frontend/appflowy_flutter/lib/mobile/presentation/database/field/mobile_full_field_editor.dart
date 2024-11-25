@@ -224,7 +224,9 @@ class _MobileFieldEditorState extends State<MobileFieldEditor> {
             const _Divider(),
             OptionTextField(
               controller: controller,
+              autoFocus: widget.mode == FieldOptionMode.add,
               fieldType: values.type,
+              isPrimary: widget.isPrimary,
               onTextChanged: (value) {
                 isFieldNameChanged = true;
                 _updateOptionValues(name: value);

@@ -5,6 +5,7 @@ import 'package:appflowy/mobile/presentation/base/app_bar/app_bar.dart';
 import 'package:appflowy/mobile/presentation/base/view_page/app_bar_buttons.dart';
 import 'package:appflowy/mobile/presentation/presentation.dart';
 import 'package:appflowy/mobile/presentation/widgets/flowy_mobile_state_container.dart';
+import 'package:appflowy/plugins/document/application/prelude.dart';
 import 'package:appflowy/plugins/document/presentation/document_collaborators.dart';
 import 'package:appflowy/shared/feature_flags.dart';
 import 'package:appflowy/startup/plugin/plugin.dart';
@@ -29,6 +30,7 @@ class MobileViewPage extends StatefulWidget {
     this.arguments,
     this.fixedTitle,
     this.showMoreButton = true,
+    this.blockId,
   });
 
   /// view id
@@ -37,6 +39,7 @@ class MobileViewPage extends StatefulWidget {
   final String? title;
   final Map<String, dynamic>? arguments;
   final bool showMoreButton;
+  final String? blockId;
 
   // only used in row page
   final String? fixedTitle;
@@ -62,6 +65,10 @@ class _MobileViewPageState extends State<MobileViewPage> {
   @override
   void dispose() {
     _appBarOpacity.dispose();
+
+    // there's no need to remove the listener, because the observer will be disposed when the widget is unmounted.
+    // inside the observer, the listener will be removed automatically.
+    // _scrollNotificationObserver?.removeListener(_onScrollNotification);
     _scrollNotificationObserver = null;
 
     super.dispose();
@@ -93,6 +100,10 @@ class _MobileViewPageState extends State<MobileViewPage> {
               ),
               BlocProvider.value(
                 value: getIt<ReminderBloc>(),
+              ),
+              BlocProvider(
+                create: (_) =>
+                    ShareBloc(view: view)..add(const ShareEvent.initial()),
               ),
               if (view.layout.isDocumentView)
                 BlocProvider(
@@ -172,6 +183,7 @@ class _MobileViewPageState extends State<MobileViewPage> {
           context: PluginContext(userProfile: state.userProfilePB),
           data: {
             MobileDocumentScreen.viewFixedTitle: widget.fixedTitle,
+            MobileDocumentScreen.viewBlockId: widget.blockId,
           },
         );
       },
