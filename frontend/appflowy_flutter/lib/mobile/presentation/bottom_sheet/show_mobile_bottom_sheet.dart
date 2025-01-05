@@ -57,6 +57,7 @@ Future<T?> showMobileBottomSheet<T>(
   double maxChildSize = 0.8,
   double initialChildSize = 0.51,
   double bottomSheetPadding = 0,
+  bool enablePadding = true,
 }) async {
   assert(
     showHeader ||
@@ -172,14 +173,18 @@ Future<T?> showMobileBottomSheet<T>(
       }
 
       // ----- content area -----
-      // add content padding and extra bottom padding
-      children.add(
-        Padding(
-          padding:
-              padding + EdgeInsets.only(bottom: context.bottomSheetPadding()),
-          child: child,
-        ),
-      );
+      if (enablePadding) {
+        // add content padding and extra bottom padding
+        children.add(
+          Padding(
+            padding:
+                padding + EdgeInsets.only(bottom: context.bottomSheetPadding()),
+            child: child,
+          ),
+        );
+      } else {
+        children.add(child);
+      }
       // ----- content area -----
 
       if (children.length == 1) {
@@ -211,14 +216,21 @@ class BottomSheetHeader extends StatelessWidget {
     required this.showDoneButton,
     this.onRemove,
     this.onDone,
+    this.onBack,
+    this.onClose,
   });
+
+  final String title;
 
   final bool showBackButton;
   final bool showCloseButton;
   final bool showRemoveButton;
-  final String title;
   final bool showDoneButton;
+
   final VoidCallback? onRemove;
+  final VoidCallback? onBack;
+  final VoidCallback? onClose;
+
   final void Function(BuildContext context)? onDone;
 
   @override
@@ -230,14 +242,18 @@ class BottomSheetHeader extends StatelessWidget {
         child: Stack(
           children: [
             if (showBackButton)
-              const Align(
+              Align(
                 alignment: Alignment.centerLeft,
-                child: BottomSheetBackButton(),
+                child: BottomSheetBackButton(
+                  onTap: onBack,
+                ),
               ),
             if (showCloseButton)
-              const Align(
+              Align(
                 alignment: Alignment.centerLeft,
-                child: BottomSheetCloseButton(),
+                child: BottomSheetCloseButton(
+                  onTap: onClose,
+                ),
               ),
             if (showRemoveButton)
               Align(

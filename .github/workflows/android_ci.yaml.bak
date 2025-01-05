@@ -7,7 +7,6 @@ on:
     paths:
       - ".github/workflows/mobile_ci.yaml"
       - "frontend/**"
-      - "!frontend/appflowy_tauri/**"
 
   pull_request:
     branches:
@@ -20,7 +19,7 @@ on:
 env:
   CARGO_TERM_COLOR: always
   FLUTTER_VERSION: "3.22.3"
-  RUST_TOOLCHAIN: "1.80.1"
+  RUST_TOOLCHAIN: "1.81.0"
   CARGO_MAKE_VERSION: "0.37.18"
   CLOUD_VERSION: 0.6.54-amd64
 
@@ -152,7 +151,7 @@ jobs:
           rustup target install aarch64-linux-android
           rustup target install x86_64-linux-android
           rustup target add armv7-linux-androideabi
-          cargo install --force duckscript_cli
+          cargo install --force --locked duckscript_cli
           cargo install cargo-ndk
           if [ "$RUNNER_OS" == "Linux" ]; then
             sudo wget -qO /etc/apt/trusted.gpg.d/dart_linux_signing_key.asc https://dl-ssl.google.com/linux/linux_signing_key.pub

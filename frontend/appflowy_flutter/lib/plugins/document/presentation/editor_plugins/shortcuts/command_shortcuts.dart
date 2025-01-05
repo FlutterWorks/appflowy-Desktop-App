@@ -30,6 +30,7 @@ List<CommandShortcutEvent> commandShortcutEvents = [
 
   customCopyCommand,
   customPasteCommand,
+  customPastePlainTextCommand,
   customCutCommand,
   customUndoCommand,
   customRedoCommand,
@@ -43,11 +44,12 @@ List<CommandShortcutEvent> commandShortcutEvents = [
         copyCommand,
         cutCommand,
         pasteCommand,
+        pasteTextWithoutFormattingCommand,
         toggleTodoListCommand,
         undoCommand,
         redoCommand,
         exitEditingCommand,
-        // ...tableCommands,
+        ...tableCommands,
       ].contains(shortcut),
     ),
 

@@ -57,7 +57,6 @@ class AIChatProgress {
 enum PromptResponseState {
   ready,
   sendingQuestion,
-  awaitingAnswer,
   streamingAnswer,
 }
 
@@ -77,19 +76,19 @@ class ChatFile extends Equatable {
     final fileName = path.basename(filePath);
     final extension = path.extension(filePath).toLowerCase();
 
-    ChatMessageMetaTypePB fileType;
+    ContextLoaderTypePB fileType;
     switch (extension) {
       case '.pdf':
-        fileType = ChatMessageMetaTypePB.PDF;
+        fileType = ContextLoaderTypePB.PDF;
         break;
       case '.txt':
-        fileType = ChatMessageMetaTypePB.Txt;
+        fileType = ContextLoaderTypePB.Txt;
         break;
       case '.md':
-        fileType = ChatMessageMetaTypePB.Markdown;
+        fileType = ContextLoaderTypePB.Markdown;
         break;
       default:
-        fileType = ChatMessageMetaTypePB.UnknownMetaType;
+        fileType = ContextLoaderTypePB.UnknownLoaderType;
     }
 
     return ChatFile(
@@ -101,7 +100,7 @@ class ChatFile extends Equatable {
 
   final String filePath;
   final String fileName;
-  final ChatMessageMetaTypePB fileType;
+  final ContextLoaderTypePB fileType;
 
   @override
   List<Object?> get props => [filePath];
@@ -131,4 +130,10 @@ const onetimeShotType = "OnetimeShotType";
 
 OnetimeShotType? onetimeMessageTypeFromMeta(Map<String, dynamic>? metadata) {
   return metadata?[onetimeShotType];
+}
+
+enum LoadChatMessageStatus {
+  loading,
+  loadingRemote,
+  ready,
 }

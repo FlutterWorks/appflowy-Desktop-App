@@ -42,11 +42,14 @@ class EditorStyleCustomizer {
   static const double minDocumentWidth = 480;
 
   static EdgeInsets get documentPadding => UniversalPlatform.isMobile
-      ? const EdgeInsets.symmetric(horizontal: 24)
+      ? EdgeInsets.zero
       : EdgeInsets.only(
           left: 40,
           right: 40 + EditorStyleCustomizer.optionMenuWidth,
         );
+
+  static double get nodeHorizontalPadding =>
+      UniversalPlatform.isMobile ? 24 : 0;
 
   static EdgeInsets get documentPaddingWithOptionMenu =>
       documentPadding + EdgeInsets.only(left: optionMenuWidth);
@@ -163,9 +166,10 @@ class EditorStyleCustomizer {
         applyHeightToLastDescent: true,
       ),
       textSpanDecorator: customizeAttributeDecorator,
-      mobileDragHandleBallSize: const Size.square(12.0),
       magnifierSize: const Size(144, 96),
       textScaleFactor: textScaleFactor,
+      mobileDragHandleLeftExtend: 12.0,
+      mobileDragHandleWidthExtend: 24.0,
     );
   }
 
@@ -239,6 +243,24 @@ class EditorStyleCustomizer {
       height: 1.5,
       color: AFThemeExtension.of(context).onBackground.withOpacity(0.6),
     );
+  }
+
+  TextStyle subPageBlockTextStyleBuilder() {
+    if (UniversalPlatform.isMobile) {
+      final pageStyle = context.read<DocumentPageStyleBloc>().state;
+      final fontSize = pageStyle.fontLayout.fontSize;
+      final fontFamily = pageStyle.fontFamily ?? defaultFontFamily;
+      final baseTextStyle = this.baseTextStyle(fontFamily);
+      return baseTextStyle.copyWith(
+        fontSize: fontSize,
+      );
+    } else {
+      final fontSize = context.read<DocumentAppearanceCubit>().state.fontSize;
+      return baseTextStyle(null).copyWith(
+        fontSize: fontSize,
+        height: 1.5,
+      );
+    }
   }
 
   SelectionMenuStyle selectionMenuStyleBuilder() {
@@ -359,12 +381,13 @@ class EditorStyleCustomizer {
     final formula = attributes[InlineMathEquationKeys.formula];
     if (formula is String) {
       return WidgetSpan(
+        style: after.style,
         alignment: PlaceholderAlignment.middle,
         child: InlineMathEquation(
           node: node,
           index: index,
           formula: formula,
-          textStyle: style().textStyleConfiguration.text,
+          textStyle: after.style ?? style().textStyleConfiguration.text,
         ),
       );
     }

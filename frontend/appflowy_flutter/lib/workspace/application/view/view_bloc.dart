@@ -3,6 +3,8 @@ import 'dart:convert';
 
 import 'package:appflowy/core/config/kv.dart';
 import 'package:appflowy/core/config/kv_keys.dart';
+import 'package:appflowy/generated/locale_keys.g.dart';
+import 'package:appflowy/shared/icon_emoji_picker/flowy_icon_emoji_picker.dart';
 import 'package:appflowy/startup/startup.dart';
 import 'package:appflowy/workspace/application/favorite/favorite_listener.dart';
 import 'package:appflowy/workspace/application/recent/cached_recent_service.dart';
@@ -14,6 +16,7 @@ import 'package:appflowy_backend/protobuf/flowy-folder/protobuf.dart';
 import 'package:appflowy_backend/protobuf/flowy-folder/view.pb.dart';
 import 'package:appflowy_result/appflowy_result.dart';
 import 'package:collection/collection.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:protobuf/protobuf.dart';
@@ -173,6 +176,7 @@ class ViewBloc extends Bloc<ViewEvent, ViewState> {
               openAfterDuplicate: true,
               syncAfterDuplicate: true,
               includeChildren: true,
+              suffix: ' (${LocaleKeys.menuAppHeader_pageNameSuffix.tr()})',
             );
             emit(
               result.fold(
@@ -243,7 +247,7 @@ class ViewBloc extends Bloc<ViewEvent, ViewState> {
           updateIcon: (value) async {
             await ViewBackendService.updateViewIcon(
               viewId: view.id,
-              viewIcon: value.icon ?? '',
+              viewIcon: view.icon.toEmojiIconData(),
             );
           },
           collapseAllPages: (value) async {
@@ -437,11 +441,17 @@ class ViewBloc extends Bloc<ViewEvent, ViewState> {
 @freezed
 class ViewEvent with _$ViewEvent {
   const factory ViewEvent.initial() = Initial;
+
   const factory ViewEvent.setIsEditing(bool isEditing) = SetEditing;
+
   const factory ViewEvent.setIsExpanded(bool isExpanded) = SetIsExpanded;
+
   const factory ViewEvent.rename(String newName) = Rename;
+
   const factory ViewEvent.delete() = Delete;
+
   const factory ViewEvent.duplicate() = Duplicate;
+
   const factory ViewEvent.move(
     ViewPB from,
     String newParentId,
@@ -449,6 +459,7 @@ class ViewEvent with _$ViewEvent {
     ViewSectionPB? fromSection,
     ViewSectionPB? toSection,
   ) = Move;
+
   const factory ViewEvent.createView(
     String name,
     ViewLayoutPB layoutType, {
@@ -456,17 +467,23 @@ class ViewEvent with _$ViewEvent {
     @Default(true) bool openAfterCreated,
     ViewSectionPB? section,
   }) = CreateView;
+
   const factory ViewEvent.viewDidUpdate(
     FlowyResult<ViewPB, FlowyError> result,
   ) = ViewDidUpdate;
+
   const factory ViewEvent.viewUpdateChildView(ViewPB result) =
       ViewUpdateChildView;
+
   const factory ViewEvent.updateViewVisibility(
     ViewPB view,
     bool isPublic,
   ) = UpdateViewVisibility;
+
   const factory ViewEvent.updateIcon(String? icon) = UpdateIcon;
+
   const factory ViewEvent.collapseAllPages() = CollapseAllPages;
+
   // this event will unpublish the page and all its child pages if they are published
   const factory ViewEvent.unpublish({required bool sync}) = Unpublish;
 }

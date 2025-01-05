@@ -8,8 +8,12 @@ import 'package:appflowy/mobile/presentation/base/type_option_menu_item.dart';
 import 'package:appflowy/mobile/presentation/presentation.dart';
 import 'package:appflowy/plugins/document/presentation/editor_plugins/base/emoji_picker_button.dart';
 import 'package:appflowy/plugins/document/presentation/editor_plugins/mobile_toolbar_v3/add_block_toolbar_item.dart';
+import 'package:appflowy/plugins/document/presentation/editor_plugins/simple_table/simple_table.dart';
+import 'package:appflowy/plugins/document/presentation/editor_plugins/simple_table/simple_table_widgets/_simple_table_bottom_sheet_actions.dart';
 import 'package:appflowy/plugins/shared/share/share_button.dart';
 import 'package:appflowy/shared/feature_flags.dart';
+import 'package:appflowy/shared/icon_emoji_picker/flowy_icon_emoji_picker.dart';
+import 'package:appflowy/shared/icon_emoji_picker/icon_picker.dart';
 import 'package:appflowy/shared/text_field/text_filed_with_metric_lines.dart';
 import 'package:appflowy/startup/startup.dart';
 import 'package:appflowy/user/presentation/screens/screens.dart';
@@ -20,6 +24,7 @@ import 'package:appflowy/workspace/presentation/home/menu/sidebar/shared/sidebar
 import 'package:appflowy/workspace/presentation/home/menu/sidebar/space/shared_widget.dart';
 import 'package:appflowy/workspace/presentation/home/menu/sidebar/space/sidebar_space_header.dart';
 import 'package:appflowy/workspace/presentation/home/menu/sidebar/space/sidebar_space_menu.dart';
+import 'package:appflowy/workspace/presentation/home/menu/sidebar/space/space_icon_popup.dart';
 import 'package:appflowy/workspace/presentation/home/menu/sidebar/workspace/_sidebar_workspace_menu.dart';
 import 'package:appflowy/workspace/presentation/home/menu/sidebar/workspace/sidebar_workspace.dart';
 import 'package:appflowy/workspace/presentation/home/menu/view/draggable_view_item.dart';
@@ -449,11 +454,8 @@ extension CommonOperations on WidgetTester {
 
     // open the page after created
     if (openAfterCreated) {
-      await openPage(
-        // if the name is null, use the default name
-        pageName ?? LocaleKeys.menuAppHeader_defaultNewPageName.tr(),
-        layout: layout,
-      );
+      // if the name is null, use empty string
+      await openPage(pageName ?? '', layout: layout);
       await pumpAndSettle();
     }
   }
@@ -611,7 +613,7 @@ extension CommonOperations on WidgetTester {
     required String name,
     required String parentName,
     required ViewLayoutPB layout,
-    required String icon,
+    required EmojiIconData icon,
   }) async {
     final iconButton = find.descendant(
       of: findPageName(
@@ -623,7 +625,11 @@ extension CommonOperations on WidgetTester {
           find.byTooltip(LocaleKeys.document_plugins_cover_changeIcon.tr()),
     );
     await tapButton(iconButton);
-    await tapEmoji(icon);
+    if (icon.type == FlowyIconType.emoji) {
+      await tapEmoji(icon.emoji);
+    } else if (icon.type == FlowyIconType.icon) {
+      await tapIcon(icon);
+    }
     await pumpAndSettle();
   }
 
@@ -631,7 +637,7 @@ extension CommonOperations on WidgetTester {
   Future<void> updatePageIconInTitleBarByName({
     required String name,
     required ViewLayoutPB layout,
-    required String icon,
+    required EmojiIconData icon,
   }) async {
     await openPage(
       name,
@@ -643,7 +649,11 @@ extension CommonOperations on WidgetTester {
     );
     await tapButton(title);
     await tapButton(find.byType(EmojiPickerButton));
-    await tapEmoji(icon);
+    if (icon.type == FlowyIconType.emoji) {
+      await tapEmoji(icon.emoji);
+    } else if (icon.type == FlowyIconType.icon) {
+      await tapIcon(icon);
+    }
     await pumpAndSettle();
   }
 
@@ -840,6 +850,71 @@ extension CommonOperations on WidgetTester {
     );
     await tapButton(toggleHeading1);
     await pumpUntilNotFound(addMenuItem);
+  }
+
+  /// Click the column menu button in the simple table
+  Future<void> clickColumnMenuButton(int index) async {
+    final columnMenuButton = find.byWidgetPredicate(
+      (w) =>
+          w is SimpleTableMobileReorderButton &&
+          w.index == index &&
+          w.type == SimpleTableMoreActionType.column,
+    );
+    await tapButton(columnMenuButton);
+    await pumpUntilFound(find.byType(SimpleTableCellBottomSheet));
+  }
+
+  /// Click the row menu button in the simple table
+  Future<void> clickRowMenuButton(int index) async {
+    final rowMenuButton = find.byWidgetPredicate(
+      (w) =>
+          w is SimpleTableMobileReorderButton &&
+          w.index == index &&
+          w.type == SimpleTableMoreActionType.row,
+    );
+    await tapButton(rowMenuButton);
+    await pumpUntilFound(find.byType(SimpleTableCellBottomSheet));
+  }
+
+  /// Click the SimpleTableQuickAction
+  Future<void> clickSimpleTableQuickAction(SimpleTableMoreAction action) async {
+    final button = find.byWidgetPredicate(
+      (widget) => widget is SimpleTableQuickAction && widget.type == action,
+    );
+    await tapButton(button);
+  }
+
+  /// Click the SimpleTableContentAction
+  Future<void> clickSimpleTableBoldContentAction() async {
+    final button = find.byType(SimpleTableContentBoldAction);
+    await tapButton(button);
+  }
+
+  /// Cancel the table action menu
+  Future<void> cancelTableActionMenu() async {
+    final finder = find.byType(SimpleTableCellBottomSheet);
+    if (finder.evaluate().isEmpty) {
+      return;
+    }
+
+    await tapAt(Offset.zero);
+    await pumpUntilNotFound(finder);
+  }
+
+  /// load icon list and return the first one
+  Future<EmojiIconData> loadIcon() async {
+    await loadIconGroups();
+    final groups = kIconGroups!;
+    final firstGroup = groups.first;
+    final firstIcon = firstGroup.icons.first;
+    return EmojiIconData.icon(
+      IconsData(
+        firstGroup.name,
+        firstIcon.content,
+        firstIcon.name,
+        builtInSpaceColors.first,
+      ),
+    );
   }
 }
 

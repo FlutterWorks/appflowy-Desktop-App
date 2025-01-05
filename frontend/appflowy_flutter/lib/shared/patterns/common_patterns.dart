@@ -42,3 +42,9 @@ final appflowySharePageLinkRegex = RegExp(appflowySharePageLinkPattern);
 
 const _numberedListPattern = r'^(\d+)\.';
 final numberedListRegex = RegExp(_numberedListPattern);
+
+const _localPathPattern = r'^(file:\/\/|\/|\\|[a-zA-Z]:[/\\]|\.{1,2}[/\\])';
+final localPathRegex = RegExp(_localPathPattern, caseSensitive: false);
+
+const _wordPattern = r"\S+";
+final wordRegex = RegExp(_wordPattern);

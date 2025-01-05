@@ -8,6 +8,7 @@ import 'package:flowy_infra_ui/flowy_infra_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_chat_core/flutter_chat_core.dart';
+import 'package:universal_platform/universal_platform.dart';
 
 import '../layout_define.dart';
 import 'ai_markdown_text.dart';
@@ -32,7 +33,9 @@ class ChatAIMessageWidget extends StatelessWidget {
     required this.chatId,
     required this.refSourceJsonString,
     this.onSelectedMetadata,
+    this.onRegenerate,
     this.isLastMessage = false,
+    this.isStreaming = false,
   });
 
   final User user;
@@ -44,6 +47,8 @@ class ChatAIMessageWidget extends StatelessWidget {
   final String chatId;
   final String? refSourceJsonString;
   final void Function(ChatMessageRefSource metadata)? onSelectedMetadata;
+  final void Function()? onRegenerate;
+  final bool isStreaming;
   final bool isLastMessage;
 
   @override
@@ -78,18 +83,24 @@ class ChatAIMessageWidget extends StatelessWidget {
                     : ChatAIMessageBubble(
                         message: message,
                         isLastMessage: isLastMessage,
-                        showActions: stream == null && state.text.isNotEmpty,
+                        showActions: stream == null &&
+                            state.text.isNotEmpty &&
+                            !isStreaming,
+                        onRegenerate: onRegenerate,
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            AIMarkdownText(markdown: state.text),
+                            IgnorePointer(
+                              ignoring: UniversalPlatform.isMobile,
+                              child: AIMarkdownText(markdown: state.text),
+                            ),
                             if (state.sources.isNotEmpty)
                               AIMessageMetadata(
                                 sources: state.sources,
                                 onSelectedMetadata: onSelectedMetadata,
                               ),
                             if (state.sources.isNotEmpty && !isLastMessage)
-                              const VSpace(16.0),
+                              const VSpace(8.0),
                           ],
                         ),
                       );
@@ -97,11 +108,6 @@ class ChatAIMessageWidget extends StatelessWidget {
               onError: (error) {
                 return ChatErrorMessageWidget(
                   errorMessage: LocaleKeys.chat_aiServerUnavailable.tr(),
-                  onRetry: () {
-                    context
-                        .read<ChatAIMessageBloc>()
-                        .add(const ChatAIMessageEvent.retry());
-                  },
                 );
               },
               onAIResponseLimit: () {

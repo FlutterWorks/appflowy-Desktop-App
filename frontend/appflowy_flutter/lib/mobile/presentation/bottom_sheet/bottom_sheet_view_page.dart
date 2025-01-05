@@ -138,7 +138,6 @@ class MobileViewBottomSheetBody extends StatelessWidget {
         ),
         _divider(),
         ..._buildPublishActions(context),
-        _divider(),
         MobileQuickActionButton(
           text: LocaleKeys.button_delete.tr(),
           textColor: Theme.of(context).colorScheme.error,
@@ -205,8 +204,5 @@ class MobileViewBottomSheetBody extends StatelessWidget {
     }
   }
 
-  Widget _divider() => const Divider(
-        height: 8.5,
-        thickness: 0.5,
-      );
+  Widget _divider() => const MobileQuickActionDivider();
 }

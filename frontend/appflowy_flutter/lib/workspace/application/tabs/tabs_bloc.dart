@@ -1,3 +1,4 @@
+import 'package:appflowy/plugins/blank/blank.dart';
 import 'package:appflowy/plugins/util.dart';
 import 'package:appflowy/startup/plugin/plugin.dart';
 import 'package:appflowy/startup/startup.dart';
@@ -57,10 +58,16 @@ class TabsBloc extends Bloc<TabsEvent, TabsState> {
             _setLatestOpenView();
           },
           openTab: (Plugin plugin, ViewPB view) {
+            state.currentPageManager
+              ..hideSecondaryPlugin()
+              ..setSecondaryPlugin(BlankPagePlugin());
             emit(state.openView(plugin));
             _setLatestOpenView(view);
           },
           openPlugin: (Plugin plugin, ViewPB? view, bool setLatest) {
+            state.currentPageManager
+              ..hideSecondaryPlugin()
+              ..setSecondaryPlugin(BlankPagePlugin());
             emit(state.openPlugin(plugin: plugin, setLatest: setLatest));
             if (setLatest) {
               _setLatestOpenView(view);
@@ -151,6 +158,25 @@ class TabsBloc extends Bloc<TabsEvent, TabsState> {
               );
             }
           },
+          openSecondaryPlugin: (plugin, view) {
+            state.currentPageManager
+              ..setSecondaryPlugin(plugin)
+              ..showSecondaryPlugin();
+          },
+          closeSecondaryPlugin: () {
+            final pageManager = state.currentPageManager;
+            pageManager.hideSecondaryPlugin();
+          },
+          expandSecondaryPlugin: () {
+            final pageManager = state.currentPageManager;
+            pageManager.setPlugin(
+              pageManager.secondaryNotifier.plugin,
+              true,
+              false,
+            );
+            pageManager.hideSecondaryPlugin();
+            _setLatestOpenView();
+          },
           switchWorkspace: (workspaceId) {
             final pluginId = state.currentPageManager.plugin.id;
 
@@ -237,6 +263,12 @@ class TabsEvent with _$TabsEvent {
     ViewPB? view,
     @Default(true) bool setLatest,
   }) = _OpenPlugin;
+  const factory TabsEvent.openSecondaryPlugin({
+    required Plugin plugin,
+    ViewPB? view,
+  }) = _OpenSecondaryPlugin;
+  const factory TabsEvent.closeSecondaryPlugin() = _CloseSecondaryPlugin;
+  const factory TabsEvent.expandSecondaryPlugin() = _ExpandSecondaryPlugin;
   const factory TabsEvent.switchWorkspace(String workspaceId) =
       _SwitchWorkspace;
 }

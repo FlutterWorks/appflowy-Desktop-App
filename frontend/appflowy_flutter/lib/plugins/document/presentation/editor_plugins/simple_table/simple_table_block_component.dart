@@ -1,7 +1,7 @@
-import 'package:appflowy/plugins/document/presentation/editor_plugins/simple_table/_shared_widget.dart';
 import 'package:appflowy/plugins/document/presentation/editor_plugins/simple_table/simple_table_cell_block_component.dart';
 import 'package:appflowy/plugins/document/presentation/editor_plugins/simple_table/simple_table_constants.dart';
 import 'package:appflowy/plugins/document/presentation/editor_plugins/simple_table/simple_table_row_block_component.dart';
+import 'package:appflowy/plugins/document/presentation/editor_plugins/simple_table/simple_table_widgets/simple_table_widget.dart';
 import 'package:appflowy_editor/appflowy_editor.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -11,43 +11,71 @@ typedef SimpleTableColumnWidthMap = Map<String, double>;
 typedef SimpleTableRowAlignMap = Map<String, String>;
 typedef SimpleTableColumnAlignMap = Map<String, String>;
 typedef SimpleTableColorMap = Map<String, String>;
+typedef SimpleTableAttributeMap = Map<String, bool>;
 
 class SimpleTableBlockKeys {
   const SimpleTableBlockKeys._();
 
   static const String type = 'simple_table';
 
-  // enable header row
-  // it's a bool value, default is false
+  /// enable header row
+  /// it's a bool value, default is false
   static const String enableHeaderRow = 'enable_header_row';
 
-  // enable column header
-  // it's a bool value, default is false
+  /// enable column header
+  /// it's a bool value, default is false
   static const String enableHeaderColumn = 'enable_header_column';
 
-  // column colors
-  // it's a `SimpleTableColorMap` value, {column_index: color, ...}
-  // the number of colors should be the same as the number of columns
+  /// column colors
+  /// it's a [SimpleTableColorMap] value, {column_index: color, ...}
+  /// the number of colors should be the same as the number of columns
   static const String columnColors = 'column_colors';
 
-  // row colors
-  // it's a `SimpleTableColorMap` value, {row_index: color, ...}
-  // the number of colors should be the same as the number of rows
+  /// row colors
+  /// it's a [SimpleTableColorMap] value, {row_index: color, ...}
+  /// the number of colors should be the same as the number of rows
   static const String rowColors = 'row_colors';
 
-  // column alignments
-  // it's a `SimpleTableColumnAlignMap` value, {column_index: align, ...}
-  // the value should be one of the following: 'left', 'center', 'right'
+  /// column alignments
+  /// it's a [SimpleTableColumnAlignMap] value, {column_index: align, ...}
+  /// the value should be one of the following: 'left', 'center', 'right'
   static const String columnAligns = 'column_aligns';
 
-  // row alignments
-  // it's a `SimpleTableRowAlignMap` value, {row_index: align, ...}
-  // the value should be one of the following: 'top', 'center', 'bottom'
+  /// row alignments
+  /// it's a [SimpleTableRowAlignMap] value, {row_index: align, ...}
+  /// the value should be one of the following: 'top', 'center', 'bottom'
   static const String rowAligns = 'row_aligns';
 
-  // column widths
-  // it's a `SimpleTableColumnWidthMap` value, {column_index: width, ...}
+  /// column bold attributes
+  /// it's a [SimpleTableAttributeMap] value, {column_index: attribute, ...}
+  /// the attribute should be one of the following: true, false
+  static const String columnBoldAttributes = 'column_bold_attributes';
+
+  /// row bold attributes
+  /// it's a [SimpleTableAttributeMap] value, {row_index: true, ...}
+  /// the attribute should be one of the following: true, false
+  static const String rowBoldAttributes = 'row_bold_attributes';
+
+  /// column text color attributes
+  /// it's a [SimpleTableColorMap] value, {column_index: color_hex_code, ...}
+  /// the attribute should be the color hex color or appflowy_theme_color
+  static const String columnTextColors = 'column_text_colors';
+
+  /// row text color attributes
+  /// it's a [SimpleTableColorMap] value, {row_index: color_hex_code, ...}
+  /// the attribute should be the color hex color or appflowy_theme_color
+  static const String rowTextColors = 'row_text_colors';
+
+  /// column widths
+  /// it's a [SimpleTableColumnWidthMap] value, {column_index: width, ...}
   static const String columnWidths = 'column_widths';
+
+  /// distribute column widths evenly
+  /// if the user distributed the column widths evenly before, the value should be true,
+  /// and for the newly added column, using the width of the previous column.
+  /// it's a bool value, default is false
+  static const String distributeColumnWidthsEvenly =
+      'distribute_column_widths_evenly';
 }
 
 Node simpleTableBlockNode({
@@ -187,15 +215,20 @@ class _SimpleTableBlockWidgetState extends State<SimpleTableBlockWidget>
 
   @override
   Widget build(BuildContext context) {
-    Widget child = Transform.translate(
-      offset: Offset(
-        UniversalPlatform.isDesktop
-            ? -SimpleTableConstants.tableLeftPadding
-            : 0,
-        0,
-      ),
-      child: _buildTable(),
+    Widget child = SimpleTableWidget(
+      node: node,
+      simpleTableContext: simpleTableContext,
     );
+
+    if (UniversalPlatform.isDesktop) {
+      child = Transform.translate(
+        offset: Offset(
+          -SimpleTableConstants.tableLeftPadding,
+          0,
+        ),
+        child: child,
+      );
+    }
 
     child = Container(
       alignment: Alignment.topLeft,
@@ -226,111 +259,6 @@ class _SimpleTableBlockWidgetState extends State<SimpleTableBlockWidget>
     }
 
     return child;
-  }
-
-  Widget _buildTable() {
-    if (UniversalPlatform.isDesktop) {
-      return _buildDesktopTable();
-    } else {
-      return _buildMobileTable();
-    }
-  }
-
-  Widget _buildDesktopTable() {
-    // IntrinsicWidth and IntrinsicHeight are used to make the table size fit the content.
-    return MouseRegion(
-      onEnter: (event) => simpleTableContext.isHoveringOnTableArea.value = true,
-      onExit: (event) {
-        simpleTableContext.isHoveringOnTableArea.value = false;
-      },
-      child: Provider.value(
-        value: simpleTableContext,
-        child: Stack(
-          children: [
-            MouseRegion(
-              hitTestBehavior: HitTestBehavior.opaque,
-              onEnter: (event) =>
-                  simpleTableContext.isHoveringOnColumnsAndRows.value = true,
-              onExit: (event) {
-                simpleTableContext.isHoveringOnColumnsAndRows.value = false;
-                simpleTableContext.hoveringTableCell.value = null;
-              },
-              child: Scrollbar(
-                controller: scrollController,
-                child: SingleChildScrollView(
-                  controller: scrollController,
-                  scrollDirection: Axis.horizontal,
-                  child: Padding(
-                    padding: SimpleTableConstants.tablePadding,
-                    child: IntrinsicWidth(
-                      child: IntrinsicHeight(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: _buildRows(),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            if (UniversalPlatform.isDesktop) ...[
-              SimpleTableAddColumnHoverButton(
-                editorState: editorState,
-                node: node,
-              ),
-              SimpleTableAddRowHoverButton(
-                editorState: editorState,
-                tableNode: node,
-              ),
-              SimpleTableAddColumnAndRowHoverButton(
-                editorState: editorState,
-                node: node,
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildMobileTable() {
-    return Provider.value(
-      value: simpleTableContext,
-      child: SingleChildScrollView(
-        controller: scrollController,
-        scrollDirection: Axis.horizontal,
-        child: IntrinsicWidth(
-          child: IntrinsicHeight(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: _buildRows(),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  List<Widget> _buildRows() {
-    final List<Widget> rows = [];
-
-    if (SimpleTableConstants.borderType == SimpleTableBorderRenderType.table) {
-      rows.add(const SimpleTableColumnDivider());
-    }
-
-    for (final child in node.children) {
-      rows.add(editorState.renderer.build(context, child));
-
-      if (SimpleTableConstants.borderType ==
-          SimpleTableBorderRenderType.table) {
-        rows.add(const SimpleTableColumnDivider());
-      }
-    }
-
-    return rows;
   }
 
   void _onSelectionChanged() {

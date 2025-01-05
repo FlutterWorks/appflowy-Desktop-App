@@ -7,7 +7,6 @@ on:
     paths:
       - ".github/workflows/mobile_ci.yaml"
       - "frontend/**"
-      - "!frontend/appflowy_tauri/**"
       - "!frontend/appflowy_web_app/**"
 
   pull_request:
@@ -16,12 +15,11 @@ on:
     paths:
       - ".github/workflows/mobile_ci.yaml"
       - "frontend/**"
-      - "!frontend/appflowy_tauri/**"
       - "!frontend/appflowy_web_app/**"
 
 env:
   FLUTTER_VERSION: "3.22.3"
-  RUST_TOOLCHAIN: "1.80.1"
+  RUST_TOOLCHAIN: "1.81.0"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -85,7 +83,7 @@ jobs:
         working-directory: frontend
         run: |
           rustup target install aarch64-apple-ios-sim
-          cargo install --force duckscript_cli
+          cargo install --force --locked duckscript_cli
           cargo install cargo-lipo
           cargo make appflowy-flutter-deps-tools
         shell: bash
