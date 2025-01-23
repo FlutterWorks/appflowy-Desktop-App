@@ -42,19 +42,26 @@ class RecentIcons {
   static List<RecentIcon> getIconsSync() {
     final iconList = _dataMap[FlowyIconType.icon.name] ?? [];
     try {
-      return iconList
-          .map(
-            (e) => RecentIcon.fromJson(jsonDecode(e) as Map<String, dynamic>),
-          )
-
-          /// skip the data that is already stored locally but has an empty
-          /// groupName to accommodate the issue of destructive data modifications
-          .skipWhile((e) => e.groupName.isEmpty)
-          .toList();
+      final List<RecentIcon> result = [];
+      for (final map in iconList) {
+        final recentIcon =
+            RecentIcon.fromJson(jsonDecode(map) as Map<String, dynamic>);
+        if (recentIcon.groupName.isEmpty) {
+          continue;
+        }
+        result.add(recentIcon);
+      }
+      return result;
     } catch (e) {
       Log.error('RecentIcons getIcons with :$iconList', e);
     }
     return [];
+  }
+
+  @visibleForTesting
+  static void clear() {
+    _dataMap.clear();
+    getIt<KeyValueStorage>().remove(KVKeys.recentIcons);
   }
 
   static Future<void> _save() async {

@@ -1,5 +1,5 @@
 use client_api::collab_sync::{SinkConfig, SyncObject, SyncPlugin};
-use client_api::entity::ai_dto::{CompletionType, RepeatedRelatedQuestion};
+use client_api::entity::ai_dto::RepeatedRelatedQuestion;
 use client_api::entity::search_dto::SearchDocumentResponseItem;
 use client_api::entity::workspace_dto::PublishInfoView;
 use client_api::entity::PublishInfo;
@@ -21,9 +21,9 @@ use collab_integrate::collab_builder::{
   CollabCloudPluginProvider, CollabPluginProviderContext, CollabPluginProviderType,
 };
 use flowy_ai_pub::cloud::{
-  ChatCloudService, ChatMessage, ChatMessageMetadata, ChatMessageType, ChatSettings, LocalAIConfig,
-  MessageCursor, RepeatedChatMessage, StreamAnswer, StreamComplete, SubscriptionPlan,
-  UpdateChatParams,
+  ChatCloudService, ChatMessage, ChatMessageMetadata, ChatMessageType, ChatSettings,
+  CompleteTextParams, LocalAIConfig, MessageCursor, RepeatedChatMessage, ResponseFormat,
+  StreamAnswer, StreamComplete, SubscriptionPlan, UpdateChatParams,
 };
 use flowy_database_pub::cloud::{
   DatabaseAIService, DatabaseCloudService, DatabaseSnapshot, EncodeCollabByOid, SummaryRowContent,
@@ -704,13 +704,14 @@ impl ChatCloudService for ServerProvider {
     workspace_id: &str,
     chat_id: &str,
     message_id: i64,
+    format: ResponseFormat,
   ) -> Result<StreamAnswer, FlowyError> {
     let workspace_id = workspace_id.to_string();
     let chat_id = chat_id.to_string();
     let server = self.get_server()?;
     server
       .chat_service()
-      .stream_answer(&workspace_id, &chat_id, message_id)
+      .stream_answer(&workspace_id, &chat_id, message_id, format)
       .await
   }
 
@@ -770,15 +771,13 @@ impl ChatCloudService for ServerProvider {
   async fn stream_complete(
     &self,
     workspace_id: &str,
-    text: &str,
-    complete_type: CompletionType,
+    params: CompleteTextParams,
   ) -> Result<StreamComplete, FlowyError> {
     let workspace_id = workspace_id.to_string();
-    let text = text.to_string();
     let server = self.get_server()?;
     server
       .chat_service()
-      .stream_complete(&workspace_id, &text, complete_type)
+      .stream_complete(&workspace_id, params)
       .await
   }
 

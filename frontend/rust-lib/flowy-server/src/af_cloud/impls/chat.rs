@@ -1,5 +1,7 @@
 use crate::af_cloud::AFServer;
-use client_api::entity::ai_dto::{CompleteTextParams, CompletionType, RepeatedRelatedQuestion};
+use client_api::entity::ai_dto::{
+  ChatQuestionQuery, CompleteTextParams, RepeatedRelatedQuestion, ResponseFormat,
+};
 use client_api::entity::chat_dto::{
   CreateAnswerMessageParams, CreateChatMessageParams, CreateChatParams, MessageCursor,
   RepeatedChatMessage,
@@ -15,6 +17,7 @@ use lib_infra::util::{get_operating_system, OperatingSystem};
 use serde_json::Value;
 use std::collections::HashMap;
 use std::path::Path;
+use tracing::trace;
 
 pub(crate) struct AFCloudChatCloudServiceImpl<T> {
   pub inner: T,
@@ -97,10 +100,24 @@ where
     workspace_id: &str,
     chat_id: &str,
     message_id: i64,
+    format: ResponseFormat,
   ) -> Result<StreamAnswer, FlowyError> {
+    trace!(
+      "stream_answer: workspace_id={}, chat_id={}, format={:?}",
+      workspace_id,
+      chat_id,
+      format
+    );
     let try_get_client = self.inner.try_get_client();
     let result = try_get_client?
-      .stream_answer_v2(workspace_id, chat_id, message_id)
+      .stream_answer_v3(
+        workspace_id,
+        ChatQuestionQuery {
+          chat_id: chat_id.to_string(),
+          question_id: message_id,
+          format,
+        },
+      )
       .await;
 
     let stream = result.map_err(FlowyError::from)?.map_err(FlowyError::from);
@@ -171,15 +188,8 @@ where
   async fn stream_complete(
     &self,
     workspace_id: &str,
-    text: &str,
-    completion_type: CompletionType,
+    params: CompleteTextParams,
   ) -> Result<StreamComplete, FlowyError> {
-    // TODO(Nathan): Check if this is correct after updating to latest client-api
-    let params = CompleteTextParams {
-      text: text.to_string(),
-      completion_type: Some(completion_type),
-      custom_prompt: None,
-    };
     let stream = self
       .inner
       .try_get_client()?

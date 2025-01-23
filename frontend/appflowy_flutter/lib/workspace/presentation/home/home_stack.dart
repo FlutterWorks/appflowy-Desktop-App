@@ -294,7 +294,7 @@ class _SecondaryViewState extends State<SecondaryView>
             return CompositedTransformFollower(
               link: layerLink,
               followerAnchor: Alignment.topRight,
-              offset: const Offset(0.0, 80.0),
+              offset: const Offset(0.0, 120.0),
               child: Align(
                 alignment: AlignmentDirectional.topEnd,
                 child: AnimatedSwitcher(
@@ -621,10 +621,12 @@ class PageNotifier extends ChangeNotifier {
   ]) =>
       _plugin.widgetBuilder.tabBarItem(pluginId, shortForm);
 
-  /// This is the only place where the plugin is set.
-  /// No need compare the old plugin with the new plugin. Just set it.
-  void setPlugin(Plugin newPlugin, bool setLatest) {
-    if (newPlugin.id != plugin.id) {
+  void setPlugin(
+    Plugin newPlugin, {
+    required bool setLatest,
+    bool disposeExisting = true,
+  }) {
+    if (newPlugin.id != plugin.id && disposeExisting) {
       _plugin.dispose();
     }
 
@@ -660,12 +662,21 @@ class PageManager {
     if (init) {
       newPlugin.init();
     }
-    _notifier.setPlugin(newPlugin, setLatest);
+    _notifier.setPlugin(newPlugin, setLatest: setLatest);
   }
 
   void setSecondaryPlugin(Plugin newPlugin) {
     newPlugin.init();
-    _secondaryNotifier.setPlugin(newPlugin, false);
+    _secondaryNotifier.setPlugin(newPlugin, setLatest: false);
+  }
+
+  void expandSecondaryPlugin() {
+    _notifier.setPlugin(_secondaryNotifier.plugin, setLatest: true);
+    _secondaryNotifier.setPlugin(
+      BlankPagePlugin(),
+      setLatest: false,
+      disposeExisting: false,
+    );
   }
 
   void showSecondaryPlugin() {
@@ -953,13 +964,16 @@ class NonClippingSizeTransition extends AnimatedWidget {
   @override
   Widget build(BuildContext context) {
     final AlignmentDirectional alignment;
+    final Edge edge;
     if (axis == Axis.vertical) {
       alignment = AlignmentDirectional(-1.0, axisAlignment);
+      edge = switch (axisAlignment) { -1.0 => Edge.bottom, _ => Edge.top };
     } else {
       alignment = AlignmentDirectional(axisAlignment, -1.0);
+      edge = switch (axisAlignment) { -1.0 => Edge.right, _ => Edge.left };
     }
     return ClipRect(
-      clipper: const EdgeRectClipper(edge: Edge.right, margin: 20),
+      clipper: EdgeRectClipper(edge: edge, margin: 20),
       child: Align(
         alignment: alignment,
         heightFactor: axis == Axis.vertical

@@ -59,7 +59,8 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
   bool isLoadingPreviousMessages = false;
   bool hasMorePreviousMessages = true;
   AnswerStream? answerStream;
-  int numSendMessage = 0;
+  bool isFetchingRelatedQuestions = false;
+  bool shouldFetchRelatedQuestions = false;
 
   @override
   Future<void> close() async {
@@ -165,13 +166,17 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
           },
           sendMessage: (
             String message,
+            PredefinedFormat? format,
             Map<String, dynamic>? metadata,
           ) {
-            numSendMessage += 1;
-
+            _clearErrorMessages(emit);
             _clearRelatedQuestions();
-            _startStreamingMessage(message, metadata);
+            _startStreamingMessage(message, format, metadata);
             lastSentMessage = null;
+
+            isFetchingRelatedQuestions = false;
+            shouldFetchRelatedQuestions =
+                format == null || format.imageFormat.hasText;
 
             emit(
               state.copyWith(
@@ -231,10 +236,13 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
               ),
             );
           },
-          regenerateAnswer: (id) {
+          regenerateAnswer: (id, format) {
             _clearRelatedQuestions();
-            _regenerateAnswer(id);
+            _regenerateAnswer(id, format);
             lastSentMessage = null;
+
+            isFetchingRelatedQuestions = false;
+            shouldFetchRelatedQuestions = false;
 
             emit(
               state.copyWith(
@@ -257,6 +265,9 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
             await AIEventUpdateChatSettings(payload)
                 .send()
                 .onFailure(Log.error);
+          },
+          deleteMessage: (mesesage) async {
+            await chatController.remove(mesesage);
           },
         );
       },
@@ -319,7 +330,9 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         // The answer stream will bet set to null after the streaming has
         // finished, got cancelled, or errored. In this case, don't retrieve
         // related questions.
-        if (answerStream == null || lastSentMessage == null) {
+        if (answerStream == null ||
+            lastSentMessage == null ||
+            !shouldFetchRelatedQuestions) {
           return;
         }
 
@@ -328,17 +341,19 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
           messageId: lastSentMessage!.messageId,
         );
 
-        // when previous numSendMessage is not equal to current numSendMessage, it means that the user
-        // has sent a new message. So we don't need to get related questions.
-        final preNumSendMessage = numSendMessage;
+        isFetchingRelatedQuestions = true;
         await AIEventGetRelatedQuestion(payload).send().fold(
           (list) {
-            if (!isClosed && preNumSendMessage == numSendMessage) {
+            // while fetching related questions, the user might enter a new
+            // question or regenerate a previous response. In such cases, don't
+            // display the relatedQuestions
+            if (!isClosed && isFetchingRelatedQuestions) {
               add(
                 ChatEvent.didReceiveRelatedQuestions(
                   list.items.map((e) => e.content).toList(),
                 ),
               );
+              isFetchingRelatedQuestions = false;
             }
           },
           (err) => Log.error("Failed to get related questions: $err"),
@@ -398,6 +413,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
 
   Future<void> _startStreamingMessage(
     String message,
+    PredefinedFormat? format,
     Map<String, dynamic>? metadata,
   ) async {
     await answerStream?.dispose();
@@ -420,6 +436,9 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       answerStreamPort: Int64(answerStream!.nativePort),
       metadata: await metadataPBFromMetadata(metadata),
     );
+    if (format != null) {
+      payload.format = format.toPB();
+    }
 
     // stream the question to the server
     await AIEventStreamMessage(payload).send().fold(
@@ -460,7 +479,10 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     );
   }
 
-  void _regenerateAnswer(String answerMessageIdString) async {
+  void _regenerateAnswer(
+    String answerMessageIdString,
+    PredefinedFormat? format,
+  ) async {
     final id = temporaryMessageIDMap.entries
             .firstWhereOrNull((e) => e.value == answerMessageIdString)
             ?.key ??
@@ -479,6 +501,9 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       answerMessageId: answerMessageId,
       answerStreamPort: Int64(answerStream!.nativePort),
     );
+    if (format != null) {
+      payload.format = format.toPB();
+    }
 
     await AIEventRegenerateResponse(payload).send().fold(
       (success) {
@@ -558,6 +583,21 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     );
   }
 
+  void _clearErrorMessages(Emitter<ChatState> emit) {
+    final errorMessages = chatController.messages
+        .where(
+          (message) =>
+              onetimeMessageTypeFromMeta(message.metadata) ==
+              OnetimeShotType.error,
+        )
+        .toList();
+
+    for (final message in errorMessages) {
+      chatController.remove(message);
+    }
+    emit(state.copyWith(clearErrorMessages: !state.clearErrorMessages));
+  }
+
   void _clearRelatedQuestions() {
     final relatedQuestionMessages = chatController.messages
         .where(
@@ -586,13 +626,17 @@ class ChatEvent with _$ChatEvent {
   // send message
   const factory ChatEvent.sendMessage({
     required String message,
+    PredefinedFormat? format,
     Map<String, dynamic>? metadata,
   }) = _SendMessage;
   const factory ChatEvent.finishSending() = _FinishSendMessage;
   const factory ChatEvent.failedSending() = _FailSendMessage;
 
   // regenerate
-  const factory ChatEvent.regenerateAnswer(String id) = _RegenerateAnswer;
+  const factory ChatEvent.regenerateAnswer(
+    String id,
+    PredefinedFormat? format,
+  ) = _RegenerateAnswer;
 
   // streaming answer
   const factory ChatEvent.stopStream() = _StopStream;
@@ -614,6 +658,8 @@ class ChatEvent with _$ChatEvent {
   const factory ChatEvent.didReceiveRelatedQuestions(
     List<String> questions,
   ) = _DidReceiveRelatedQueston;
+
+  const factory ChatEvent.deleteMessage(Message message) = _DeleteMessage;
 }
 
 @freezed
@@ -622,12 +668,14 @@ class ChatState with _$ChatState {
     required List<String> selectedSourceIds,
     required LoadChatMessageStatus loadingState,
     required PromptResponseState promptResponseState,
+    required bool clearErrorMessages,
   }) = _ChatState;
 
   factory ChatState.initial() => const ChatState(
         selectedSourceIds: [],
         loadingState: LoadChatMessageStatus.loading,
         promptResponseState: PromptResponseState.ready,
+        clearErrorMessages: false,
       );
 }
 

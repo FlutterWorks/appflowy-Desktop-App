@@ -52,6 +52,7 @@ Map<String, BlockComponentBuilder> buildBlockComponentBuilders({
   ShowPlaceholder? showParagraphPlaceholder,
   String Function(Node)? placeholderText,
   EdgeInsets? customHeadingPadding,
+  bool alwaysDistributeSimpleTableColumnWidths = false,
 }) {
   final configuration = _buildDefaultConfiguration(context);
   final builders = _buildBlockComponentBuilderMap(
@@ -61,6 +62,8 @@ Map<String, BlockComponentBuilder> buildBlockComponentBuilders({
     styleCustomizer: styleCustomizer,
     showParagraphPlaceholder: showParagraphPlaceholder,
     placeholderText: placeholderText,
+    alwaysDistributeSimpleTableColumnWidths:
+        alwaysDistributeSimpleTableColumnWidths,
   );
 
   // customize the action builder. actually, we can customize them in their own builder. Put them here just for convenience.
@@ -102,9 +105,16 @@ BlockComponentConfiguration _buildDefaultConfiguration(BuildContext context) {
 
       return const EdgeInsets.symmetric(vertical: 5.0);
     },
-    indentPadding: (node, textDirection) => textDirection == TextDirection.ltr
-        ? const EdgeInsets.only(left: 26.0)
-        : const EdgeInsets.only(right: 26.0),
+    indentPadding: (node, textDirection) {
+      double padding = 26.0;
+      // only add indent padding for the top level node to align the children
+      if (UniversalPlatform.isMobile && node.path.length == 1) {
+        padding += EditorStyleCustomizer.nodeHorizontalPadding;
+      }
+      return textDirection == TextDirection.ltr
+          ? EdgeInsets.only(left: padding)
+          : EdgeInsets.only(right: padding);
+    },
   );
   return configuration;
 }
@@ -225,6 +235,7 @@ Map<String, BlockComponentBuilder> _buildBlockComponentBuilderMap(
   ShowPlaceholder? showParagraphPlaceholder,
   String Function(Node)? placeholderText,
   EdgeInsets? customHeadingPadding,
+  bool alwaysDistributeSimpleTableColumnWidths = false,
 }) {
   final customBlockComponentBuilderMap = {
     PageBlockKeys.type: PageBlockComponentBuilder(),
@@ -340,14 +351,17 @@ Map<String, BlockComponentBuilder> _buildBlockComponentBuilderMap(
     SimpleTableBlockKeys.type: _buildSimpleTableBlockComponentBuilder(
       context,
       configuration,
+      alwaysDistributeColumnWidths: alwaysDistributeSimpleTableColumnWidths,
     ),
     SimpleTableRowBlockKeys.type: _buildSimpleTableRowBlockComponentBuilder(
       context,
       configuration,
+      alwaysDistributeColumnWidths: alwaysDistributeSimpleTableColumnWidths,
     ),
     SimpleTableCellBlockKeys.type: _buildSimpleTableCellBlockComponentBuilder(
       context,
       configuration,
+      alwaysDistributeColumnWidths: alwaysDistributeSimpleTableColumnWidths,
     ),
   };
 
@@ -361,8 +375,9 @@ Map<String, BlockComponentBuilder> _buildBlockComponentBuilderMap(
 
 SimpleTableBlockComponentBuilder _buildSimpleTableBlockComponentBuilder(
   BuildContext context,
-  BlockComponentConfiguration configuration,
-) {
+  BlockComponentConfiguration configuration, {
+  bool alwaysDistributeColumnWidths = false,
+}) {
   final copiedConfiguration = configuration.copyWith(
     padding: (node) {
       final padding = configuration.padding(node);
@@ -373,21 +388,32 @@ SimpleTableBlockComponentBuilder _buildSimpleTableBlockComponentBuilder(
       }
     },
   );
-  return SimpleTableBlockComponentBuilder(configuration: copiedConfiguration);
+  return SimpleTableBlockComponentBuilder(
+    configuration: copiedConfiguration,
+    alwaysDistributeColumnWidths: alwaysDistributeColumnWidths,
+  );
 }
 
 SimpleTableRowBlockComponentBuilder _buildSimpleTableRowBlockComponentBuilder(
   BuildContext context,
-  BlockComponentConfiguration configuration,
-) {
-  return SimpleTableRowBlockComponentBuilder(configuration: configuration);
+  BlockComponentConfiguration configuration, {
+  bool alwaysDistributeColumnWidths = false,
+}) {
+  return SimpleTableRowBlockComponentBuilder(
+    configuration: configuration,
+    alwaysDistributeColumnWidths: alwaysDistributeColumnWidths,
+  );
 }
 
 SimpleTableCellBlockComponentBuilder _buildSimpleTableCellBlockComponentBuilder(
   BuildContext context,
-  BlockComponentConfiguration configuration,
-) {
-  return SimpleTableCellBlockComponentBuilder(configuration: configuration);
+  BlockComponentConfiguration configuration, {
+  bool alwaysDistributeColumnWidths = false,
+}) {
+  return SimpleTableCellBlockComponentBuilder(
+    configuration: configuration,
+    alwaysDistributeColumnWidths: alwaysDistributeColumnWidths,
+  );
 }
 
 ParagraphBlockComponentBuilder _buildParagraphBlockComponentBuilder(
@@ -591,10 +617,14 @@ CustomImageBlockComponentBuilder _buildCustomImageBlockComponentBuilder(
   return CustomImageBlockComponentBuilder(
     configuration: configuration,
     showMenu: true,
-    menuBuilder: (node, state) => Positioned(
+    menuBuilder: (node, state, imageStateNotifier) => Positioned(
       top: 10,
       right: 10,
-      child: ImageMenu(node: node, state: state),
+      child: ImageMenu(
+        node: node,
+        state: state,
+        imageStateNotifier: imageStateNotifier,
+      ),
     ),
   );
 }
@@ -854,7 +884,12 @@ LinkPreviewBlockComponentBuilder _buildLinkPreviewBlockComponentBuilder(
 ) {
   return LinkPreviewBlockComponentBuilder(
     configuration: configuration.copyWith(
-      padding: (_) => const EdgeInsets.symmetric(vertical: 10),
+      padding: (node) {
+        if (UniversalPlatform.isMobile) {
+          return configuration.padding(node);
+        }
+        return const EdgeInsets.symmetric(vertical: 10);
+      },
     ),
     cache: LinkPreviewDataCache(),
     showMenu: true,

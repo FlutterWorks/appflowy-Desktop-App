@@ -1,6 +1,7 @@
 import 'package:appflowy/plugins/base/emoji/emoji_picker_screen.dart';
 import 'package:appflowy/plugins/document/presentation/editor_plugins/header/emoji_icon_widget.dart';
 import 'package:appflowy/shared/icon_emoji_picker/flowy_icon_emoji_picker.dart';
+import 'package:appflowy/shared/icon_emoji_picker/tab.dart';
 import 'package:flowy_infra_ui/flowy_infra_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -21,6 +22,8 @@ class EmojiPickerButton extends StatelessWidget {
     this.enable = true,
     this.margin,
     this.buttonSize,
+    this.documentId,
+    this.tabs = const [PickerTabType.emoji, PickerTabType.icon],
   });
 
   final EmojiIconData emoji;
@@ -39,6 +42,8 @@ class EmojiPickerButton extends StatelessWidget {
   final bool enable;
   final EdgeInsets? margin;
   final Size? buttonSize;
+  final String? documentId;
+  final List<PickerTabType> tabs;
 
   @override
   Widget build(BuildContext context) {
@@ -55,6 +60,8 @@ class EmojiPickerButton extends StatelessWidget {
         showBorder: showBorder,
         enable: enable,
         buttonSize: buttonSize,
+        tabs: tabs,
+        documentId: documentId,
       );
     }
 
@@ -65,6 +72,8 @@ class EmojiPickerButton extends StatelessWidget {
       enable: enable,
       title: title,
       margin: margin,
+      tabs: tabs,
+      documentId: documentId,
     );
   }
 }
@@ -82,6 +91,8 @@ class _DesktopEmojiPickerButton extends StatelessWidget {
     this.showBorder = true,
     this.enable = true,
     this.buttonSize,
+    this.documentId,
+    this.tabs = const [PickerTabType.emoji, PickerTabType.icon],
   });
 
   final EmojiIconData emoji;
@@ -99,6 +110,8 @@ class _DesktopEmojiPickerButton extends StatelessWidget {
   final bool showBorder;
   final bool enable;
   final Size? buttonSize;
+  final String? documentId;
+  final List<PickerTabType> tabs;
 
   @override
   Widget build(BuildContext context) {
@@ -118,6 +131,8 @@ class _DesktopEmojiPickerButton extends StatelessWidget {
         padding: const EdgeInsets.all(4.0),
         child: FlowyIconEmojiPicker(
           initialType: emoji.type.toPickerTabType(),
+          tabs: tabs,
+          documentId: documentId,
           onSelectedEmoji: (r) {
             onSubmitted(r, popoverController);
           },
@@ -157,6 +172,8 @@ class _MobileEmojiPickerButton extends StatelessWidget {
     this.enable = true,
     this.title,
     this.margin,
+    this.documentId,
+    this.tabs = const [PickerTabType.emoji, PickerTabType.icon],
   });
 
   final EmojiIconData emoji;
@@ -168,6 +185,8 @@ class _MobileEmojiPickerButton extends StatelessWidget {
   final String? title;
   final bool enable;
   final EdgeInsets? margin;
+  final String? documentId;
+  final List<PickerTabType> tabs;
 
   @override
   Widget build(BuildContext context) {
@@ -187,6 +206,9 @@ class _MobileEmojiPickerButton extends StatelessWidget {
                   queryParameters: {
                     MobileEmojiPickerScreen.pageTitle: title,
                     MobileEmojiPickerScreen.iconSelectedType: emoji.type.name,
+                    MobileEmojiPickerScreen.uploadDocumentId: documentId,
+                    MobileEmojiPickerScreen.selectTabs:
+                        tabs.map((e) => e.name).toList(),
                   },
                 ).toString(),
               );
