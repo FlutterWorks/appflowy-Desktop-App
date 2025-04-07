@@ -1,8 +1,9 @@
-use std::sync::{Arc, Weak};
-use tracing::instrument;
-
 use flowy_error::{FlowyError, FlowyResult};
 use lib_dispatch::prelude::{data_result_ok, AFPluginData, AFPluginState, DataResult};
+use std::str::FromStr;
+use std::sync::{Arc, Weak};
+use tracing::instrument;
+use uuid::Uuid;
 
 use crate::entities::*;
 use crate::manager::FolderManager;
@@ -443,7 +444,12 @@ pub(crate) async fn unpublish_views_handler(
 ) -> Result<(), FlowyError> {
   let folder = upgrade_folder(folder)?;
   let params = data.into_inner();
-  folder.unpublish_views(params.view_ids).await?;
+  let view_ids = params
+    .view_ids
+    .into_iter()
+    .flat_map(|id| Uuid::from_str(&id).ok())
+    .collect::<Vec<_>>();
+  folder.unpublish_views(view_ids).await?;
   Ok(())
 }
 
@@ -454,6 +460,7 @@ pub(crate) async fn get_publish_info_handler(
 ) -> DataResult<PublishInfoResponsePB, FlowyError> {
   let folder = upgrade_folder(folder)?;
   let view_id = data.into_inner().value;
+  let view_id = Uuid::from_str(&view_id)?;
   let info = folder.get_publish_info(&view_id).await?;
   data_result_ok(PublishInfoResponsePB::from(info))
 }
@@ -465,6 +472,7 @@ pub(crate) async fn set_publish_name_handler(
 ) -> Result<(), FlowyError> {
   let folder = upgrade_folder(folder)?;
   let SetPublishNamePB { view_id, new_name } = data.into_inner();
+  let view_id = Uuid::from_str(&view_id)?;
   folder.set_publish_name(view_id, new_name).await?;
   Ok(())
 }
@@ -531,5 +539,27 @@ pub(crate) async fn remove_default_publish_view_handler(
 ) -> Result<(), FlowyError> {
   let folder = upgrade_folder(folder)?;
   folder.remove_default_published_view().await?;
+  Ok(())
+}
+
+#[tracing::instrument(level = "debug", skip(data, folder))]
+pub(crate) async fn lock_view_handler(
+  data: AFPluginData<ViewIdPB>,
+  folder: AFPluginState<Weak<FolderManager>>,
+) -> Result<(), FlowyError> {
+  let folder = upgrade_folder(folder)?;
+  let view_id = data.into_inner().value;
+  folder.lock_view(&view_id).await?;
+  Ok(())
+}
+
+#[tracing::instrument(level = "debug", skip(data, folder))]
+pub(crate) async fn unlock_view_handler(
+  data: AFPluginData<ViewIdPB>,
+  folder: AFPluginState<Weak<FolderManager>>,
+) -> Result<(), FlowyError> {
+  let folder = upgrade_folder(folder)?;
+  let view_id = data.into_inner().value;
+  folder.unlock_view(&view_id).await?;
   Ok(())
 }

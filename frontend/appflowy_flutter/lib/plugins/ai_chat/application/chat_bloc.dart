@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:collection';
 
+import 'package:appflowy/ai/ai.dart';
 import 'package:appflowy/util/int64_extension.dart';
 import 'package:appflowy_backend/dispatch/dispatch.dart';
 import 'package:appflowy_backend/log.dart';
@@ -10,6 +11,7 @@ import 'package:appflowy_backend/protobuf/flowy-folder/view.pb.dart';
 import 'package:appflowy_result/appflowy_result.dart';
 import 'package:collection/collection.dart';
 import 'package:fixnum/fixnum.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_chat_core/flutter_chat_core.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
@@ -28,6 +30,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     required this.userId,
   })  : chatController = InMemoryChatController(),
         listener = ChatMessageListener(chatId: chatId),
+        selectedSourcesNotifier = ValueNotifier([]),
         super(ChatState.initial()) {
     _startListening();
     _dispatch();
@@ -38,7 +41,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
   final String chatId;
   final String userId;
   final ChatMessageListener listener;
-
+  final ValueNotifier<List<String>> selectedSourcesNotifier;
   final ChatController chatController;
 
   /// The last streaming message id
@@ -68,7 +71,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     await listener.stop();
     final request = ViewIdPB(value: chatId);
     unawaited(FolderEventCloseView(request).send());
-
+    selectedSourcesNotifier.dispose();
     return super.close();
   }
 
@@ -236,9 +239,9 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
               ),
             );
           },
-          regenerateAnswer: (id, format) {
+          regenerateAnswer: (id, format, model) {
             _clearRelatedQuestions();
-            _regenerateAnswer(id, format);
+            _regenerateAnswer(id, format, model);
             lastSentMessage = null;
 
             isFetchingRelatedQuestions = false;
@@ -251,12 +254,10 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
             );
           },
           didReceiveChatSettings: (settings) {
-            emit(
-              state.copyWith(selectedSourceIds: settings.ragIds),
-            );
+            selectedSourcesNotifier.value = settings.ragIds;
           },
           updateSelectedSources: (selectedSourcesIds) async {
-            emit(state.copyWith(selectedSourceIds: selectedSourcesIds));
+            selectedSourcesNotifier.value = [...selectedSourcesIds];
 
             final payload = UpdateChatSettingsPB(
               chatId: ChatId(value: chatId),
@@ -482,6 +483,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
   void _regenerateAnswer(
     String answerMessageIdString,
     PredefinedFormat? format,
+    AIModelPB? model,
   ) async {
     final id = temporaryMessageIDMap.entries
             .firstWhereOrNull((e) => e.value == answerMessageIdString)
@@ -503,6 +505,9 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     );
     if (format != null) {
       payload.format = format.toPB();
+    }
+    if (model != null) {
+      payload.model = model;
     }
 
     await AIEventRegenerateResponse(payload).send().fold(
@@ -636,6 +641,7 @@ class ChatEvent with _$ChatEvent {
   const factory ChatEvent.regenerateAnswer(
     String id,
     PredefinedFormat? format,
+    AIModelPB? model,
   ) = _RegenerateAnswer;
 
   // streaming answer
@@ -665,14 +671,12 @@ class ChatEvent with _$ChatEvent {
 @freezed
 class ChatState with _$ChatState {
   const factory ChatState({
-    required List<String> selectedSourceIds,
     required LoadChatMessageStatus loadingState,
     required PromptResponseState promptResponseState,
     required bool clearErrorMessages,
   }) = _ChatState;
 
   factory ChatState.initial() => const ChatState(
-        selectedSourceIds: [],
         loadingState: LoadChatMessageStatus.loading,
         promptResponseState: PromptResponseState.ready,
         clearErrorMessages: false,

@@ -155,7 +155,8 @@
     "charCountLabel": "عدد الأحرف: ",
     "createdAtLabel": "تم إنشاؤه: ",
     "syncedAtLabel": "تم المزامنة: ",
-    "saveAsNewPage": "حفظ الرسائل في الصفحة"
+    "saveAsNewPage": "حفظ الرسائل في الصفحة",
+    "saveAsNewPageDisabled": "لا توجد رسائل متاحة"
   },
   "importPanel": {
     "textAndMarkdown": "نص و Markdown",
@@ -164,6 +165,15 @@
     "notionZip": "ملف Zip المُصدَّر من Notion",
     "csv": "CSV",
     "database": "قاعدة البيانات"
+  },
+  "emojiIconPicker": {
+    "iconUploader": {
+      "placeholderLeft": "اسحب وأفلِت ملفًا، وانقر فوقه ",
+      "placeholderUpload": "رفع",
+      "placeholderRight": "أو قم بلصق رابط الصورة.",
+      "dropToUpload": "إفلات ملف لتحميله",
+      "change": "تغير"
+    }
   },
   "disclosureAction": {
     "rename": "إعادة تسمية",
@@ -178,7 +188,8 @@
     "changeIcon": "تغيير الأيقونة",
     "collapseAllPages": "طي جميع الصفحات الفرعية",
     "movePageTo": "تحريك الصفحة إلى",
-    "move": "تحريك"
+    "move": "تحريك",
+    "lockPage": "إلغاء تأمين الصفحة"
   },
   "blankPageTitle": "صفحة فارغة",
   "newPageText": "صفحة جديدة",
@@ -218,6 +229,7 @@
     "indexingFile": "الفهرسة {}",
     "generatingResponse": "توليد الاستجابة",
     "selectSources": "اختر المصادر",
+    "currentPage": "الصفحة الحالية",
     "sourcesLimitReached": "يمكنك فقط تحديد ما يصل إلى 3 مستندات من المستوى العلوي ومستنداتها الفرعية",
     "sourceUnsupported": "نحن لا ندعم الدردشة مع قواعد البيانات في الوقت الحالي",
     "regenerate": "حاول ثانية",
@@ -244,12 +256,19 @@
       "bulletWithImageDescription": "@:chat.changeFormat.bullet مع الصورة",
       "tableWithImageDescription": "@:chat.changeFormat.table مع الصورة"
     },
+    "switchModel": {
+      "label": "تبديل النموذج",
+      "localModel": "النموذج المحلي",
+      "cloudModel": "نموذج السحابة",
+      "autoModel": "آلي"
+    },
     "selectBanner": {
       "saveButton": "أضف إلى...",
       "selectMessages": "حدد الرسائل",
       "nSelected": "{} تم التحديد",
       "allSelected": "جميعها محددة"
-    }
+    },
+    "stopTooltip": "توقف عن التوليد"
   },
   "trash": {
     "text": "المهملات",
@@ -377,13 +396,14 @@
     "storageLimitDialogTitle": "لقد نفدت مساحة التخزين المجانية لديك. قم بالترقية لإلغاء تأمين مساحة تخزين غير محدودة",
     "storageLimitDialogTitleIOS": "لقد نفدت مساحة التخزين المجانية.",
     "aiResponseLimitTitle": "لقد نفدت منك استجابات الذكاء الاصطناعي المجانية. قم بالترقية إلى الخطة الاحترافية أو قم بشراء إضافة الذكاء الاصطناعي لفتح عدد غير محدود من الاستجابات",
-    "aiResponseLimitTitleIOS": "لقد نفدت استجابات الذكاء الاصطناعي المجانية.",
     "aiResponseLimitDialogTitle": "تم الوصول إلى الحد الأقصى لاستجابات الذكاء الاصطناعي",
     "aiResponseLimit": "لقد نفدت استجابات الذكاء الاصطناعي المجانية.<inlang-LineFeed>\nانتقل إلى الإعدادات -&gt; الخطة -&gt; انقر فوق AI Max أو Pro Plan للحصول على المزيد من استجابات الذكاء الاصطناعي",
     "askOwnerToUpgradeToPro": "مساحة العمل الخاصة بك نفدت من مساحة التخزين المجانية. يرجى مطالبة مالك مساحة العمل الخاصة بك بالترقية إلى الخطة الاحترافية",
     "askOwnerToUpgradeToProIOS": "مساحة العمل الخاصة بك على وشك النفاد من مساحة التخزين المجانية.",
     "askOwnerToUpgradeToAIMax": "لقد نفدت الاستجابات المجانية للذكاء الاصطناعي من مساحة العمل الخاصة بك. يرجى مطالبة مالك مساحة العمل الخاصة بك بترقية الخطة أو شراء إضافات الذكاء الاصطناعي",
     "askOwnerToUpgradeToAIMaxIOS": "مساحة العمل الخاصة بك تفتقر إلى الاستجابات المجانية للذكاء الاصطناعي.",
+    "purchaseAIMax": "لقد نفدت استجابات الصور بالذكاء الاصطناعي من مساحة العمل الخاصة بك. يرجى مطالبة مالك مساحة العمل الخاصة بك بشراء AI Max",
+    "aiImageResponseLimit": "لقد نفدت استجابات الصور الخاصة بالذكاء الاصطناعي.<inlang-LineFeed>\nانتقل إلى الإعدادات -&gt; الخطة -&gt; انقر فوق AI Max للحصول على المزيد من استجابات صور AI",
     "purchaseStorageSpace": "شراء مساحة تخزين",
     "singleFileProPlanLimitationDescription": "لقد تجاوزت الحد الأقصى لحجم تحميل الملف المسموح به في الخطة المجانية. يرجى الترقية إلى الخطة الاحترافية لتحميل ملفات أكبر حجمًا",
     "purchaseAIResponse": "شراء",
@@ -574,7 +594,9 @@
         "title": "تسجيل الدخول إلى الحساب",
         "loginLabel": "تسجيل الدخول",
         "logoutLabel": "تسجيل الخروج"
-      }
+      },
+      "isUpToDate": "تم تحديث @:appName !",
+      "officialVersion": "الإصدار {version} (الإصدار الرسمي)"
     },
     "workspacePage": {
       "menuLabel": "مساحة العمل",
@@ -750,6 +772,7 @@
         "alignLeft": "محاذاة النص إلى اليسار",
         "alignCenter": "محاذاة النص إلى الوسط",
         "alignRight": "محاذاة النص إلى اليمين",
+        "insertInlineMathEquation": "إدراج معادلة رياضية مضمنة",
         "undo": "التراجع",
         "redo": "الإعادة",
         "convertToParagraph": "تحويل الكتلة إلى فقرة",
@@ -840,11 +863,17 @@
         "localAIStart": "بدأت الدردشة المحلية بالذكاء الاصطناعي...",
         "localAILoading": "جاري تحميل نموذج الدردشة المحلية للذكاء الاصطناعي...",
         "localAIStopped": "تم إيقاف الذكاء الاصطناعي المحلي",
+        "localAIRunning": "الذكاء الاصطناعي المحلي قيد التشغيل",
+        "localAINotReadyRetryLater": "جاري تهيئة الذكاء الاصطناعي المحلي، يرجى المحاولة مرة أخرى لاحقًا",
+        "localAIDisabled": "أنت تستخدم الذكاء الاصطناعي المحلي، ولكنه مُعطّل. يُرجى الانتقال إلى الإعدادات لتفعيله أو تجربة نموذج آخر.",
+        "localAIInitializing": "يتم تهيئة الذكاء الاصطناعي المحلي وقد يستغرق الأمر بضع دقائق، حسب جهازك",
+        "localAINotReadyTextFieldPrompt": "لا يمكنك التحرير أثناء تحميل الذكاء الاصطناعي المحلي",
         "failToLoadLocalAI": "فشل في بدء تشغيل الذكاء الاصطناعي المحلي",
         "restartLocalAI": "إعادة تشغيل الذكاء الاصطناعي المحلي",
         "disableLocalAITitle": "تعطيل الذكاء الاصطناعي المحلي",
         "disableLocalAIDescription": "هل تريد تعطيل الذكاء الاصطناعي المحلي؟",
         "localAIToggleTitle": "التبديل لتفعيل أو تعطيل الذكاء الاصطناعي المحلي",
+        "localAIToggleSubTitle": "قم بتشغيل نماذج الذكاء الاصطناعي المحلية الأكثر تقدمًا داخل AppFlowy للحصول على أقصى درجات الخصوصية والأمان",
         "offlineAIInstruction1": "اتبع",
         "offlineAIInstruction2": "تعليمات",
         "offlineAIInstruction3": "لتفعيل الذكاء الاصطناعي دون اتصال بالإنترنت.",
@@ -853,7 +882,15 @@
         "offlineAIDownload3": "إنه أولا",
         "activeOfflineAI": "نشط",
         "downloadOfflineAI": "التنزيل",
-        "openModelDirectory": "افتح المجلد"
+        "openModelDirectory": "افتح المجلد",
+        "laiNotReady": "لم يتم تثبيت تطبيق الذكاء الاصطناعي المحلي بشكل صحيح.",
+        "ollamaNotReady": "خادم Ollama غير جاهز.",
+        "pleaseFollowThese": "اتبع هؤلاء",
+        "instructions": "التعليمات",
+        "installOllamaLai": "لإعداد Ollama وAppFlowy Local AI. تخطَّ هذه الخطوة إذا كنت قد قمت بإعدادها بالفعل",
+        "modelsMissing": "لم يتم العثور على النماذج المطلوبة.",
+        "downloadModel": "لتنزيلها.",
+        "startLocalAI": "قد يستغرق الأمر بضع ثوانٍ لبدء تشغيل الذكاء الاصطناعي المحلي"
       }
     },
     "planPage": {
@@ -995,6 +1032,7 @@
         "itemFour": "التعاون في الزمن الحقيقي",
         "itemFive": "تطبيق الجوال",
         "itemSix": "استجابات الذكاء الاصطناعي",
+        "itemSeven": "صور الذكاء الاصطناعي",
         "itemFileUpload": "رفع الملفات",
         "customNamespace": "مساحة اسم مخصصة",
         "tooltipSix": "تعني مدة الحياة أن عدد الاستجابات لا يتم إعادة ضبطه أبدًا",
@@ -1009,6 +1047,7 @@
         "itemFour": "نعم",
         "itemFive": "نعم",
         "itemSix": "10 مدى الحياة",
+        "itemSeven": "2 مدى الحياة",
         "itemFileUpload": "حتى 7 ميجا بايت",
         "intelligentSearch": "البحث الذكي"
       },
@@ -1019,6 +1058,7 @@
         "itemFour": "نعم",
         "itemFive": "نعم",
         "itemSix": "غير محدود",
+        "itemSeven": "10 صور شهريا",
         "itemFileUpload": "غير محدود",
         "intelligentSearch": "البحث الذكي"
       },
@@ -1194,6 +1234,7 @@
         "system": "التكيف مع النظام"
       },
       "fontScaleFactor": "عامل مقياس الخط",
+      "displaySize": "حجم العرض",
       "documentSettings": {
         "cursorColor": "لون مؤشر المستند",
         "selectionColor": "لون اختيار المستند",
@@ -1394,6 +1435,7 @@
       "filterBy": "مصنف بواسطة...",
       "typeAValue": "اكتب قيمة ...",
       "layout": "تَخطِيط",
+      "compactMode": "الوضع المضغوط",
       "databaseLayout": "تَخطِيط",
       "viewList": {
         "zero": "0 مشاهدات",
@@ -1702,6 +1744,14 @@
         "selectADocumentToLinkTo": "حدد مستندًا للارتباط به"
       },
       "name": {
+        "textStyle": "نمط النص",
+        "list": "قائمة",
+        "toggle": "تبديل",
+        "fileAndMedia": "الملفات والوسائط",
+        "simpleTable": "جدول بسيط",
+        "visuals": "المرئيات",
+        "document": "وثيقة",
+        "advanced": "متقدم",
         "text": "نص",
         "heading1": "العنوان 1",
         "heading2": "العنوان 2",
@@ -1733,7 +1783,10 @@
         "aiWriter": "كاتب الذكاء الاصطناعي",
         "dateOrReminder": "التاريخ أو التذكير",
         "photoGallery": "معرض الصور",
-        "file": "الملف"
+        "file": "الملف",
+        "twoColumns": "عمودين",
+        "threeColumns": "3 أعمدة",
+        "fourColumns": "4 أعمدة"
       },
       "subPage": {
         "name": "المستند",
@@ -1756,6 +1809,16 @@
       "referencedGrid": "الشبكة المشار إليها",
       "referencedCalendar": "التقويم المشار إليه",
       "referencedDocument": "الوثيقة المشار إليها",
+      "aiWriter": {
+        "userQuestion": "اسأل الذكاء الاصطناعي عن أي شيء",
+        "continueWriting": "استمر في الكتابة",
+        "fixSpelling": "تصحيح الأخطاء الإملائية والنحوية",
+        "improveWriting": "تحسين الكتابة",
+        "summarize": "تلخيص",
+        "explain": "اشرح",
+        "makeShorter": "اجعلها أقصر",
+        "makeLonger": "اجعلها أطول"
+      },
       "autoGeneratorMenuItemName": "كاتب AI",
       "autoGeneratorTitleName": "AI: اطلب من الذكاء الاصطناعي كتابة أي شيء ...",
       "autoGeneratorLearnMore": "يتعلم أكثر",
@@ -2080,7 +2143,28 @@
       "morePages": "المزيد من الصفحات"
     },
     "toolbar": {
-      "resetToDefaultFont": "إعادة تعيين إلى الافتراضي"
+      "resetToDefaultFont": "إعادة تعيين إلى الافتراضي",
+      "textSize": "حجم النص",
+      "textColor": "لون النص",
+      "h1": "العنوان 1",
+      "h2": "العنوان 2",
+      "h3": "العنوان 3",
+      "alignLeft": "محاذاة إلى اليسار",
+      "alignRight": "محاذاة إلى اليمين",
+      "alignCenter": "محاذاة إلى الوسط",
+      "link": "وصلة",
+      "textAlign": "محاذاة النص",
+      "moreOptions": "المزيد من الخيارات",
+      "font": "الخط",
+      "inlineCode": "الكود المضمن",
+      "suggestions": "اقتراحات",
+      "turnInto": "تحول إلى",
+      "equation": "معادلة",
+      "insert": "إدراج",
+      "linkInputHint": "لصق الرابط أو البحث عن الصفحات",
+      "pageOrURL": "الصفحة أو عنوان URL",
+      "linkName": "اسم الرابط",
+      "linkNameHint": "اسم رابط الإدخال"
     },
     "errorBlock": {
       "theBlockIsNotSupported": "الإصدار الحالي لا يدعم هذا الحقل.",
@@ -2536,6 +2620,7 @@
       "accountLogin": "تسجيل الدخول إلى الحساب",
       "updateNameError": "فشل في تحديث الاسم",
       "updateIconError": "فشل في تحديث الأيقونة",
+      "aboutAppFlowy": "حول appName",
       "deleteAccount": {
         "title": "حذف الحساب",
         "subtitle": "احذف حسابك وجميع بياناتك بشكل دائم.",
@@ -2544,12 +2629,12 @@
         "dialogTitle": "حذف الحساب",
         "dialogContent1": "هل أنت متأكد أنك تريد حذف حسابك نهائياً؟",
         "dialogContent2": "لا يمكن التراجع عن هذا الإجراء، وسوف يؤدي إلى إزالة الوصول من جميع مساحات العمل، ومسح حسابك بالكامل، بما في ذلك مساحات العمل الخاصة، وإزالتك من جميع مساحات العمل المشتركة.",
-        "confirmHint1": "من فضلك اكتب \"حذف حسابي\" للتأكيد.",
+        "confirmHint1": "من فضلك اكتب \"@:newSettings.myAccount.deleteAccount.confirmHint3\" للتأكيد.",
         "confirmHint2": "أفهم أن هذا الإجراء لا رجعة فيه وسيؤدي إلى حذف حسابي وجميع البيانات المرتبطة به بشكل دائم.",
         "confirmHint3": "حذف حسابي",
         "checkToConfirmError": "يجب عليك تحديد المربع لتأكيد الحذف",
         "failedToGetCurrentUser": "فشل في الحصول على البريد الإلكتروني الحالي للمستخدم",
-        "confirmTextValidationFailed": "نص التأكيد الخاص بك لا يتطابق مع \"حذف حسابي\"",
+        "confirmTextValidationFailed": "نص التأكيد الخاص بك لا يتطابق مع \"@:newSettings.myAccount.deleteAccount.confirmHint3\"",
         "deleteAccountSuccess": "تم حذف الحساب بنجاح"
       }
     },
@@ -2726,6 +2811,7 @@
     "moreOptions": "المزيد من الخيارات",
     "collapse": "طي",
     "signInAgreement": "بالنقر فوق \"متابعة\" أعلاه، فإنك توافق على شروط استخدام AppFlowy",
+    "signInLocalAgreement": "من خلال النقر على \"البدء\" أعلاه، فإنك توافق على شروط وأحكام AppFlowy",
     "and": "و",
     "termOfUse": "شروط",
     "privacyPolicy": "سياسة الخصوصية",
@@ -3105,6 +3191,50 @@
     }
   },
   "ai": {
-    "contentPolicyViolation": "فشل إنشاء الصورة بسبب محتوى حساس. يرجى إعادة صياغة إدخالك والمحاولة مرة أخرى"
+    "contentPolicyViolation": "فشل إنشاء الصورة بسبب محتوى حساس. يرجى إعادة صياغة إدخالك والمحاولة مرة أخرى",
+    "textLimitReachedDescription": "لقد نفدت الاستجابات المجانية للذكاء الاصطناعي من مساحة عملك. قم بالترقية إلى الخطة الاحترافية أو قم بشراء إضافة للذكاء الاصطناعي لفتح عدد غير محدود من الاستجابات",
+    "imageLimitReachedDescription": "لقد استنفدت حصتك المجانية من صور الذكاء الاصطناعي. يُرجى الترقية إلى الخطة الاحترافية أو شراء إضافة الذكاء الاصطناعي لفتح عدد غير محدود من الاستجابات",
+    "limitReachedAction": {
+      "textDescription": "لقد نفدت الاستجابات المجانية للذكاء الاصطناعي من مساحة عملك. للحصول على المزيد من الاستجابات، يرجى",
+      "imageDescription": "لقد استنفدت حصتك المجانية من صور الذكاء الاصطناعي. يرجى",
+      "upgrade": "ترقية",
+      "toThe": "الى",
+      "proPlan": "الخطة الاحترافية",
+      "orPurchaseAn": "أو شراء",
+      "aiAddon": "مَرافِق الذكاء الاصطناعي"
+    },
+    "editing": "تحرير",
+    "analyzing": "تحليل",
+    "continueWritingEmptyDocumentTitle": "استمر في كتابة الخطأ",
+    "continueWritingEmptyDocumentDescription": "نواجه مشكلة في توسيع نطاق المحتوى في مستندك. اكتب مقدمة قصيرة وسنتولى الأمر من هناك!",
+    "more": "أكثر"
+  },
+  "autoUpdate": {
+    "criticalUpdateTitle": "التحديث ضروري للمتابعة",
+    "criticalUpdateDescription": "لقد أجرينا تحسينات لتحسين تجربتك! يُرجى التحديث من {currentVersion} إلى {newVersion} لمواصلة استخدام التطبيق.",
+    "criticalUpdateButton": "تحديث",
+    "bannerUpdateTitle": "النسخة الجديدة متاحة!",
+    "bannerUpdateDescription": "احصل على أحدث الميزات والإصلاحات. انقر على \"تحديث\" للتثبيت الآن.",
+    "bannerUpdateButton": "تحديث",
+    "settingsUpdateTitle": "الإصدار الجديد ({newVersion}) متاح!",
+    "settingsUpdateDescription": "الإصدار الحالي: {currentVersion} (الإصدار الرسمي) → {newVersion}",
+    "settingsUpdateButton": "تحديث",
+    "settingsUpdateWhatsNew": "ما الجديد"
+  },
+  "lockPage": {
+    "lockPage": "مقفل",
+    "reLockPage": "إعادة القفل",
+    "lockTooltip": "تم قفل الصفحة لمنع التعديل غير المقصود. انقر لفتح القفل.",
+    "pageLockedToast": "الصفحة مقفلة. التعديل معطل حتى يفتحها أحد.",
+    "lockedOperationTooltip": "تم قفل الصفحة لمنع التعديل غير المقصود."
+  },
+  "suggestion": {
+    "accept": "يقبل",
+    "keep": "يحفظ",
+    "discard": "تجاهل",
+    "close": "يغلق",
+    "tryAgain": "حاول ثانية",
+    "rewrite": "إعادة كتابة",
+    "insertBelow": "أدخل أدناه"
   }
 }

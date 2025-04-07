@@ -41,7 +41,7 @@ validator.workspace = true
 async-trait.workspace = true
 client-api = { workspace = true }
 regex = "1.9.5"
-futures = "0.3.30"
+futures = "0.3.31"
 dashmap.workspace = true
 
 
@@ -50,6 +50,4 @@ flowy-codegen.workspace = true
 
 [features]
 dart = ["flowy-codegen/dart", "flowy-notification/dart"]
-tauri_ts = ["flowy-codegen/ts", "flowy-notification/tauri_ts"]
-web_ts = ["flowy-codegen/ts", "flowy-notification/web_ts"]
 test_helper = []

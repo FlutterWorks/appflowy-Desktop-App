@@ -4,6 +4,7 @@ import 'package:appflowy/workspace/application/settings/appearance/base_appearan
 import 'package:flowy_infra/size.dart';
 import 'package:flowy_infra/theme.dart';
 import 'package:flowy_infra/theme_extension.dart';
+import 'package:flowy_infra/theme_extension_v2.dart';
 import 'package:flutter/material.dart';
 
 class MobileAppearance extends BaseAppearance {
@@ -29,6 +30,7 @@ class MobileAppearance extends BaseAppearance {
     );
 
     final codeFontStyle = getFontStyle(fontFamily: codeFontFamily);
+    final isLight = brightness == Brightness.light;
 
     final theme = brightness == Brightness.light
         ? appTheme.lightTheme
@@ -49,7 +51,7 @@ class MobileAppearance extends BaseAppearance {
             error: const Color(0xffFB006D),
             onError: const Color(0xffFB006D),
             outline: const Color(0xffe3e3e3),
-            outlineVariant: const Color(0xffCBD5E0).withOpacity(0.24),
+            outlineVariant: const Color(0xffCBD5E0).withValues(alpha: 0.24),
             //Snack bar
             surface: Colors.white,
             onSurface: _onSurfaceColor, // text/body color
@@ -280,8 +282,14 @@ class MobileAppearance extends BaseAppearance {
           scrollbarColor: theme.scrollbarColor,
           scrollbarHoverColor: theme.scrollbarHoverColor,
           lightIconColor: theme.lightIconColor,
+          toolbarHoverColor: theme.toolbarHoverColor,
         ),
         ToolbarColorExtension.fromBrightness(brightness),
+        isLight
+            ? lightAFThemeV2
+            : darkAFThemeV2.copyWith(
+                icon_primary: theme.icon,
+              ),
       ],
     );
   }

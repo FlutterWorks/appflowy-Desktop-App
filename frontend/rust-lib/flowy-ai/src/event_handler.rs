@@ -1,20 +1,18 @@
-use std::fs;
-use std::path::PathBuf;
-
-use crate::ai_manager::AIManager;
+use crate::ai_manager::{AIManager, GLOBAL_ACTIVE_MODEL_KEY};
 use crate::completion::AICompletion;
 use crate::entities::*;
-use crate::local_ai::local_llm_chat::LLMModelInfo;
-use crate::notification::{
-  chat_notification_builder, ChatNotification, APPFLOWY_AI_NOTIFICATION_KEY,
+use crate::util::ai_available_models_key;
+use flowy_ai_pub::cloud::{
+  AIModel, ChatMessageMetadata, ChatMessageType, ChatRAGData, ContextLoader,
 };
-use allo_isolate::Isolate;
-use flowy_ai_pub::cloud::{ChatMessageMetadata, ChatMessageType, ChatRAGData, ContextLoader};
 use flowy_error::{ErrorCode, FlowyError, FlowyResult};
 use lib_dispatch::prelude::{data_result_ok, AFPluginData, AFPluginState, DataResult};
-use lib_infra::isolate_stream::IsolateSink;
+use std::fs;
+use std::path::PathBuf;
+use std::str::FromStr;
 use std::sync::{Arc, Weak};
 use tracing::trace;
+use uuid::Uuid;
 use validator::Validate;
 
 fn upgrade_ai_manager(ai_manager: AFPluginState<Weak<AIManager>>) -> FlowyResult<Arc<AIManager>> {
@@ -73,9 +71,10 @@ pub(crate) async fn stream_chat_message_handler(
 
   trace!("Stream chat message with metadata: {:?}", metadata);
 
+  let chat_id = Uuid::from_str(&chat_id)?;
   let params = StreamMessageParams {
-    chat_id: &chat_id,
-    message: &message,
+    chat_id,
+    message,
     message_type,
     answer_stream_port,
     question_stream_port,
@@ -84,7 +83,7 @@ pub(crate) async fn stream_chat_message_handler(
   };
 
   let ai_manager = upgrade_ai_manager(ai_manager)?;
-  let result = ai_manager.stream_chat_message(&params).await?;
+  let result = ai_manager.stream_chat_message(params).await?;
   data_result_ok(result)
 }
 
@@ -94,15 +93,50 @@ pub(crate) async fn regenerate_response_handler(
   ai_manager: AFPluginState<Weak<AIManager>>,
 ) -> FlowyResult<()> {
   let data = data.try_into_inner()?;
+  let chat_id = Uuid::from_str(&data.chat_id)?;
 
   let ai_manager = upgrade_ai_manager(ai_manager)?;
   ai_manager
     .stream_regenerate_response(
-      &data.chat_id,
+      &chat_id,
       data.answer_message_id,
       data.answer_stream_port,
       data.format,
+      data.model,
     )
+    .await?;
+  Ok(())
+}
+
+#[tracing::instrument(level = "debug", skip_all, err)]
+pub(crate) async fn get_server_model_list_handler(
+  ai_manager: AFPluginState<Weak<AIManager>>,
+) -> DataResult<AvailableModelsPB, FlowyError> {
+  let ai_manager = upgrade_ai_manager(ai_manager)?;
+  let source_key = ai_available_models_key(GLOBAL_ACTIVE_MODEL_KEY);
+  let models = ai_manager.get_available_models(source_key).await?;
+  data_result_ok(models)
+}
+
+#[tracing::instrument(level = "debug", skip_all, err)]
+pub(crate) async fn get_chat_models_handler(
+  data: AFPluginData<AvailableModelsQueryPB>,
+  ai_manager: AFPluginState<Weak<AIManager>>,
+) -> DataResult<AvailableModelsPB, FlowyError> {
+  let data = data.try_into_inner()?;
+  let ai_manager = upgrade_ai_manager(ai_manager)?;
+  let models = ai_manager.get_available_models(data.source).await?;
+  data_result_ok(models)
+}
+
+pub(crate) async fn update_selected_model_handler(
+  data: AFPluginData<UpdateSelectedModelPB>,
+  ai_manager: AFPluginState<Weak<AIManager>>,
+) -> Result<(), FlowyError> {
+  let data = data.try_into_inner()?;
+  let ai_manager = upgrade_ai_manager(ai_manager)?;
+  ai_manager
+    .update_selected_model(data.source, AIModel::from(data.selected_model))
     .await?;
   Ok(())
 }
@@ -116,8 +150,9 @@ pub(crate) async fn load_prev_message_handler(
   let data = data.into_inner();
   data.validate()?;
 
+  let chat_id = Uuid::from_str(&data.chat_id)?;
   let messages = ai_manager
-    .load_prev_chat_messages(&data.chat_id, data.limit, data.before_message_id)
+    .load_prev_chat_messages(&chat_id, data.limit, data.before_message_id)
     .await?;
   data_result_ok(messages)
 }
@@ -131,8 +166,9 @@ pub(crate) async fn load_next_message_handler(
   let data = data.into_inner();
   data.validate()?;
 
+  let chat_id = Uuid::from_str(&data.chat_id)?;
   let messages = ai_manager
-    .load_latest_chat_messages(&data.chat_id, data.limit, data.after_message_id)
+    .load_latest_chat_messages(&chat_id, data.limit, data.after_message_id)
     .await?;
   data_result_ok(messages)
 }
@@ -144,8 +180,9 @@ pub(crate) async fn get_related_question_handler(
 ) -> DataResult<RepeatedRelatedQuestionPB, FlowyError> {
   let ai_manager = upgrade_ai_manager(ai_manager)?;
   let data = data.into_inner();
+  let chat_id = Uuid::from_str(&data.chat_id)?;
   let messages = ai_manager
-    .get_related_questions(&data.chat_id, data.message_id)
+    .get_related_questions(&chat_id, data.message_id)
     .await?;
   data_result_ok(messages)
 }
@@ -157,8 +194,9 @@ pub(crate) async fn get_answer_handler(
 ) -> DataResult<ChatMessagePB, FlowyError> {
   let ai_manager = upgrade_ai_manager(ai_manager)?;
   let data = data.into_inner();
+  let chat_id = Uuid::from_str(&data.chat_id)?;
   let message = ai_manager
-    .generate_answer(&data.chat_id, data.message_id)
+    .generate_answer(&chat_id, data.message_id)
     .await?;
   data_result_ok(message)
 }
@@ -172,56 +210,20 @@ pub(crate) async fn stop_stream_handler(
   data.validate()?;
 
   let ai_manager = upgrade_ai_manager(ai_manager)?;
-  ai_manager.stop_stream(&data.chat_id).await?;
+  let chat_id = Uuid::from_str(&data.chat_id)?;
+  ai_manager.stop_stream(&chat_id).await?;
   Ok(())
-}
-
-#[tracing::instrument(level = "debug", skip_all, err)]
-pub(crate) async fn refresh_local_ai_info_handler(
-  ai_manager: AFPluginState<Weak<AIManager>>,
-) -> DataResult<LLMModelInfoPB, FlowyError> {
-  let ai_manager = upgrade_ai_manager(ai_manager)?;
-  let model_info = ai_manager.local_ai_controller.refresh_model_info().await;
-  if model_info.is_err() {
-    if let Some(llm_model) = ai_manager.local_ai_controller.get_current_model() {
-      let model_info = LLMModelInfo {
-        selected_model: llm_model.clone(),
-        models: vec![llm_model],
-      };
-      return data_result_ok(model_info.into());
-    }
-  }
-  data_result_ok(model_info?.into())
-}
-
-#[tracing::instrument(level = "debug", skip_all, err)]
-pub(crate) async fn update_local_llm_model_handler(
-  data: AFPluginData<LLMModelPB>,
-  ai_manager: AFPluginState<Weak<AIManager>>,
-) -> DataResult<LocalModelResourcePB, FlowyError> {
-  let data = data.into_inner();
-  let ai_manager = upgrade_ai_manager(ai_manager)?;
-  let state = ai_manager
-    .local_ai_controller
-    .select_local_llm(data.llm_id)
-    .await?;
-  data_result_ok(state)
-}
-
-#[tracing::instrument(level = "debug", skip_all, err)]
-pub(crate) async fn get_local_llm_state_handler(
-  ai_manager: AFPluginState<Weak<AIManager>>,
-) -> DataResult<LocalModelResourcePB, FlowyError> {
-  let ai_manager = upgrade_ai_manager(ai_manager)?;
-  let state = ai_manager.local_ai_controller.get_local_llm_state().await?;
-  data_result_ok(state)
 }
 
 pub(crate) async fn start_complete_text_handler(
   data: AFPluginData<CompleteTextPB>,
+  ai_manager: AFPluginState<Weak<AIManager>>,
   tools: AFPluginState<Arc<AICompletion>>,
 ) -> DataResult<CompleteTextTaskPB, FlowyError> {
-  let task = tools.create_complete_task(data.into_inner()).await?;
+  let data = data.into_inner();
+  let ai_manager = upgrade_ai_manager(ai_manager)?;
+  let ai_model = ai_manager.get_active_model(&data.object_id).await;
+  let task = tools.create_complete_task(data, ai_model).await?;
   data_result_ok(task)
 }
 
@@ -279,113 +281,17 @@ pub(crate) async fn chat_file_handler(
 
   tracing::debug!("File size: {} bytes", file_size);
   let ai_manager = upgrade_ai_manager(ai_manager)?;
-  ai_manager.chat_with_file(&data.chat_id, file_path).await?;
+  let chat_id = Uuid::from_str(&data.chat_id)?;
+  ai_manager.chat_with_file(&chat_id, file_path).await?;
   Ok(())
 }
 
 #[tracing::instrument(level = "debug", skip_all, err)]
-pub(crate) async fn download_llm_resource_handler(
-  data: AFPluginData<DownloadLLMPB>,
-  ai_manager: AFPluginState<Weak<AIManager>>,
-) -> DataResult<DownloadTaskPB, FlowyError> {
-  let data = data.into_inner();
-  let ai_manager = upgrade_ai_manager(ai_manager)?;
-  let text_sink = IsolateSink::new(Isolate::new(data.progress_stream));
-  let task_id = ai_manager
-    .local_ai_controller
-    .start_downloading(text_sink)
-    .await?;
-  data_result_ok(DownloadTaskPB { task_id })
-}
-
-#[tracing::instrument(level = "debug", skip_all, err)]
-pub(crate) async fn cancel_download_llm_resource_handler(
+pub(crate) async fn restart_local_ai_handler(
   ai_manager: AFPluginState<Weak<AIManager>>,
 ) -> Result<(), FlowyError> {
   let ai_manager = upgrade_ai_manager(ai_manager)?;
-  ai_manager.local_ai_controller.cancel_download()?;
-  Ok(())
-}
-
-#[tracing::instrument(level = "debug", skip_all, err)]
-pub(crate) async fn get_plugin_state_handler(
-  ai_manager: AFPluginState<Weak<AIManager>>,
-) -> DataResult<LocalAIPluginStatePB, FlowyError> {
-  let ai_manager = upgrade_ai_manager(ai_manager)?;
-  let state = ai_manager.local_ai_controller.get_chat_plugin_state();
-  data_result_ok(state)
-}
-#[tracing::instrument(level = "debug", skip_all, err)]
-pub(crate) async fn toggle_local_ai_chat_handler(
-  ai_manager: AFPluginState<Weak<AIManager>>,
-) -> DataResult<LocalAIChatPB, FlowyError> {
-  let ai_manager = upgrade_ai_manager(ai_manager)?;
-  let enabled = ai_manager
-    .local_ai_controller
-    .toggle_local_ai_chat()
-    .await?;
-  let file_enabled = ai_manager.local_ai_controller.is_rag_enabled();
-  let plugin_state = ai_manager.local_ai_controller.get_chat_plugin_state();
-  let pb = LocalAIChatPB {
-    enabled,
-    file_enabled,
-    plugin_state,
-  };
-  chat_notification_builder(
-    APPFLOWY_AI_NOTIFICATION_KEY,
-    ChatNotification::UpdateLocalChatAI,
-  )
-  .payload(pb.clone())
-  .send();
-  data_result_ok(pb)
-}
-
-#[tracing::instrument(level = "debug", skip_all, err)]
-pub(crate) async fn toggle_local_ai_chat_file_handler(
-  ai_manager: AFPluginState<Weak<AIManager>>,
-) -> DataResult<LocalAIChatPB, FlowyError> {
-  let ai_manager = upgrade_ai_manager(ai_manager)?;
-  let enabled = ai_manager.local_ai_controller.is_chat_enabled();
-  let file_enabled = ai_manager
-    .local_ai_controller
-    .toggle_local_ai_chat_rag()
-    .await?;
-  let plugin_state = ai_manager.local_ai_controller.get_chat_plugin_state();
-  let pb = LocalAIChatPB {
-    enabled,
-    file_enabled,
-    plugin_state,
-  };
-  chat_notification_builder(
-    APPFLOWY_AI_NOTIFICATION_KEY,
-    ChatNotification::UpdateLocalChatAI,
-  )
-  .payload(pb.clone())
-  .send();
-
-  data_result_ok(pb)
-}
-
-#[tracing::instrument(level = "debug", skip_all, err)]
-pub(crate) async fn get_local_ai_chat_state_handler(
-  ai_manager: AFPluginState<Weak<AIManager>>,
-) -> DataResult<LocalAIChatPB, FlowyError> {
-  let ai_manager = upgrade_ai_manager(ai_manager)?;
-  let enabled = ai_manager.local_ai_controller.is_chat_enabled();
-  let file_enabled = ai_manager.local_ai_controller.is_rag_enabled();
-  let plugin_state = ai_manager.local_ai_controller.get_chat_plugin_state();
-  data_result_ok(LocalAIChatPB {
-    enabled,
-    file_enabled,
-    plugin_state,
-  })
-}
-#[tracing::instrument(level = "debug", skip_all, err)]
-pub(crate) async fn restart_local_ai_chat_handler(
-  ai_manager: AFPluginState<Weak<AIManager>>,
-) -> Result<(), FlowyError> {
-  let ai_manager = upgrade_ai_manager(ai_manager)?;
-  ai_manager.local_ai_controller.restart_chat_plugin();
+  ai_manager.local_ai.restart_plugin().await;
   Ok(())
 }
 
@@ -394,8 +300,9 @@ pub(crate) async fn toggle_local_ai_handler(
   ai_manager: AFPluginState<Weak<AIManager>>,
 ) -> DataResult<LocalAIPB, FlowyError> {
   let ai_manager = upgrade_ai_manager(ai_manager)?;
-  let enabled = ai_manager.local_ai_controller.toggle_local_ai().await?;
-  data_result_ok(LocalAIPB { enabled })
+  ai_manager.toggle_local_ai().await?;
+  let state = ai_manager.local_ai.get_local_ai_state().await;
+  data_result_ok(state)
 }
 
 #[tracing::instrument(level = "debug", skip_all, err)]
@@ -403,31 +310,8 @@ pub(crate) async fn get_local_ai_state_handler(
   ai_manager: AFPluginState<Weak<AIManager>>,
 ) -> DataResult<LocalAIPB, FlowyError> {
   let ai_manager = upgrade_ai_manager(ai_manager)?;
-  let enabled = ai_manager.local_ai_controller.is_enabled();
-  data_result_ok(LocalAIPB { enabled })
-}
-
-#[tracing::instrument(level = "debug", skip_all, err)]
-pub(crate) async fn get_model_storage_directory_handler(
-  ai_manager: AFPluginState<Weak<AIManager>>,
-) -> DataResult<LocalModelStoragePB, FlowyError> {
-  let ai_manager = upgrade_ai_manager(ai_manager)?;
-  let file_path = ai_manager
-    .local_ai_controller
-    .get_model_storage_directory()?;
-  data_result_ok(LocalModelStoragePB { file_path })
-}
-
-#[tracing::instrument(level = "debug", skip_all, err)]
-pub(crate) async fn get_offline_app_handler(
-  ai_manager: AFPluginState<Weak<AIManager>>,
-) -> DataResult<OfflineAIPB, FlowyError> {
-  let ai_manager = upgrade_ai_manager(ai_manager)?;
-  let link = ai_manager
-    .local_ai_controller
-    .get_offline_ai_app_download_link()
-    .await?;
-  data_result_ok(OfflineAIPB { link })
+  let state = ai_manager.local_ai.get_local_ai_state().await;
+  data_result_ok(state)
 }
 
 #[tracing::instrument(level = "debug", skip_all, err)]
@@ -457,6 +341,7 @@ pub(crate) async fn get_chat_settings_handler(
   ai_manager: AFPluginState<Weak<AIManager>>,
 ) -> DataResult<ChatSettingsPB, FlowyError> {
   let chat_id = data.try_into_inner()?.value;
+  let chat_id = Uuid::from_str(&chat_id)?;
   let ai_manager = upgrade_ai_manager(ai_manager)?;
   let rag_ids = ai_manager.get_rag_ids(&chat_id).await?;
   let pb = ChatSettingsPB { rag_ids };
@@ -470,9 +355,29 @@ pub(crate) async fn update_chat_settings_handler(
 ) -> FlowyResult<()> {
   let params = data.try_into_inner()?;
   let ai_manager = upgrade_ai_manager(ai_manager)?;
-  ai_manager
-    .update_rag_ids(&params.chat_id.value, params.rag_ids)
-    .await?;
+  let chat_id = Uuid::from_str(&params.chat_id.value)?;
+  ai_manager.update_rag_ids(&chat_id, params.rag_ids).await?;
 
+  Ok(())
+}
+
+#[tracing::instrument(level = "debug", skip_all, err)]
+pub(crate) async fn get_local_ai_setting_handler(
+  ai_manager: AFPluginState<Weak<AIManager>>,
+) -> DataResult<LocalAISettingPB, FlowyError> {
+  let ai_manager = upgrade_ai_manager(ai_manager)?;
+  let setting = ai_manager.local_ai.get_local_ai_setting();
+  let pb = LocalAISettingPB::from(setting);
+  data_result_ok(pb)
+}
+
+#[tracing::instrument(level = "debug", skip_all, err)]
+pub(crate) async fn update_local_ai_setting_handler(
+  ai_manager: AFPluginState<Weak<AIManager>>,
+  data: AFPluginData<LocalAISettingPB>,
+) -> Result<(), FlowyError> {
+  let data = data.try_into_inner()?;
+  let ai_manager = upgrade_ai_manager(ai_manager)?;
+  ai_manager.update_local_ai_setting(data.into()).await?;
   Ok(())
 }

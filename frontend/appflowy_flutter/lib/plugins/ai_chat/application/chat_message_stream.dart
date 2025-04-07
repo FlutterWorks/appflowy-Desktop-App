@@ -2,47 +2,25 @@ import 'dart:async';
 import 'dart:ffi';
 import 'dart:isolate';
 
+import 'package:appflowy/ai/service/ai_entities.dart';
 import 'package:appflowy/plugins/ai_chat/application/chat_message_service.dart';
 
+/// A stream that receives answer events from an isolate or external process.
+/// It caches events that might occur before a listener is attached.
 class AnswerStream {
   AnswerStream() {
     _port.handler = _controller.add;
     _subscription = _controller.stream.listen(
-      (event) {
-        if (event.startsWith("data:")) {
-          _hasStarted = true;
-          final newText = event.substring(5);
-          _text += newText;
-          _onData?.call(_text);
-        } else if (event.startsWith("error:")) {
-          _error = event.substring(5);
-          _onError?.call(_error!);
-        } else if (event.startsWith("metadata:")) {
-          if (_onMetadata != null) {
-            final s = event.substring(9);
-            _onMetadata!(parseMetadata(s));
-          }
-        } else if (event == "AI_RESPONSE_LIMIT") {
-          _aiLimitReached = true;
-          _onAIResponseLimit?.call();
-        } else if (event == "AI_IMAGE_RESPONSE_LIMIT") {
-          _aiImageLimitReached = true;
-          _onAIImageResponseLimit?.call();
-        }
-      },
-      onDone: () {
-        _onEnd?.call();
-      },
-      onError: (error) {
-        _error = error.toString();
-        _onError?.call(error.toString());
-      },
+      _handleEvent,
+      onDone: _onDoneCallback,
+      onError: _handleError,
     );
   }
 
   final RawReceivePort _port = RawReceivePort();
   final StreamController<String> _controller = StreamController.broadcast();
   late StreamSubscription<String> _subscription;
+
   bool _hasStarted = false;
   bool _aiLimitReached = false;
   bool _aiImageLimitReached = false;
@@ -54,9 +32,15 @@ class AnswerStream {
   void Function()? _onStart;
   void Function()? _onEnd;
   void Function(String error)? _onError;
+  void Function()? _onLocalAIInitializing;
   void Function()? _onAIResponseLimit;
   void Function()? _onAIImageResponseLimit;
-  void Function(MetadataCollection metadataCollection)? _onMetadata;
+  void Function(String message)? _onAIMaxRequired;
+  void Function(MetadataCollection metadata)? _onMetadata;
+
+  // Caches for events that occur before listen() is called.
+  final List<String> _pendingAIMaxRequiredEvents = [];
+  bool _pendingLocalAINotReady = false;
 
   int get nativePort => _port.sendPort.nativePort;
   bool get hasStarted => _hasStarted;
@@ -65,12 +49,61 @@ class AnswerStream {
   String? get error => _error;
   String get text => _text;
 
+  /// Releases the resources used by the AnswerStream.
   Future<void> dispose() async {
     await _controller.close();
     await _subscription.cancel();
     _port.close();
   }
 
+  /// Handles incoming events from the underlying stream.
+  void _handleEvent(String event) {
+    if (event.startsWith(AIStreamEventPrefix.data)) {
+      _hasStarted = true;
+      final newText = event.substring(AIStreamEventPrefix.data.length);
+      _text += newText;
+      _onData?.call(_text);
+    } else if (event.startsWith(AIStreamEventPrefix.error)) {
+      _error = event.substring(AIStreamEventPrefix.error.length);
+      _onError?.call(_error!);
+    } else if (event.startsWith(AIStreamEventPrefix.metadata)) {
+      final s = event.substring(AIStreamEventPrefix.metadata.length);
+      _onMetadata?.call(parseMetadata(s));
+    } else if (event == AIStreamEventPrefix.aiResponseLimit) {
+      _aiLimitReached = true;
+      _onAIResponseLimit?.call();
+    } else if (event == AIStreamEventPrefix.aiImageResponseLimit) {
+      _aiImageLimitReached = true;
+      _onAIImageResponseLimit?.call();
+    } else if (event.startsWith(AIStreamEventPrefix.aiMaxRequired)) {
+      final msg = event.substring(AIStreamEventPrefix.aiMaxRequired.length);
+      if (_onAIMaxRequired != null) {
+        _onAIMaxRequired!(msg);
+      } else {
+        _pendingAIMaxRequiredEvents.add(msg);
+      }
+    } else if (event.startsWith(AIStreamEventPrefix.localAINotReady)) {
+      if (_onLocalAIInitializing != null) {
+        _onLocalAIInitializing!();
+      } else {
+        _pendingLocalAINotReady = true;
+      }
+    }
+  }
+
+  void _onDoneCallback() {
+    _onEnd?.call();
+  }
+
+  void _handleError(dynamic error) {
+    _error = error.toString();
+    _onError?.call(_error!);
+  }
+
+  /// Registers listeners for various events.
+  ///
+  /// If certain events have already occurred (e.g. AI_MAX_REQUIRED or LOCAL_AI_NOT_READY),
+  /// they will be flushed immediately.
   void listen({
     void Function(String text)? onData,
     void Function()? onStart,
@@ -78,7 +111,9 @@ class AnswerStream {
     void Function(String error)? onError,
     void Function()? onAIResponseLimit,
     void Function()? onAIImageResponseLimit,
+    void Function(String message)? onAIMaxRequired,
     void Function(MetadataCollection metadata)? onMetadata,
+    void Function()? onLocalAIInitializing,
   }) {
     _onData = onData;
     _onStart = onStart;
@@ -86,7 +121,23 @@ class AnswerStream {
     _onError = onError;
     _onAIResponseLimit = onAIResponseLimit;
     _onAIImageResponseLimit = onAIImageResponseLimit;
+    _onAIMaxRequired = onAIMaxRequired;
     _onMetadata = onMetadata;
+    _onLocalAIInitializing = onLocalAIInitializing;
+
+    // Flush pending AI_MAX_REQUIRED events.
+    if (_onAIMaxRequired != null && _pendingAIMaxRequiredEvents.isNotEmpty) {
+      for (final msg in _pendingAIMaxRequiredEvents) {
+        _onAIMaxRequired!(msg);
+      }
+      _pendingAIMaxRequiredEvents.clear();
+    }
+
+    // Flush pending LOCAL_AI_NOT_READY event.
+    if (_pendingLocalAINotReady && _onLocalAIInitializing != null) {
+      _onLocalAIInitializing!();
+      _pendingLocalAINotReady = false;
+    }
 
     _onStart?.call();
   }

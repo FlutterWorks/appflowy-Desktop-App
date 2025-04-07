@@ -1,14 +1,11 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:appflowy/ai/widgets/prompt_input/layout_define.dart';
-import 'package:appflowy/ai/widgets/prompt_input/predefined_format_buttons.dart';
-import 'package:appflowy/ai/widgets/prompt_input/select_sources_menu.dart';
+import 'package:appflowy/ai/ai.dart';
 import 'package:appflowy/generated/flowy_svgs.g.dart';
 import 'package:appflowy/generated/locale_keys.g.dart';
 import 'package:appflowy/plugins/ai_chat/application/chat_ai_message_bloc.dart';
 import 'package:appflowy/plugins/ai_chat/application/chat_edit_document_service.dart';
-import 'package:appflowy/plugins/ai_chat/application/chat_entity.dart';
 import 'package:appflowy/plugins/ai_chat/application/chat_select_sources_cubit.dart';
 import 'package:appflowy/plugins/document/application/prelude.dart';
 import 'package:appflowy/plugins/document/presentation/editor_plugins/copy_and_paste/clipboard_service.dart';
@@ -24,6 +21,7 @@ import 'package:appflowy/workspace/application/view/view_ext.dart';
 import 'package:appflowy/workspace/presentation/home/menu/sidebar/space/shared_widget.dart';
 import 'package:appflowy/workspace/presentation/home/menu/view/view_item.dart';
 import 'package:appflowy/workspace/presentation/widgets/dialogs.dart';
+import 'package:appflowy_backend/protobuf/flowy-ai/protobuf.dart';
 import 'package:appflowy_backend/protobuf/flowy-folder/protobuf.dart';
 import 'package:appflowy_editor/appflowy_editor.dart';
 import 'package:appflowy_result/appflowy_result.dart';
@@ -44,6 +42,7 @@ class AIMessageActionBar extends StatefulWidget {
     required this.showDecoration,
     this.onRegenerate,
     this.onChangeFormat,
+    this.onChangeModel,
     this.onOverrideVisibility,
   });
 
@@ -51,6 +50,7 @@ class AIMessageActionBar extends StatefulWidget {
   final bool showDecoration;
   final void Function()? onRegenerate;
   final void Function(PredefinedFormat)? onChangeFormat;
+  final void Function(AIModelPB)? onChangeModel;
   final void Function(bool)? onOverrideVisibility;
 
   @override
@@ -89,14 +89,14 @@ class _AIMessageActionBarState extends State<AIMessageActionBar> {
                   spreadRadius: -2,
                   color: isLightMode
                       ? const Color(0x051F2329)
-                      : Theme.of(context).shadowColor.withOpacity(0.02),
+                      : Theme.of(context).shadowColor.withValues(alpha: 0.02),
                 ),
                 BoxShadow(
                   offset: const Offset(0, 2),
                   blurRadius: 4,
                   color: isLightMode
                       ? const Color(0x051F2329)
-                      : Theme.of(context).shadowColor.withOpacity(0.02),
+                      : Theme.of(context).shadowColor.withValues(alpha: 0.02),
                 ),
                 BoxShadow(
                   offset: const Offset(0, 2),
@@ -104,7 +104,7 @@ class _AIMessageActionBarState extends State<AIMessageActionBar> {
                   spreadRadius: 2,
                   color: isLightMode
                       ? const Color(0x051F2329)
-                      : Theme.of(context).shadowColor.withOpacity(0.02),
+                      : Theme.of(context).shadowColor.withValues(alpha: 0.02),
                 ),
               ],
             ),
@@ -126,6 +126,12 @@ class _AIMessageActionBarState extends State<AIMessageActionBar> {
       ChangeFormatButton(
         isInHoverBar: widget.showDecoration,
         onRegenerate: widget.onChangeFormat,
+        popoverMutex: popoverMutex,
+        onOverrideVisibility: widget.onOverrideVisibility,
+      ),
+      ChangeModelButton(
+        isInHoverBar: widget.showDecoration,
+        onRegenerate: widget.onChangeModel,
         popoverMutex: popoverMutex,
         onOverrideVisibility: widget.onOverrideVisibility,
       ),
@@ -220,7 +226,7 @@ class RegenerateButton extends StatelessWidget {
             ? DesktopAIChatSizes.messageHoverActionBarIconRadius
             : DesktopAIChatSizes.messageActionBarIconRadius,
         icon: FlowySvg(
-          FlowySvgs.ai_undo_s,
+          FlowySvgs.ai_try_again_s,
           color: Theme.of(context).hintColor,
           size: const Size.square(16),
         ),
@@ -263,8 +269,11 @@ class _ChangeFormatButtonState extends State<ChangeFormatButton> {
       constraints: const BoxConstraints(),
       onClose: () => widget.onOverrideVisibility?.call(false),
       child: buildButton(context),
-      popupBuilder: (_) => _ChangeFormatPopoverContent(
-        onRegenerate: widget.onRegenerate,
+      popupBuilder: (_) => BlocProvider.value(
+        value: context.read<AIPromptInputBloc>(),
+        child: _ChangeFormatPopoverContent(
+          onRegenerate: widget.onRegenerate,
+        ),
       ),
     );
   }
@@ -340,14 +349,14 @@ class _ChangeFormatPopoverContentState
             spreadRadius: -2,
             color: isLightMode
                 ? const Color(0x051F2329)
-                : Theme.of(context).shadowColor.withOpacity(0.02),
+                : Theme.of(context).shadowColor.withValues(alpha: 0.02),
           ),
           BoxShadow(
             offset: const Offset(0, 2),
             blurRadius: 4,
             color: isLightMode
                 ? const Color(0x051F2329)
-                : Theme.of(context).shadowColor.withOpacity(0.02),
+                : Theme.of(context).shadowColor.withValues(alpha: 0.02),
           ),
           BoxShadow(
             offset: const Offset(0, 2),
@@ -355,18 +364,23 @@ class _ChangeFormatPopoverContentState
             spreadRadius: 2,
             color: isLightMode
                 ? const Color(0x051F2329)
-                : Theme.of(context).shadowColor.withOpacity(0.02),
+                : Theme.of(context).shadowColor.withValues(alpha: 0.02),
           ),
         ],
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          ChangeFormatBar(
-            spacing: 2.0,
-            predefinedFormat: predefinedFormat,
-            onSelectPredefinedFormat: (format) {
-              setState(() => predefinedFormat = format);
+          BlocBuilder<AIPromptInputBloc, AIPromptInputState>(
+            builder: (context, state) {
+              return ChangeFormatBar(
+                spacing: 2.0,
+                showImageFormats: state.aiType.isCloud,
+                predefinedFormat: predefinedFormat,
+                onSelectPredefinedFormat: (format) {
+                  setState(() => predefinedFormat = format);
+                },
+              );
             },
           ),
           const HSpace(4.0),
@@ -377,8 +391,9 @@ class _ChangeFormatPopoverContentState
               child: GestureDetector(
                 behavior: HitTestBehavior.opaque,
                 onTap: () {
-                  widget.onRegenerate
-                      ?.call(predefinedFormat ?? const PredefinedFormat.auto());
+                  if (predefinedFormat != null) {
+                    widget.onRegenerate?.call(predefinedFormat!);
+                  }
                 },
                 child: SizedBox.square(
                   dimension: DesktopAIPromptSizes.predefinedFormatButtonHeight,
@@ -394,6 +409,85 @@ class _ChangeFormatPopoverContentState
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class ChangeModelButton extends StatefulWidget {
+  const ChangeModelButton({
+    super.key,
+    required this.isInHoverBar,
+    this.popoverMutex,
+    this.onRegenerate,
+    this.onOverrideVisibility,
+  });
+
+  final bool isInHoverBar;
+  final PopoverMutex? popoverMutex;
+  final void Function(AIModelPB)? onRegenerate;
+  final void Function(bool)? onOverrideVisibility;
+
+  @override
+  State<ChangeModelButton> createState() => _ChangeModelButtonState();
+}
+
+class _ChangeModelButtonState extends State<ChangeModelButton> {
+  final popoverController = PopoverController();
+
+  @override
+  Widget build(BuildContext context) {
+    return AppFlowyPopover(
+      controller: popoverController,
+      mutex: widget.popoverMutex,
+      triggerActions: PopoverTriggerFlags.none,
+      margin: EdgeInsets.zero,
+      offset: Offset(8, 0),
+      direction: PopoverDirection.rightWithBottomAligned,
+      constraints: BoxConstraints(maxWidth: 250, maxHeight: 600),
+      onClose: () => widget.onOverrideVisibility?.call(false),
+      child: buildButton(context),
+      popupBuilder: (_) {
+        final bloc = context.read<AIPromptInputBloc>();
+        final (models, _) = bloc.aiModelStateNotifier.getAvailableModels();
+        return SelectModelPopoverContent(
+          models: models,
+          selectedModel: null,
+          onSelectModel: widget.onRegenerate,
+        );
+      },
+    );
+  }
+
+  Widget buildButton(BuildContext context) {
+    return FlowyTooltip(
+      message: LocaleKeys.chat_switchModel_label.tr(),
+      child: FlowyIconButton(
+        width: 32.0,
+        height: DesktopAIChatSizes.messageActionBarIconSize,
+        hoverColor: AFThemeExtension.of(context).lightGreyHover,
+        radius: widget.isInHoverBar
+            ? DesktopAIChatSizes.messageHoverActionBarIconRadius
+            : DesktopAIChatSizes.messageActionBarIconRadius,
+        icon: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            FlowySvg(
+              FlowySvgs.ai_sparks_s,
+              color: Theme.of(context).hintColor,
+              size: const Size.square(16),
+            ),
+            FlowySvg(
+              FlowySvgs.ai_source_drop_down_s,
+              color: Theme.of(context).hintColor,
+              size: const Size.square(8),
+            ),
+          ],
+        ),
+        onPressed: () {
+          widget.onOverrideVisibility?.call(true);
+          popoverController.show();
+        },
       ),
     );
   }
