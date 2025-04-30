@@ -9,7 +9,7 @@ use collab_integrate::CollabKVDB;
 use flowy_error::{FlowyError, FlowyResult};
 use std::sync::{Arc, Weak};
 use tokio::task::spawn_blocking;
-use tracing::{event, info, Level};
+use tracing::{error, event, info, Level};
 use uuid::Uuid;
 
 impl FolderManager {
@@ -73,7 +73,7 @@ impl FolderManager {
           // 3. If the folder doesn't exist and create_if_not_exist is false, try to fetch the folder data from cloud/
           // This will happen user can't fetch the folder data when the user sign in.
           let doc_state = self
-            .cloud_service
+            .cloud_service()?
             .get_folder_doc_state(workspace_id, uid, CollabType::Folder, workspace_id)
             .await?;
 
@@ -115,8 +115,9 @@ impl FolderManager {
       let index_content_rx = folder.subscribe_index_content();
       self
         .folder_indexer
-        .set_index_content_receiver(index_content_rx, *workspace_id);
-      self.handle_index_folder(*workspace_id, &folder);
+        .set_index_content_receiver(index_content_rx, *workspace_id)
+        .await;
+      self.handle_index_folder(*workspace_id, &folder).await;
       folder_state_rx
     };
 
@@ -136,6 +137,16 @@ impl FolderManager {
       weak_mutex_folder.clone(),
       Arc::downgrade(&self.user),
     );
+
+    let weak_folder_indexer = Arc::downgrade(&self.folder_indexer);
+    let workspace_id = *workspace_id;
+    tokio::spawn(async move {
+      if let Some(folder_indexer) = weak_folder_indexer.upgrade() {
+        if let Err(err) = folder_indexer.initialize(&workspace_id).await {
+          error!("Failed to initialize folder indexer: {:?}", err);
+        }
+      }
+    });
 
     Ok(())
   }
@@ -166,7 +177,7 @@ impl FolderManager {
     Ok(folder)
   }
 
-  fn handle_index_folder(&self, workspace_id: Uuid, folder: &Folder) {
+  async fn handle_index_folder(&self, workspace_id: Uuid, folder: &Folder) {
     let mut index_all = true;
 
     let encoded_collab = self
@@ -191,12 +202,11 @@ impl FolderManager {
     if index_all {
       let views = folder.get_all_views();
       let folder_indexer = self.folder_indexer.clone();
+      let _ = folder_indexer
+        .remove_indices_for_workspace(workspace_id)
+        .await;
       // We spawn a blocking task to index all views in the folder
       spawn_blocking(move || {
-        // We remove old indexes just in case
-        let _ = folder_indexer.remove_indices_for_workspace(workspace_id);
-
-        // We index all views from the workspace
         folder_indexer.index_all_views(views, workspace_id);
       });
     }

@@ -380,6 +380,24 @@ pub enum ErrorCode {
 
   #[error("Local AI disabled")]
   LocalAIDisabled = 130,
+
+  #[error("User not login")]
+  UserNotLogin = 131,
+
+  #[error("Reference resource is not available")]
+  WeakRefDrop = 132,
+
+  #[error("New password is too weak")]
+  NewPasswordTooWeak = 133,
+
+  #[error("Invalid new password")]
+  InvalidNewPassword = 134,
+
+  #[error("New password is too long")]
+  NewPasswordTooLong = 135,
+
+  #[error("New password is too short")]
+  NewPasswordTooShort = 136,
 }
 
 impl ErrorCode {

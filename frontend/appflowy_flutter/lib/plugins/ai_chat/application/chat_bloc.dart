@@ -72,6 +72,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     final request = ViewIdPB(value: chatId);
     unawaited(FolderEventCloseView(request).send());
     selectedSourcesNotifier.dispose();
+    chatController.dispose();
     return super.close();
   }
 
@@ -435,7 +436,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       messageType: ChatMessageTypePB.User,
       questionStreamPort: Int64(questionStream.nativePort),
       answerStreamPort: Int64(answerStream!.nativePort),
-      metadata: await metadataPBFromMetadata(metadata),
+      //metadata: await metadataPBFromMetadata(metadata),
     );
     if (format != null) {
       payload.format = format.toPB();
@@ -576,6 +577,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     if (temporaryMessageIDMap.containsKey(messageId)) {
       messageId = temporaryMessageIDMap[messageId]!;
     }
+    final metadata = message.metadata == 'null' ? '[]' : message.metadata;
 
     return TextMessage(
       author: User(id: message.authorId),
@@ -583,7 +585,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       text: message.content,
       createdAt: message.createdAt.toDateTime(),
       metadata: {
-        messageRefSourceJsonStringKey: message.metadata,
+        messageRefSourceJsonStringKey: metadata,
       },
     );
   }

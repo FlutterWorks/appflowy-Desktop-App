@@ -1,17 +1,16 @@
-use crate::ai_manager::AIUserService;
 use crate::local_ai::controller::LocalAISetting;
-use flowy_ai_pub::cloud::LocalAIConfig;
 use flowy_error::{ErrorCode, FlowyError, FlowyResult};
 use lib_infra::async_trait::async_trait;
 
 use crate::entities::LackOfAIResourcePB;
-use crate::local_ai::watch::{is_plugin_ready, ollama_plugin_path};
-#[cfg(target_os = "macos")]
+#[cfg(any(target_os = "macos", target_os = "linux"))]
 use crate::local_ai::watch::{watch_offline_app, WatchContext};
 use crate::notification::{
   chat_notification_builder, ChatNotification, APPFLOWY_AI_NOTIFICATION_KEY,
 };
 use af_local_ai::ollama_plugin::OllamaPluginConfig;
+use af_plugin::core::path::{is_plugin_ready, ollama_plugin_path};
+use flowy_ai_pub::user_service::AIUserService;
 use lib_infra::util::{get_operating_system, OperatingSystem};
 use reqwest::Client;
 use serde::Deserialize;
@@ -33,7 +32,6 @@ struct ModelEntry {
 #[async_trait]
 pub trait LLMResourceService: Send + Sync + 'static {
   /// Get local ai configuration from remote server
-  async fn fetch_local_ai_config(&self) -> Result<LocalAIConfig, anyhow::Error>;
   fn store_setting(&self, setting: LocalAISetting) -> Result<(), anyhow::Error>;
   fn retrieve_setting(&self) -> Option<LocalAISetting>;
 }
@@ -58,7 +56,7 @@ pub struct LocalAIResourceController {
   user_service: Arc<dyn AIUserService>,
   resource_service: Arc<dyn LLMResourceService>,
   resource_notify: tokio::sync::broadcast::Sender<()>,
-  #[cfg(target_os = "macos")]
+  #[cfg(any(target_os = "macos", target_os = "linux"))]
   #[allow(dead_code)]
   app_disk_watch: Option<WatchContext>,
   app_state_sender: tokio::sync::broadcast::Sender<WatchDiskEvent>,
@@ -71,10 +69,10 @@ impl LocalAIResourceController {
   ) -> Self {
     let (resource_notify, _) = tokio::sync::broadcast::channel(1);
     let (app_state_sender, _) = tokio::sync::broadcast::channel(1);
-    #[cfg(target_os = "macos")]
+    #[cfg(any(target_os = "macos", target_os = "linux"))]
     let mut offline_app_disk_watch: Option<WatchContext> = None;
 
-    #[cfg(target_os = "macos")]
+    #[cfg(any(target_os = "macos", target_os = "linux"))]
     {
       match watch_offline_app() {
         Ok((new_watcher, mut rx)) => {
@@ -97,7 +95,7 @@ impl LocalAIResourceController {
     Self {
       user_service,
       resource_service: Arc::new(resource_service),
-      #[cfg(target_os = "macos")]
+      #[cfg(any(target_os = "macos", target_os = "linux"))]
       app_disk_watch: offline_app_disk_watch,
       app_state_sender,
       resource_notify,
@@ -123,11 +121,6 @@ impl LocalAIResourceController {
       .calculate_pending_resources()
       .await
       .is_ok_and(|r| r.is_none())
-  }
-
-  pub async fn get_plugin_download_link(&self) -> FlowyResult<String> {
-    let ai_config = self.get_local_ai_configuration().await?;
-    Ok(ai_config.plugin.url)
   }
 
   /// Retrieves model information and updates the current model settings.
@@ -168,7 +161,6 @@ impl LocalAIResourceController {
 
     let setting = self.get_llm_setting();
     let client = Client::builder().timeout(Duration::from_secs(5)).build()?;
-
     match client.get(&setting.ollama_server_url).send().await {
       Ok(resp) if resp.status().is_success() => {
         info!(
@@ -195,9 +187,14 @@ impl LocalAIResourceController {
         let tags: TagsResponse = resp.json().await.inspect_err(|e| {
           log::error!("[LLM Resource] Failed to parse /api/tags JSON response: {e:?}")
         })?;
-        // Check each required model is present in the response.
+        // Check if each of our required models exists in the list of available models
+        trace!("[LLM Resource] ollama available models: {:?}", tags.models);
         for required in &required_models {
-          if !tags.models.iter().any(|m| m.name.contains(required)) {
+          if !tags
+            .models
+            .iter()
+            .any(|m| m.name == *required || m.name == format!("{}:latest", required))
+          {
             log::trace!(
               "[LLM Resource] required model '{}' not found in API response",
               required
@@ -264,19 +261,6 @@ impl LocalAIResourceController {
     }
     trace!("[AI Chat] config: {:?}", config);
     Ok(config)
-  }
-
-  /// Fetches the local AI configuration from the resource service.
-  async fn get_local_ai_configuration(&self) -> FlowyResult<LocalAIConfig> {
-    self
-      .resource_service
-      .fetch_local_ai_config()
-      .await
-      .map_err(|err| {
-        error!("[LLM Resource] Failed to fetch local ai config: {:?}", err);
-        FlowyError::local_ai()
-          .with_context("Can't retrieve model info. Please try again later".to_string())
-      })
   }
 
   pub(crate) fn user_model_folder(&self) -> FlowyResult<PathBuf> {
