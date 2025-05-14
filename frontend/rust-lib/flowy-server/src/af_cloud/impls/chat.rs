@@ -99,16 +99,13 @@ where
     &self,
     workspace_id: &Uuid,
     chat_id: &Uuid,
-    message_id: i64,
+    question_id: i64,
     format: ResponseFormat,
-    ai_model: Option<AIModel>,
+    ai_model: AIModel,
   ) -> Result<StreamAnswer, FlowyError> {
     trace!(
       "stream_answer: workspace_id={}, chat_id={}, format={:?}, model: {:?}",
-      workspace_id,
-      chat_id,
-      format,
-      ai_model,
+      workspace_id, chat_id, format, ai_model,
     );
     let try_get_client = self.inner.try_get_client();
     let result = try_get_client?
@@ -116,10 +113,10 @@ where
         workspace_id,
         ChatQuestionQuery {
           chat_id: chat_id.to_string(),
-          question_id: message_id,
+          question_id,
           format,
         },
-        ai_model.map(|v| v.name),
+        Some(ai_model.name),
       )
       .await;
 
@@ -182,7 +179,7 @@ where
     workspace_id: &Uuid,
     chat_id: &Uuid,
     message_id: i64,
-    ai_model: Option<AIModel>,
+    ai_model: AIModel,
   ) -> Result<RepeatedRelatedQuestion, FlowyError> {
     let try_get_client = self.inner.try_get_client();
     let resp = try_get_client?
@@ -197,12 +194,12 @@ where
     &self,
     workspace_id: &Uuid,
     params: CompleteTextParams,
-    ai_model: Option<AIModel>,
+    ai_model: AIModel,
   ) -> Result<StreamComplete, FlowyError> {
     let stream = self
       .inner
       .try_get_client()?
-      .stream_completion_v2(workspace_id, params, ai_model.map(|v| v.name))
+      .stream_completion_v2(workspace_id, params, Some(ai_model.name))
       .await
       .map_err(FlowyError::from)?
       .map_err(FlowyError::from);

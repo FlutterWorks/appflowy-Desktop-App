@@ -10,8 +10,11 @@ pub mod local_ai;
 // #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
 // pub mod mcp;
 
-#[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+#[cfg(feature = "ai-tool")]
+mod ai_tool;
 pub mod embeddings;
+pub use embeddings::store::SqliteVectorStore;
+
 mod middleware;
 mod model_select;
 #[cfg(test)]
