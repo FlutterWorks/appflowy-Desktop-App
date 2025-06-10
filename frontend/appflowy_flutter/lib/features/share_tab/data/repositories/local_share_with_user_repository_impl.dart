@@ -2,21 +2,25 @@ import 'dart:math';
 
 import 'package:appflowy/features/share_tab/data/models/models.dart';
 import 'package:appflowy_backend/protobuf/flowy-error/errors.pb.dart';
+import 'package:appflowy_backend/protobuf/flowy-user/user_profile.pb.dart';
 import 'package:appflowy_result/appflowy_result.dart';
 
 import 'share_with_user_repository.dart';
 
-class LocalShareWithUserRepository extends ShareWithUserRepository {
-  LocalShareWithUserRepository();
+// Move this file to test folder
+class LocalShareWithUserRepositoryImpl extends ShareWithUserRepository {
+  LocalShareWithUserRepositoryImpl();
 
   final SharedUsers _sharedUsers = [
+    // current user has full access
     SharedUser(
       email: 'lucas.xu@appflowy.io',
-      name: 'Lucas Xu',
+      name: 'Lucas Xu - Long long long long long name',
       accessLevel: ShareAccessLevel.readOnly,
       role: ShareRole.guest,
       avatarUrl: 'https://avatar.iran.liara.run/public',
     ),
+    // member user has read and write access
     SharedUser(
       email: 'vivian@appflowy.io',
       name: 'Vivian Wang',
@@ -24,27 +28,31 @@ class LocalShareWithUserRepository extends ShareWithUserRepository {
       role: ShareRole.member,
       avatarUrl: 'https://avatar.iran.liara.run/public/girl',
     ),
+    // member user has read access
     SharedUser(
       email: 'shuheng@appflowy.io',
       name: 'Shuheng',
-      accessLevel: ShareAccessLevel.fullAccess,
-      role: ShareRole.owner,
+      accessLevel: ShareAccessLevel.readOnly,
+      role: ShareRole.member,
       avatarUrl: 'https://avatar.iran.liara.run/public/boy',
     ),
+    // guest user has read access
     SharedUser(
       email: 'guest_user_1@appflowy.io',
-      name: 'Guest User 1',
+      name: 'Read Only Guest',
       accessLevel: ShareAccessLevel.readOnly,
       role: ShareRole.guest,
       avatarUrl: 'https://avatar.iran.liara.run/public/boy/10',
     ),
+    // guest user has read and write access
     SharedUser(
       email: 'guest_user_2@appflowy.io',
-      name: 'Guest User 2',
-      accessLevel: ShareAccessLevel.readOnly,
-      role: ShareRole.owner,
+      name: 'Read And Write Guest',
+      accessLevel: ShareAccessLevel.readAndWrite,
+      role: ShareRole.guest,
       avatarUrl: 'https://avatar.iran.liara.run/public/boy/11',
     ),
+    // Others
     SharedUser(
       email: 'member_user_1@appflowy.io',
       name: 'Member User 1',
@@ -145,7 +153,7 @@ class LocalShareWithUserRepository extends ShareWithUserRepository {
 
   @override
   Future<FlowyResult<void, FlowyError>> changeRole({
-    required String pageId,
+    required String workspaceId,
     required String email,
     required ShareRole role,
   }) async {
@@ -155,5 +163,36 @@ class LocalShareWithUserRepository extends ShareWithUserRepository {
     }
 
     return FlowySuccess(null);
+  }
+
+  @override
+  Future<FlowyResult<UserProfilePB, FlowyError>> getCurrentUserProfile() async {
+    // Simulate fetching current user profile
+    return FlowySuccess(
+      UserProfilePB()
+        ..email = 'lucas.xu@appflowy.io'
+        ..name = 'Lucas Xu',
+    );
+  }
+
+  @override
+  Future<FlowyResult<SharedSectionType, FlowyError>> getCurrentPageSectionType({
+    required String pageId,
+  }) async {
+    return FlowySuccess(SharedSectionType.private);
+  }
+
+  @override
+  Future<bool> getUpgradeToProButtonClicked({
+    required String workspaceId,
+  }) async {
+    return false;
+  }
+
+  @override
+  Future<void> setUpgradeToProButtonClicked({
+    required String workspaceId,
+  }) async {
+    return;
   }
 }
